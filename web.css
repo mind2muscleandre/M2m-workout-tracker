@@ -1,0 +1,26 @@
+/* Global web styles for React Native Web */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Fix for ScrollView on web */
+[data-scroll-view] {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Ensure proper scrolling on web */
+div[style*="overflow"] {
+  -webkit-overflow-scrolling: touch;
+}

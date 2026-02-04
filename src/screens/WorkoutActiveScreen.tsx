@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  Platform,
 } from 'react-native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
@@ -197,7 +198,12 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
       </View>
 
       {/* Exercises */}
-      <ScrollView style={styles.exerciseList} contentContainerStyle={styles.exerciseListContent}>
+      <ScrollView 
+        style={styles.exerciseList} 
+        contentContainerStyle={styles.exerciseListContent}
+        nestedScrollEnabled={true}
+        scrollEnabled={true}
+      >
         {activeWorkout.workout_exercises.map((we, weIndex) => (
           <ExerciseSection
             key={we.id}
@@ -538,8 +544,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statusText: { fontSize: 13, fontWeight: '600' },
-  exerciseList: { flex: 1 },
-  exerciseListContent: { padding: 16, paddingBottom: 100 },
+  exerciseList: { 
+    flex: 1,
+    ...(Platform.OS === 'web' && { overflowY: 'auto', WebkitOverflowScrolling: 'touch' }),
+  },
+  exerciseListContent: { 
+    padding: 16, 
+    paddingBottom: 100,
+    ...(Platform.OS === 'web' && { minHeight: '100%' }),
+  },
   exerciseSection: {
     backgroundColor: colors.card,
     borderRadius: 12,

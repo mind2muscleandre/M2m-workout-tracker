@@ -470,6 +470,8 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        scrollEnabled={true}
       >
         {/* ============================================ */}
         {/* Client Info Section                          */}
@@ -828,10 +830,12 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    ...(Platform.OS === 'web' && { overflowY: 'auto', WebkitOverflowScrolling: 'touch' }),
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
+    ...(Platform.OS === 'web' && { minHeight: '100%' }),
   },
 
   // ---- Loading ----

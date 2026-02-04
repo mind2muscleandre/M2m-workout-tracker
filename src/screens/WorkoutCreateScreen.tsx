@@ -458,7 +458,10 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
   }, [templateWorkoutId, handleCopyFromTemplate]);
 
   const handleCreate = async () => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('Fel', 'Du måste vara inloggad');
+      return;
+    }
 
     if (selectedExercises.length === 0) {
       Alert.alert('Inga övningar', 'Lägg till minst en övning');
@@ -487,18 +490,25 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
         const repsString = se.targetReps.length > 0 
           ? se.targetReps.join(',') 
           : null;
-        await addExerciseToWorkout(
-          workoutId,
-          se.exercise.id,
-          i,
-          se.targetSets || null,
-          repsString
-        );
+        try {
+          await addExerciseToWorkout(
+            workoutId,
+            se.exercise.id,
+            i,
+            se.targetSets || null,
+            repsString
+          );
+        } catch (exerciseError) {
+          console.error(`Error adding exercise ${i}:`, exerciseError);
+          // Continue with other exercises even if one fails
+        }
       }
 
+      // Navigate after all exercises are added (or attempted)
       navigation.replace('WorkoutActive', { workoutId });
     } catch (error) {
-      Alert.alert('Fel', 'Kunde inte skapa passet');
+      console.error('Create workout error:', error);
+      Alert.alert('Fel', `Kunde inte skapa passet: ${error instanceof Error ? error.message : 'Okänt fel'}`);
     } finally {
       setIsCreating(false);
     }
@@ -749,6 +759,8 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="handled"
           bounces={true}
+          nestedScrollEnabled={true}
+          scrollEnabled={true}
         >
           {/* Client */}
           <View style={styles.section}>
@@ -851,8 +863,15 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && { height: '100vh', overflow: 'hidden' }),
+  },
+  flex: { 
+    flex: 1,
+    ...(Platform.OS === 'web' && { overflowY: 'auto', WebkitOverflowScrolling: 'touch' }),
+  },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -864,7 +883,12 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  scrollContent: { padding: 16, paddingBottom: 120, flexGrow: 1 },
+  scrollContent: { 
+    padding: 16, 
+    paddingBottom: 120, 
+    flexGrow: 1,
+    ...(Platform.OS === 'web' && { minHeight: '100%' }),
+  },
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   clientBadge: {
