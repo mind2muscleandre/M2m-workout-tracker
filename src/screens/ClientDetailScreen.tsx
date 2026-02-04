@@ -454,7 +454,12 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
   // ----------------------------------------
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+      style={[
+        styles.container,
+        Platform.OS === 'web' && { height: '100vh', overflow: 'hidden' }
+      ]}
+    >
       {/* Header with Back Button */}
       <View style={styles.screenHeader}>
         <TouchableOpacity
@@ -807,6 +812,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && { 
+      height: '100vh', 
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }),
   },
   screenHeader: {
     flexDirection: 'row',
@@ -830,12 +841,20 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    ...(Platform.OS === 'web' && { overflowY: 'auto', WebkitOverflowScrolling: 'touch' }),
+    ...(Platform.OS === 'web' && { 
+      overflowY: 'auto', 
+      WebkitOverflowScrolling: 'touch',
+      minHeight: 0,
+      height: '100%',
+    }),
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    ...(Platform.OS === 'web' && { minHeight: '100%' }),
+    ...(Platform.OS === 'web' && { 
+      minHeight: '100%',
+      flexGrow: 1,
+    }),
   },
 
   // ---- Loading ----

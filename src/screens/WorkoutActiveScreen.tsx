@@ -164,7 +164,12 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
   const isPlanned = activeWorkout.status === 'planned';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+      style={[
+        styles.container,
+        Platform.OS === 'web' && { height: '100vh', overflow: 'hidden' }
+      ]}
+    >
       {/* Header */}
       <View style={styles.header}>
         {/* Back button for completed/planned workouts */}
@@ -502,7 +507,16 @@ function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTi
 // ============================================
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && { 
+      height: '100vh', 
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }),
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { color: colors.textSecondary, fontSize: 16 },
   header: {
@@ -546,12 +560,20 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 13, fontWeight: '600' },
   exerciseList: { 
     flex: 1,
-    ...(Platform.OS === 'web' && { overflowY: 'auto', WebkitOverflowScrolling: 'touch' }),
+    ...(Platform.OS === 'web' && { 
+      overflowY: 'auto', 
+      WebkitOverflowScrolling: 'touch',
+      minHeight: 0,
+      height: '100%',
+    }),
   },
   exerciseListContent: { 
     padding: 16, 
     paddingBottom: 100,
-    ...(Platform.OS === 'web' && { minHeight: '100%' }),
+    ...(Platform.OS === 'web' && { 
+      minHeight: '100%',
+      flexGrow: 1,
+    }),
   },
   exerciseSection: {
     backgroundColor: colors.card,

@@ -737,7 +737,12 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+      style={[
+        styles.container,
+        Platform.OS === 'web' && { height: '100vh', overflow: 'hidden' }
+      ]}
+    >
       {/* Header with back button */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -749,9 +754,10 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'web' ? undefined : 'height'}
         style={styles.flex}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        enabled={Platform.OS !== 'web'}
       >
         <ScrollView 
           style={styles.flex} 
@@ -866,11 +872,21 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && { height: '100vh', overflow: 'hidden' }),
+    ...(Platform.OS === 'web' && { 
+      height: '100vh', 
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }),
   },
   flex: { 
     flex: 1,
-    ...(Platform.OS === 'web' && { overflowY: 'auto', WebkitOverflowScrolling: 'touch' }),
+    ...(Platform.OS === 'web' && { 
+      overflowY: 'auto', 
+      WebkitOverflowScrolling: 'touch',
+      minHeight: 0,
+      height: '100%',
+    }),
   },
   header: {
     paddingHorizontal: 16,
