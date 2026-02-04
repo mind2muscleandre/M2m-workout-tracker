@@ -75,7 +75,7 @@ export const MainTabs: React.FC = () => {
         name="Exercises"
         component={ExerciseLibraryScreen}
         options={{
-          tabBarLabel: '\u00D6vningar',
+          tabBarLabel: 'Övningar',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon={'\uD83D\uDCDA'} focused={focused} />
           ),

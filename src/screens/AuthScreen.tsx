@@ -25,8 +25,8 @@ import { UserRole } from '../types/database';
 const colors = {
   background: '#0F0F0F',
   card: '#1A1A1A',
-  primary: '#6C5CE7',
-  primaryLight: '#A29BFE',
+  primary: '#F7E928',
+  primaryLight: '#FBF47A',
   text: '#FFFFFF',
   textSecondary: '#8E8E93',
   border: '#2C2C2E',
@@ -127,6 +127,20 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         await signUp(email.trim(), password, fullName.trim(), role);
+        // Show success message and switch to login
+        Alert.alert(
+          'Konto skapat! 🎉',
+          'Vi har skickat ett aktiveringsmail till din e-postadress. Klicka på länken i mailet för att aktivera ditt konto, sedan kan du logga in.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setIsSignUp(false);
+                setPassword('');
+              },
+            },
+          ]
+        );
       } else {
         await signIn(email.trim(), password);
       }
@@ -154,6 +168,22 @@ export default function AuthScreen() {
   // ----------------------------------------
   // Render
   // ----------------------------------------
+
+  // #region agent log - TEST: Minimal render to isolate boolean error
+  // If this removes the error, the problem is in the original AuthScreen components
+  // If error persists, the problem is in Navigation/App layer
+  const MINIMAL_TEST_MODE = false; // Set to true to test minimal render
+  
+  if (MINIMAL_TEST_MODE) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: '#FFF', fontSize: 24, textAlign: 'center', marginTop: 100 }}>
+          Minimal Test Mode
+        </Text>
+      </View>
+    );
+  }
+  // #endregion
 
   return (
     <View style={styles.container}>
@@ -440,7 +470,7 @@ const styles = StyleSheet.create({
   },
   roleOptionSelected: {
     borderColor: colors.primary,
-    backgroundColor: '#6C5CE710',
+    backgroundColor: '#F7E92810',
   },
   roleRadioOuter: {
     width: 22,

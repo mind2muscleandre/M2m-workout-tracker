@@ -19,7 +19,7 @@ interface LoadingScreenProps {
 export function LoadingScreen({ message }: LoadingScreenProps) {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#6C5CE7" />
+      <ActivityIndicator size="large" color="#F7E928" />
       {message && <Text style={styles.message}>{message}</Text>}
     </View>
   );

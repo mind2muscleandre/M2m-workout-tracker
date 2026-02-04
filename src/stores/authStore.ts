@@ -71,8 +71,35 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     fullName: string,
     role: UserRole
   ) => {
+    // #region agent log - Debug signUp network error
+    const logDebug = (location: string, message: string, data: any) => {
+      fetch('http://127.0.0.1:7245/ingest/02e11a2b-a3b0-46ff-a481-9b2a69f4cc9c', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location,
+          message,
+          data,
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'supabase-debug',
+        }),
+      }).catch(() => {});
+    };
+    // #endregion
+
     try {
       set({ isLoading: true });
+
+      // #region agent log
+      logDebug('authStore:signUp', 'Before supabase.auth.signUp', {
+        email: email.substring(0, 10) + '...',
+        hasPassword: !!password,
+        passwordLength: password.length,
+        fullName,
+        role,
+      });
+      // #endregion
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -84,6 +111,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           },
         },
       });
+
+      // #region agent log
+      logDebug('authStore:signUp', 'After supabase.auth.signUp', {
+        hasError: !!error,
+        errorMessage: error?.message || 'N/A',
+        errorStatus: error?.status || 'N/A',
+        hasData: !!data,
+        hasSession: !!data?.session,
+        hasUser: !!data?.user,
+      });
+      // #endregion
 
       if (error) {
         throw error;
@@ -101,7 +139,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      // #region agent log
+      logDebug('authStore:signUp', 'SignUp catch block', {
+        errorName: error?.name || 'N/A',
+        errorMessage: error?.message || 'N/A',
+        errorStack: error?.stack?.substring(0, 200) || 'N/A',
+        errorType: typeof error,
+        isNetworkError: error?.message?.includes('Network') || false,
+      });
+      // #endregion
       console.error('Sign up error:', (error as Error).message);
       throw error;
     } finally {

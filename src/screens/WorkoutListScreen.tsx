@@ -9,14 +9,14 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useClientStore } from '../stores/clientStore';
 import { Workout } from '../types/database';
 import { formatDate } from '../utils/helpers';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 const statusColors: Record<string, string> = {
   planned: '#5AC8FA',
@@ -127,7 +127,7 @@ export function WorkoutListScreen() {
         renderItem={renderWorkoutCard}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C5CE7" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F7E928" />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -188,8 +188,8 @@ const styles = StyleSheet.create({
     borderColor: '#2C2C2E',
   },
   filterChipActive: {
-    backgroundColor: '#6C5CE720',
-    borderColor: '#6C5CE7',
+    backgroundColor: '#F7E92820',
+    borderColor: '#F7E928',
   },
   filterText: {
     fontSize: 13,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   filterTextActive: {
-    color: '#6C5CE7',
+    color: '#F7E928',
   },
   list: {
     padding: 16,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   clientName: {
     fontSize: 13,
-    color: '#A29BFE',
+    color: '#FBF47A',
     fontWeight: '600',
   },
   statusBadge: {
@@ -266,11 +266,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#F7E928',
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5,
-    shadowColor: '#6C5CE7',
+    shadowColor: '#F7E928',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

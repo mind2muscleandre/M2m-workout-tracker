@@ -17,7 +17,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import { useClientStore } from '../stores/clientStore';
 import { useWorkoutStore } from '../stores/workoutStore';
@@ -28,7 +28,7 @@ import { formatDate } from '../utils/helpers';
 // Navigation Props
 // ============================================
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ClientDetail'>;
+type Props = StackScreenProps<RootStackParamList, 'ClientDetail'>;
 
 // ============================================
 // Design System Colors
@@ -37,8 +37,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ClientDetail'>;
 const colors = {
   background: '#0F0F0F',
   card: '#1A1A1A',
-  primary: '#6C5CE7',
-  primaryLight: '#A29BFE',
+  primary: '#F7E928',
+  primaryLight: '#FBF47A',
   text: '#FFFFFF',
   textSecondary: '#8E8E93',
   border: '#2C2C2E',
@@ -57,7 +57,7 @@ function getStatusConfig(status: string): { label: string; color: string } {
     case 'completed':
       return { label: 'Klar', color: colors.success };
     case 'in_progress':
-      return { label: 'P\u00E5g\u00E5r', color: colors.warning };
+      return { label: 'Pågår', color: colors.warning };
     case 'planned':
     default:
       return { label: 'Planerad', color: colors.primaryLight };
@@ -142,7 +142,7 @@ function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
       </View>
 
       <Text style={styles.workoutTitle} numberOfLines={1}>
-        {workout.title || 'Namnl\u00F6st pass'}
+        {workout.title || 'Namnlöst pass'}
       </Text>
 
       {workout.notes && (
@@ -192,7 +192,7 @@ function CopyWorkoutModal({
       <View style={styles.copyWorkoutInfo}>
         <Text style={styles.copyWorkoutDate}>{formatDate(item.date)}</Text>
         <Text style={styles.copyWorkoutTitle} numberOfLines={1}>
-          {item.title || 'Namnl\u00F6st pass'}
+          {item.title || 'Namnlöst pass'}
         </Text>
       </View>
       <Text style={styles.copyWorkoutChevron}>{'\u203A'}</Text>
@@ -214,7 +214,7 @@ function CopyWorkoutModal({
             onPress={onClose}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={styles.modalCancelText}>St\u00E4ng</Text>
+            <Text style={styles.modalCancelText}>Stäng</Text>
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Kopiera Pass</Text>
           <View style={styles.modalHeaderButton} />
@@ -311,7 +311,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
   const totalWorkouts = completedWorkouts.length;
 
   const lastWorkoutDate =
-    workouts.length > 0 ? formatDate(workouts[0].date) : 'Inget \u00E4nnu';
+    workouts.length > 0 ? formatDate(workouts[0].date) : 'Inget ännu';
 
   // ----------------------------------------
   // Navigation Header
@@ -354,7 +354,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
 
   const handleSaveEdit = useCallback(async () => {
     if (!editName.trim()) {
-      Alert.alert('Namn kr\u00E4vs', 'Klientens namn kan inte vara tomt.');
+      Alert.alert('Namn krävs', 'Klientens namn kan inte vara tomt.');
       return;
     }
 
@@ -368,7 +368,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
       });
       setIsEditing(false);
     } catch {
-      Alert.alert('Fel', 'Kunde inte spara \u00E4ndringarna. F\u00F6rs\u00F6k igen.');
+      Alert.alert('Fel', 'Kunde inte spara ändringarna. Försök igen.');
     } finally {
       setIsSaving(false);
     }
@@ -383,7 +383,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
 
     const action = client.is_active ? 'arkivera' : 'aktivera';
     const title = client.is_active ? 'Arkivera klient' : 'Aktivera klient';
-    const message = `\u00C4r du s\u00E4ker att du vill ${action} ${client.name}?`;
+    const message = `Är du säker att du vill ${action} ${client.name}?`;
 
     Alert.alert(title, message, [
       { text: 'Avbryt', style: 'cancel' },
@@ -394,7 +394,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
           try {
             await toggleClientActive(clientId);
           } catch {
-            Alert.alert('Fel', 'Kunde inte \u00E4ndra status. F\u00F6rs\u00F6k igen.');
+            Alert.alert('Fel', 'Kunde inte ändra status. Försök igen.');
           }
         },
       },
@@ -417,7 +417,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
         setCopyModalVisible(false);
         navigation.navigate('WorkoutActive', { workoutId: newWorkoutId });
       } catch {
-        Alert.alert('Fel', 'Kunde inte kopiera passet. F\u00F6rs\u00F6k igen.');
+        Alert.alert('Fel', 'Kunde inte kopiera passet. Försök igen.');
       }
     },
     [clientId, copyWorkout, navigation]
@@ -455,6 +455,17 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with Back Button */}
+      <View style={styles.screenHeader}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -713,9 +724,9 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
         ) : recentWorkouts.length === 0 ? (
           <View style={styles.emptyWorkouts}>
             <Text style={styles.emptyWorkoutsIcon}>{'\u{1F3CB}\uFE0F'}</Text>
-            <Text style={styles.emptyWorkoutsTitle}>Inga pass \u00E4nnu</Text>
+            <Text style={styles.emptyWorkoutsTitle}>Inga pass ännu</Text>
             <Text style={styles.emptyWorkoutsSubtitle}>
-              Skapa ett nytt pass f\u00F6r att komma ig\u00E5ng
+              Skapa ett nytt pass för att komma igång
             </Text>
           </View>
         ) : (
@@ -738,7 +749,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
           <Text style={styles.prPlaceholderIcon}>{'\u{1F3C6}'}</Text>
           <Text style={styles.prPlaceholderTitle}>Coming soon</Text>
           <Text style={styles.prPlaceholderSubtitle}>
-            Personliga rekord visas h\u00E4r n\u00E4r tillr\u00E4ckligt med data finns
+            Personliga rekord visas här när tillräckligt med data finns
           </Text>
         </View>
 
@@ -795,12 +806,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  screenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    fontSize: 24,
+    color: colors.primary,
+    fontWeight: '600',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 8,
   },
 
   // ---- Loading ----

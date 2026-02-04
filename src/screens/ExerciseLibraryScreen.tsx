@@ -62,7 +62,7 @@ const CATEGORY_COLORS: Record<ExerciseCategory, string> = {
   power: '#FF9500',
   conditioning: '#34C759',
   mobility: '#5AC8FA',
-  injury_prevention: '#AF52DE',
+  injury_prevention: '#F7E928',
 };
 
 // ============================================
@@ -440,8 +440,8 @@ export const ExerciseLibraryScreen: React.FC<Props> = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#6C5CE7"
-            colors={['#6C5CE7']}
+            tintColor="#F7E928"
+            colors={['#F7E928']}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -482,7 +482,7 @@ export const ExerciseLibraryScreen: React.FC<Props> = () => {
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 {isCreating ? (
-                  <ActivityIndicator size="small" color="#6C5CE7" />
+                  <ActivityIndicator size="small" color="#F7E928" />
                 ) : (
                   <Text style={styles.modalSaveText}>Spara</Text>
                 )}
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#F7E928',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -705,8 +705,8 @@ const styles = StyleSheet.create({
     borderColor: '#2C2C2E',
   },
   chipSelected: {
-    backgroundColor: '#6C5CE7' + '25',
-    borderColor: '#6C5CE7',
+    backgroundColor: '#F7E928' + '25',
+    borderColor: '#F7E928',
   },
   chipDot: {
     width: 6,
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   chipTextSelected: {
-    color: '#A29BFE',
+    color: '#FBF47A',
   },
 
   // ---- List ----
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
   },
   modalSaveText: {
     fontSize: 16,
-    color: '#6C5CE7',
+    color: '#F7E928',
     fontWeight: '600',
   },
   modalScrollView: {
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
   },
   formHint: {
     fontWeight: '400',
-    color: '#A29BFE',
+    color: '#FBF47A',
   },
   formInput: {
     backgroundColor: '#1C1C1E',
@@ -900,8 +900,8 @@ const styles = StyleSheet.create({
     borderColor: '#2C2C2E',
   },
   muscleGroupChipSelected: {
-    backgroundColor: '#6C5CE7' + '20',
-    borderColor: '#6C5CE7',
+    backgroundColor: '#F7E928' + '20',
+    borderColor: '#F7E928',
   },
   muscleGroupChipText: {
     fontSize: 14,
@@ -909,7 +909,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   muscleGroupChipTextSelected: {
-    color: '#A29BFE',
+    color: '#FBF47A',
   },
 
   // ---- Modal Spacer ----

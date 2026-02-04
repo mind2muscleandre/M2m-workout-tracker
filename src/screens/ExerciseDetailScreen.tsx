@@ -6,20 +6,20 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../lib/theme';
 import { useExerciseStore } from '../stores/exerciseStore';
 import { getCategoryLabel, getMuscleGroupLabel } from '../utils/helpers';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ExerciseDetail'>;
+type Props = StackScreenProps<RootStackParamList, 'ExerciseDetail'>;
 
 const categoryColors: Record<string, string> = {
   strength: '#FF3B30',
   power: '#FF9500',
   conditioning: '#34C759',
   mobility: '#5AC8FA',
-  injury_prevention: '#AF52DE',
+  injury_prevention: '#F7E928',
 };
 
 export function ExerciseDetailScreen({ route }: Props) {

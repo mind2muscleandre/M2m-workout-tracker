@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useClientStore } from '../stores/clientStore';
 import { useAuthStore } from '../stores/authStore';
@@ -32,7 +32,7 @@ import { Client } from '../types/database';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Clients'>,
-  NativeStackScreenProps<RootStackParamList>
+  StackScreenProps<RootStackParamList>
 >;
 
 // ============================================
@@ -42,8 +42,8 @@ type Props = CompositeScreenProps<
 const colors = {
   background: '#0F0F0F',
   card: '#1A1A1A',
-  primary: '#6C5CE7',
-  primaryLight: '#A29BFE',
+  primary: '#F7E928',
+  primaryLight: '#FBF47A',
   text: '#FFFFFF',
   textSecondary: '#8E8E93',
   border: '#2C2C2E',
@@ -67,12 +67,12 @@ function EmptyState({ isArchived }: EmptyStateProps) {
         {isArchived ? '\u{1F4E6}' : '\u{1F465}'}
       </Text>
       <Text style={styles.emptyTitle}>
-        {isArchived ? 'Inga arkiverade klienter' : 'Inga klienter \u00E4nnu'}
+        {isArchived ? 'Inga arkiverade klienter' : 'Inga klienter ännu'}
       </Text>
       <Text style={styles.emptySubtitle}>
         {isArchived
-          ? 'Arkiverade klienter visas h\u00E4r'
-          : 'Tryck p\u00E5 + f\u00F6r att l\u00E4gga till din f\u00F6rsta klient'}
+          ? 'Arkiverade klienter visas här'
+          : 'Tryck på + för att lägga till din första klient'}
       </Text>
     </View>
   );
@@ -184,7 +184,7 @@ function AddClientModal({
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Namn kr\u00E4vs', 'Ange klientens namn f\u00F6r att forts\u00E4tta.');
+      Alert.alert('Namn krävs', 'Ange klientens namn för att fortsätta.');
       return;
     }
     onSave({
@@ -244,7 +244,7 @@ function AddClientModal({
               </Text>
               <TextInput
                 style={styles.fieldInput}
-                placeholder="F\u00F6rnamn Efternamn"
+                placeholder="Förnamn Efternamn"
                 placeholderTextColor={colors.textSecondary}
                 value={name}
                 onChangeText={setName}
@@ -290,7 +290,7 @@ function AddClientModal({
               <Text style={styles.fieldLabel}>Anteckningar</Text>
               <TextInput
                 style={[styles.fieldInput, styles.fieldTextArea]}
-                placeholder="M\u00E5l, skador, \u00F6vrigt..."
+                placeholder="Mål, skador, övrigt..."
                 placeholderTextColor={colors.textSecondary}
                 value={notes}
                 onChangeText={setNotes}
@@ -385,7 +385,7 @@ export function ClientListScreen({ navigation }: Props) {
       notes: string;
     }) => {
       if (!user) {
-        Alert.alert('Fel', 'Du m\u00E5ste vara inloggad f\u00F6r att l\u00E4gga till klienter.');
+        Alert.alert('Fel', 'Du måste vara inloggad för att lägga till klienter.');
         return;
       }
 
@@ -403,7 +403,7 @@ export function ClientListScreen({ navigation }: Props) {
       } catch {
         Alert.alert(
           'Kunde inte spara',
-          'N\u00E5got gick fel. F\u00F6rs\u00F6k igen.'
+          'Något gick fel. Försök igen.'
         );
       }
     },
@@ -452,7 +452,7 @@ export function ClientListScreen({ navigation }: Props) {
           style={styles.headerAddButton}
           onPress={() => setModalVisible(true)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="L\u00E4gg till klient"
+          accessibilityLabel="Lägg till klient"
           accessibilityRole="button"
         >
           <Text style={styles.headerAddIcon}>+</Text>
@@ -465,7 +465,7 @@ export function ClientListScreen({ navigation }: Props) {
           <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="S\u00F6k klient..."
+            placeholder="Sök klient..."
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -477,7 +477,7 @@ export function ClientListScreen({ navigation }: Props) {
             <TouchableOpacity
               onPress={() => setSearchQuery('')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Rensa s\u00F6kning"
+              accessibilityLabel="Rensa sökning"
             >
               <Text style={styles.clearIcon}>{'\u2715'}</Text>
             </TouchableOpacity>
@@ -581,7 +581,7 @@ export function ClientListScreen({ navigation }: Props) {
         style={styles.fab}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.8}
-        accessibilityLabel="L\u00E4gg till ny klient"
+        accessibilityLabel="Lägg till ny klient"
         accessibilityRole="button"
       >
         <Text style={styles.fabIcon}>+</Text>

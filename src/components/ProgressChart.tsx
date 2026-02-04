@@ -60,7 +60,7 @@ export default function ProgressChart({
   data,
   title,
   unit = '',
-  color = '#6C5CE7',
+  color = '#F7E928',
 }: ProgressChartProps) {
   // Empty state
   if (!data || data.length === 0) {

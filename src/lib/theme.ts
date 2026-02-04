@@ -6,9 +6,9 @@ export const colors = {
   background: '#0F0F0F',
   card: '#1A1A1A',
   cardElevated: '#222222',
-  primary: '#6C5CE7',
-  primaryLight: '#A29BFE',
-  primaryDark: '#5A4BD1',
+  primary: '#F7E928',
+  primaryLight: '#FBF47A',
+  primaryDark: '#D4C820',
   text: '#FFFFFF',
   textSecondary: '#8E8E93',
   textTertiary: '#636366',
@@ -27,7 +27,7 @@ export const categoryColors: Record<string, string> = {
   power: '#FF9500',
   conditioning: '#34C759',
   mobility: '#5AC8FA',
-  injury_prevention: '#AF52DE',
+  injury_prevention: '#F7E928',
 };
 
 export const spacing = {

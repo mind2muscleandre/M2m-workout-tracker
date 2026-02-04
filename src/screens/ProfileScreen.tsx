@@ -181,9 +181,9 @@ export const ProfileScreen: React.FC<Props> = () => {
                 onValueChange={handleThemeToggle}
                 trackColor={{
                   false: '#2C2C2E',
-                  true: '#6C5CE7' + '60',
+                  true: '#F7E928' + '60',
                 }}
-                thumbColor={darkMode ? '#6C5CE7' : '#8E8E93'}
+                thumbColor={darkMode ? '#F7E928' : '#8E8E93'}
               />
             </View>
 
@@ -205,9 +205,9 @@ export const ProfileScreen: React.FC<Props> = () => {
                 onValueChange={handleNotificationsToggle}
                 trackColor={{
                   false: '#2C2C2E',
-                  true: '#6C5CE7' + '60',
+                  true: '#F7E928' + '60',
                 }}
-                thumbColor={notifications ? '#6C5CE7' : '#8E8E93'}
+                thumbColor={notifications ? '#F7E928' : '#8E8E93'}
               />
             </View>
 
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#F7E928',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   roleBadge: {
-    backgroundColor: '#6C5CE7' + '20',
+    backgroundColor: '#F7E928' + '20',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#A29BFE',
+    color: '#FBF47A',
   },
 
   // ---- Settings Card ----
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#F7E928',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,

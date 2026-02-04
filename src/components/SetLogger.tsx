@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import WheelPicker from './WheelPicker';
 
 // ============================================
 // Props
@@ -24,6 +25,12 @@ interface SetLoggerProps {
   isPR?: boolean;
 }
 
+// Generate weight values: 0 to 300 kg in 2.5 kg increments
+const WEIGHT_VALUES = Array.from({ length: 121 }, (_, i) => i * 2.5);
+
+// Generate reps values: 0 to 100
+const REPS_VALUES = Array.from({ length: 101 }, (_, i) => i);
+
 // ============================================
 // Component
 // ============================================
@@ -40,16 +47,8 @@ export default function SetLogger({
   onDelete,
   isPR = false,
 }: SetLoggerProps) {
-
-  const handleWeightText = (text: string) => {
-    const parsed = parseFloat(text);
-    onWeightChange(isNaN(parsed) ? 0 : parsed);
-  };
-
-  const handleRepsText = (text: string) => {
-    const parsed = parseInt(text, 10);
-    onRepsChange(isNaN(parsed) ? 0 : parsed);
-  };
+  const [showWeightPicker, setShowWeightPicker] = useState(false);
+  const [showRepsPicker, setShowRepsPicker] = useState(false);
 
   const handleRpeText = (text: string) => {
     const parsed = parseFloat(text);
@@ -81,18 +80,23 @@ export default function SetLogger({
             <Text style={styles.incrementText}>-</Text>
           </TouchableOpacity>
 
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.numericInput}
-              value={weightKg != null && weightKg > 0 ? String(weightKg) : ''}
-              onChangeText={handleWeightText}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor="#3A3A3C"
-              accessibilityLabel={`Weight for set ${setNumber}`}
-            />
+          <TouchableOpacity
+            style={styles.inputWrapper}
+            onPress={() => setShowWeightPicker(true)}
+            accessibilityLabel={`Weight for set ${setNumber}`}
+          >
+            <View style={styles.pickerButton}>
+              <Text style={[
+                styles.pickerButtonText,
+                (!weightKg || weightKg === 0) && styles.placeholderText
+              ]}>
+                {weightKg != null && weightKg > 0 
+                  ? weightKg.toFixed(weightKg % 1 === 0 ? 0 : 1) 
+                  : '0'}
+              </Text>
+            </View>
             <Text style={styles.unitLabel}>kg</Text>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.incrementButton}
@@ -113,18 +117,21 @@ export default function SetLogger({
             <Text style={styles.incrementText}>-</Text>
           </TouchableOpacity>
 
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.numericInput}
-              value={reps != null && reps > 0 ? String(reps) : ''}
-              onChangeText={handleRepsText}
-              keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor="#3A3A3C"
-              accessibilityLabel={`Reps for set ${setNumber}`}
-            />
+          <TouchableOpacity
+            style={styles.inputWrapper}
+            onPress={() => setShowRepsPicker(true)}
+            accessibilityLabel={`Reps for set ${setNumber}`}
+          >
+            <View style={styles.pickerButton}>
+              <Text style={[
+                styles.pickerButtonText,
+                (!reps || reps === 0) && styles.placeholderText
+              ]}>
+                {reps != null && reps > 0 ? String(reps) : '0'}
+              </Text>
+            </View>
             <Text style={styles.unitLabel}>reps</Text>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.incrementButton}
@@ -180,6 +187,28 @@ export default function SetLogger({
           )}
         </View>
       )}
+
+      {/* Weight Picker Modal */}
+      <WheelPicker
+        visible={showWeightPicker}
+        onClose={() => setShowWeightPicker(false)}
+        onSelect={onWeightChange}
+        currentValue={weightKg ?? 0}
+        values={WEIGHT_VALUES}
+        unit="kg"
+        title="Välj vikt"
+      />
+
+      {/* Reps Picker Modal */}
+      <WheelPicker
+        visible={showRepsPicker}
+        onClose={() => setShowRepsPicker(false)}
+        onSelect={onRepsChange}
+        currentValue={reps ?? 0}
+        values={REPS_VALUES}
+        unit="reps"
+        title="Välj repetitioner"
+      />
     </View>
   );
 }
@@ -209,7 +238,7 @@ const styles = StyleSheet.create({
   setNumber: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6C5CE7',
+    color: '#F7E928',
   },
   prIcon: {
     fontSize: 12,
@@ -232,23 +261,32 @@ const styles = StyleSheet.create({
   incrementText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#A29BFE',
+    color: '#FBF47A',
   },
   inputWrapper: {
     flex: 1,
     alignItems: 'center',
   },
-  numericInput: {
+  pickerButton: {
     backgroundColor: '#1C1C1E',
     borderRadius: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 8,
+    width: '100%',
+    minWidth: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
+  },
+  pickerButtonText: {
     fontSize: 20,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
-    width: '100%',
-    minWidth: 48,
+  },
+  placeholderText: {
+    color: '#3A3A3C',
   },
   unitLabel: {
     fontSize: 10,

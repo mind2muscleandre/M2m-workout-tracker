@@ -15,7 +15,7 @@ const CATEGORY_COLORS: Record<ExerciseCategory, string> = {
   power: '#FF9500',
   conditioning: '#34C759',
   mobility: '#5AC8FA',
-  injury_prevention: '#AF52DE',
+  injury_prevention: '#F7E928',
 };
 
 const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
@@ -45,7 +45,7 @@ export default function ExerciseCard({
   onToggleFavorite,
   showFavorite = true,
 }: ExerciseCardProps) {
-  const categoryColor = CATEGORY_COLORS[exercise.category] ?? '#6C5CE7';
+  const categoryColor = CATEGORY_COLORS[exercise.category] ?? '#F7E928';
   const categoryLabel = CATEGORY_LABELS[exercise.category] ?? exercise.category;
 
   return (
@@ -191,14 +191,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   muscleTag: {
-    backgroundColor: '#6C5CE7' + '15',
+    backgroundColor: '#F7E928' + '15',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
   muscleText: {
     fontSize: 11,
-    color: '#A29BFE',
+    color: '#FBF47A',
     fontWeight: '500',
     textTransform: 'capitalize',
   },

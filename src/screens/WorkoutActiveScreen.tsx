@@ -7,9 +7,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-  TextInput,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../lib/theme';
 import { useWorkoutStore } from '../stores/workoutStore';
@@ -17,8 +16,18 @@ import { WorkoutExercise, WorkoutSet, Exercise } from '../types/database';
 import { formatTime, formatDate } from '../utils/helpers';
 import RestTimer from '../components/RestTimer';
 import LoadingScreen from '../components/LoadingScreen';
+import WheelPicker from '../components/WheelPicker';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutActive'>;
+// Generate weight values: 0 to 300 kg in 2.5 kg increments
+const WEIGHT_VALUES = Array.from({ length: 121 }, (_, i) => i * 2.5);
+
+// Generate reps values: 0 to 100
+const REPS_VALUES = Array.from({ length: 101 }, (_, i) => i);
+
+// Generate RPE values: 1 to 10 (with 0.5 increments)
+const RPE_VALUES = Array.from({ length: 19 }, (_, i) => (i + 2) * 0.5);
+
+type Props = StackScreenProps<RootStackParamList, 'WorkoutActive'>;
 
 export function WorkoutActiveScreen({ route, navigation }: Props) {
   const { workoutId } = route.params;
@@ -151,12 +160,24 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
 
   const isActive = activeWorkout.status === 'in_progress';
   const isCompleted = activeWorkout.status === 'completed';
+  const isPlanned = activeWorkout.status === 'planned';
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        {/* Back button for completed/planned workouts */}
+        {(isCompleted || isPlanned) && (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+        )}
+        
+        <View style={styles.headerTitleContainer}>
           <Text style={styles.title}>{activeWorkout.title || 'Namnlöst pass'}</Text>
           <Text style={styles.date}>{formatDate(activeWorkout.date)}</Text>
         </View>
@@ -325,21 +346,26 @@ interface SetRowProps {
 
 function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTimeLogged }: SetRowProps) {
   const [showTimer, setShowTimer] = useState(false);
-  const [localWeight, setLocalWeight] = useState(set.weight_kg?.toString() || '');
-  const [localReps, setLocalReps] = useState(set.reps?.toString() || '');
-  const [localRpe, setLocalRpe] = useState(set.rpe?.toString() || '');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showWeightPicker, setShowWeightPicker] = useState(false);
+  const [showRepsPicker, setShowRepsPicker] = useState(false);
+  const [showRpePicker, setShowRpePicker] = useState(false);
 
-  const debouncedUpdate = useCallback(
-    (field: string, value: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        const numVal = value === '' ? null : parseFloat(value);
-        onUpdateSet(set.id, field, numVal);
-      }, 500);
-    },
-    [set.id, onUpdateSet]
-  );
+  const handleWeightSelect = (value: number) => {
+    onUpdateSet(set.id, 'weight_kg', value === 0 ? null : value);
+  };
+
+  const handleRepsSelect = (value: number) => {
+    onUpdateSet(set.id, 'reps', value === 0 ? null : value);
+  };
+
+  const handleRpeSelect = (value: number) => {
+    onUpdateSet(set.id, 'rpe', value);
+  };
+
+  const formatWeight = (weight: number | null) => {
+    if (weight == null) return '-';
+    return weight % 1 === 0 ? weight.toString() : weight.toFixed(1);
+  };
 
   return (
     <>
@@ -349,60 +375,55 @@ function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTi
           {set.is_pr && <Text style={styles.prBadge}>PR</Text>}
         </View>
 
+        {/* Weight */}
         <View style={{ flex: 1, paddingHorizontal: 4 }}>
           {isActive ? (
-            <TextInput
+            <TouchableOpacity
               style={styles.setInput}
-              keyboardType="decimal-pad"
-              value={localWeight}
-              onChangeText={(v) => {
-                setLocalWeight(v);
-                debouncedUpdate('weight_kg', v);
-              }}
-              placeholder="-"
-              placeholderTextColor={colors.textSecondary}
-            />
+              onPress={() => setShowWeightPicker(true)}
+            >
+              <Text style={[styles.setInputText, !set.weight_kg && styles.placeholderText]}>
+                {formatWeight(set.weight_kg)}
+              </Text>
+            </TouchableOpacity>
           ) : (
-            <Text style={styles.setValue}>{set.weight_kg ?? '-'}</Text>
+            <Text style={styles.setValue}>{formatWeight(set.weight_kg)}</Text>
           )}
         </View>
 
+        {/* Reps */}
         <View style={{ flex: 1, paddingHorizontal: 4 }}>
           {isActive ? (
-            <TextInput
+            <TouchableOpacity
               style={styles.setInput}
-              keyboardType="number-pad"
-              value={localReps}
-              onChangeText={(v) => {
-                setLocalReps(v);
-                debouncedUpdate('reps', v);
-              }}
-              placeholder="-"
-              placeholderTextColor={colors.textSecondary}
-            />
+              onPress={() => setShowRepsPicker(true)}
+            >
+              <Text style={[styles.setInputText, !set.reps && styles.placeholderText]}>
+                {set.reps ?? '-'}
+              </Text>
+            </TouchableOpacity>
           ) : (
             <Text style={styles.setValue}>{set.reps ?? '-'}</Text>
           )}
         </View>
 
+        {/* RPE */}
         <View style={{ width: 50, paddingHorizontal: 2 }}>
           {isActive ? (
-            <TextInput
-              style={[styles.setInput, { fontSize: 13 }]}
-              keyboardType="number-pad"
-              value={localRpe}
-              onChangeText={(v) => {
-                setLocalRpe(v);
-                debouncedUpdate('rpe', v);
-              }}
-              placeholder="-"
-              placeholderTextColor={colors.textSecondary}
-            />
+            <TouchableOpacity
+              style={[styles.setInput, { paddingHorizontal: 4 }]}
+              onPress={() => setShowRpePicker(true)}
+            >
+              <Text style={[styles.setInputText, { fontSize: 13 }, !set.rpe && styles.placeholderText]}>
+                {set.rpe ?? '-'}
+              </Text>
+            </TouchableOpacity>
           ) : (
             <Text style={[styles.setValue, { fontSize: 13 }]}>{set.rpe ?? '-'}</Text>
           )}
         </View>
 
+        {/* Rest Timer */}
         <TouchableOpacity
           style={{ width: 60, alignItems: 'center' }}
           onPress={() => isActive && setShowTimer(!showTimer)}
@@ -413,6 +434,7 @@ function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTi
           </Text>
         </TouchableOpacity>
 
+        {/* Delete */}
         {isActive && (
           <TouchableOpacity style={{ width: 40, alignItems: 'center' }} onPress={() => onDeleteSet(set.id)}>
             <Text style={{ color: colors.danger, fontSize: 16 }}>X</Text>
@@ -432,6 +454,39 @@ function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTi
           />
         </View>
       )}
+
+      {/* Weight Picker */}
+      <WheelPicker
+        visible={showWeightPicker}
+        onClose={() => setShowWeightPicker(false)}
+        onSelect={handleWeightSelect}
+        currentValue={set.weight_kg ?? 0}
+        values={WEIGHT_VALUES}
+        unit="kg"
+        title="Välj vikt"
+      />
+
+      {/* Reps Picker */}
+      <WheelPicker
+        visible={showRepsPicker}
+        onClose={() => setShowRepsPicker(false)}
+        onSelect={handleRepsSelect}
+        currentValue={set.reps ?? 0}
+        values={REPS_VALUES}
+        unit="reps"
+        title="Välj repetitioner"
+      />
+
+      {/* RPE Picker */}
+      <WheelPicker
+        visible={showRpePicker}
+        onClose={() => setShowRpePicker(false)}
+        onSelect={handleRpeSelect}
+        currentValue={set.rpe ?? 6}
+        values={RPE_VALUES}
+        unit=""
+        title="Välj RPE"
+      />
     </>
   );
 }
@@ -451,6 +506,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  backIcon: {
+    fontSize: 24,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   title: { fontSize: 24, fontWeight: '700', color: colors.text },
   date: { fontSize: 14, color: colors.textSecondary, marginTop: 2 },
@@ -517,13 +589,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inputBg,
     borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setInputText: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
     textAlign: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  placeholderText: {
+    color: colors.textSecondary,
   },
   setValue: { fontSize: 15, fontWeight: '500', color: colors.text, textAlign: 'center' },
   addSetButton: {

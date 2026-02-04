@@ -28,14 +28,14 @@ import type {
   WorkoutSet,
   PersonalRecord,
 } from '../types/database';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { StackScreenProps } from '@react-navigation/stack';
 import type { RootStackParamList } from '../navigation/types';
 
 // ============================================
 // Types
 // ============================================
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Progression'>;
+type Props = StackScreenProps<RootStackParamList, 'Progression'>;
 
 interface SetHistoryEntry {
   date: string;
@@ -470,7 +470,7 @@ export const ProgressionScreen: React.FC<Props> = ({ route }) => {
         {/* ---- Loading Indicator ---- */}
         {isLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#6C5CE7" />
+            <ActivityIndicator size="large" color="#F7E928" />
             <Text style={styles.loadingText}>Laddar data...</Text>
           </View>
         )}
@@ -484,7 +484,7 @@ export const ProgressionScreen: React.FC<Props> = ({ route }) => {
                 data={chartData}
                 title="Viktprogression"
                 unit="kg"
-                color="#6C5CE7"
+                color="#F7E928"
               />
             </View>
 
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#A29BFE',
+    color: '#FBF47A',
     marginTop: 4,
   },
 
@@ -772,7 +772,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2C2C2E',
   },
   dropdownRowSelected: {
-    backgroundColor: '#6C5CE7' + '15',
+    backgroundColor: '#F7E928' + '15',
   },
   dropdownRowText: {
     fontSize: 16,
@@ -780,12 +780,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dropdownRowTextSelected: {
-    color: '#A29BFE',
+    color: '#FBF47A',
     fontWeight: '600',
   },
   dropdownCheck: {
     fontSize: 16,
-    color: '#6C5CE7',
+    color: '#F7E928',
     fontWeight: '700',
     marginLeft: 8,
   },
@@ -898,7 +898,7 @@ const styles = StyleSheet.create({
   setGroupDate: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#A29BFE',
+    color: '#FBF47A',
     marginBottom: 10,
   },
   setRow: {
@@ -959,8 +959,8 @@ const styles = StyleSheet.create({
     borderColor: '#2C2C2E',
   },
   prRowHighlighted: {
-    borderColor: '#6C5CE7',
-    backgroundColor: '#6C5CE7' + '10',
+    borderColor: '#F7E928',
+    backgroundColor: '#F7E928' + '10',
   },
   prRowLeft: {
     flex: 1,
@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
   prValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#A29BFE',
+    color: '#FBF47A',
   },
   prE1RM: {
     fontSize: 12,
