@@ -469,8 +469,13 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
     }
 
     setIsCreating(true);
+    let workoutId: string | null = null;
+    
     try {
-      const workoutId = await createWorkout({
+      console.log('Starting workout creation...');
+      
+      // Create workout
+      workoutId = await createWorkout({
         client_id: clientId,
         created_by_pt_id: user.id,
         date,
@@ -482,35 +487,73 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
         status: 'planned',
         completed_at: null,
       });
+      
+      console.log('Workout created with ID:', workoutId);
 
-      // Add exercises to workout
-      for (let i = 0; i < selectedExercises.length; i++) {
-        const se = selectedExercises[i];
-        // Format reps as comma-separated string, e.g. "10,8,12"
-        const repsString = se.targetReps.length > 0 
-          ? se.targetReps.join(',') 
-          : null;
-        try {
-          await addExerciseToWorkout(
-            workoutId,
+      // Add exercises to workout - use allSettled to handle partial failures
+      const exerciseResults = await Promise.allSettled(
+        selectedExercises.map(async (se, i) => {
+          const repsString = se.targetReps.length > 0 
+            ? se.targetReps.join(',') 
+            : null;
+          console.log(`Adding exercise ${i + 1}/${selectedExercises.length}:`, se.exercise.name);
+          return addExerciseToWorkout(
+            workoutId!,
             se.exercise.id,
             i,
             se.targetSets || null,
             repsString
           );
-        } catch (exerciseError) {
-          console.error(`Error adding exercise ${i}:`, exerciseError);
-          // Continue with other exercises even if one fails
-        }
+        })
+      );
+
+      // Check for failures
+      const failures = exerciseResults.filter(r => r.status === 'rejected');
+      if (failures.length > 0) {
+        console.warn(`${failures.length} exercises failed to add:`, failures);
+        // Still navigate even if some exercises failed
+      } else {
+        console.log('All exercises added successfully');
       }
 
-      // Navigate after all exercises are added (or attempted)
-      navigation.replace('WorkoutActive', { workoutId });
+      // Navigate after all exercises are processed
+      if (workoutId) {
+        console.log('Navigating to WorkoutActive screen...');
+        // Reset creating state first
+        setIsCreating(false);
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          try {
+            navigation.replace('WorkoutActive', { workoutId });
+          } catch (navError) {
+            console.error('Navigation error:', navError);
+            // Fallback to navigate if replace fails
+            navigation.navigate('WorkoutActive', { workoutId });
+          }
+        }, 50);
+      }
     } catch (error) {
       console.error('Create workout error:', error);
-      Alert.alert('Fel', `Kunde inte skapa passet: ${error instanceof Error ? error.message : 'Okänt fel'}`);
-    } finally {
+      const errorMessage = error instanceof Error ? error.message : 'Okänt fel';
+      
+      // Reset creating state
       setIsCreating(false);
+      
+      Alert.alert(
+        'Fel', 
+        `Kunde inte skapa passet: ${errorMessage}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // If workout was created but exercises failed, still navigate
+              if (workoutId) {
+                navigation.replace('WorkoutActive', { workoutId });
+              }
+            }
+          }
+        ]
+      );
     }
   };
 
