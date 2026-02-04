@@ -30,7 +30,7 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
       bundler: 'metro',
-      output: 'static',
+      output: 'single',
       name: 'M2M Workout Tracker',
       shortName: 'M2M',
       lang: 'sv',
