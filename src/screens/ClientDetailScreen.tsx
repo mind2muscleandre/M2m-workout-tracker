@@ -117,10 +117,18 @@ function StatCard({ label, value, icon }: StatCardProps) {
 interface WorkoutCardProps {
   workout: Workout;
   onPress: () => void;
+  onDelete?: () => void;
 }
 
-function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
+function WorkoutCard({ workout, onPress, onDelete }: WorkoutCardProps) {
   const status = getStatusConfig(workout.status);
+
+  const handleDelete = (e: any) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete();
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -132,12 +140,23 @@ function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
     >
       <View style={styles.workoutCardHeader}>
         <Text style={styles.workoutDate}>{formatDate(workout.date)}</Text>
-        <View
-          style={[styles.workoutStatusBadge, { backgroundColor: status.color + '20' }]}
-        >
-          <Text style={[styles.workoutStatusText, { color: status.color }]}>
-            {status.label}
-          </Text>
+        <View style={styles.workoutCardHeaderRight}>
+          <View
+            style={[styles.workoutStatusBadge, { backgroundColor: status.color + '20' }]}
+          >
+            <Text style={[styles.workoutStatusText, { color: status.color }]}>
+              {status.label}
+            </Text>
+          </View>
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.workoutDeleteButton}
+              onPress={handleDelete}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.workoutDeleteIcon}>{'\u2715'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -264,6 +283,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
     workouts,
     fetchWorkouts,
     copyWorkout,
+    deleteWorkout,
     isLoading: workoutLoading,
   } = useWorkoutStore();
 
@@ -428,6 +448,30 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
       navigation.navigate('WorkoutActive', { workoutId: workout.id });
     },
     [navigation]
+  );
+
+  const handleDeleteWorkout = useCallback(
+    (workout: Workout) => {
+      Alert.alert(
+        'Ta bort pass',
+        `Är du säker att du vill ta bort "${workout.title || 'Namnlöst pass'}"? Detta går inte att ångra.`,
+        [
+          { text: 'Avbryt', style: 'cancel' },
+          {
+            text: 'Ta bort',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteWorkout(workout.id);
+              } catch (error) {
+                Alert.alert('Fel', 'Kunde inte ta bort passet. Försök igen.');
+              }
+            },
+          },
+        ]
+      );
+    },
+    [deleteWorkout]
   );
 
   const handleProgressionPress = useCallback(() => {
@@ -743,6 +787,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
                 key={workout.id}
                 workout={workout}
                 onPress={() => handleWorkoutPress(workout)}
+                onDelete={() => handleDeleteWorkout(workout)}
               />
             ))}
           </View>
@@ -1173,6 +1218,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
+  workoutCardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   workoutDate: {
     fontSize: 13,
     fontWeight: '500',
@@ -1182,6 +1232,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 10,
+  },
+  workoutDeleteButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.danger + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  workoutDeleteIcon: {
+    fontSize: 16,
+    color: colors.danger,
+    fontWeight: '600',
   },
   workoutStatusText: {
     fontSize: 12,

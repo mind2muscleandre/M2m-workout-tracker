@@ -25,6 +25,7 @@ interface WorkoutState {
 interface WorkoutActions {
   fetchWorkouts: (clientId: string) => Promise<void>;
   createWorkout: (data: WorkoutInsert) => Promise<string>;
+  deleteWorkout: (workoutId: string) => Promise<void>;
   fetchWorkoutDetail: (workoutId: string) => Promise<void>;
   startWorkout: (workoutId: string) => Promise<void>;
   completeWorkout: (workoutId: string) => Promise<void>;
@@ -128,6 +129,68 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => ({
       return newWorkout.id;
     } catch (error) {
       console.error('Create workout error:', (error as Error).message);
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  deleteWorkout: async (workoutId: string) => {
+    try {
+      set({ isLoading: true });
+
+      // First, get all workout exercise IDs
+      const { data: workoutExercises, error: fetchError } = await supabase
+        .from('workout_exercises')
+        .select('id')
+        .eq('workout_id', workoutId);
+
+      if (fetchError) {
+        console.warn('Error fetching workout exercises:', fetchError);
+      }
+
+      // Delete sets if we have workout exercise IDs
+      if (workoutExercises && workoutExercises.length > 0) {
+        const workoutExerciseIds = workoutExercises.map((we) => we.id);
+        const { error: setsError } = await supabase
+          .from('sets')
+          .delete()
+          .in('workout_exercise_id', workoutExerciseIds);
+
+        if (setsError) {
+          console.warn('Error deleting sets:', setsError);
+          // Continue anyway as cascade delete might handle it
+        }
+      }
+
+      // Delete workout exercises
+      const { error: exercisesError } = await supabase
+        .from('workout_exercises')
+        .delete()
+        .eq('workout_id', workoutId);
+
+      if (exercisesError) {
+        console.warn('Error deleting workout exercises:', exercisesError);
+        // Continue anyway
+      }
+
+      // Delete the workout
+      const { error } = await supabase
+        .from('workouts')
+        .delete()
+        .eq('id', workoutId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Remove from local state
+      set((state) => ({
+        workouts: state.workouts.filter((w) => w.id !== workoutId),
+        activeWorkout: state.activeWorkout?.id === workoutId ? null : state.activeWorkout,
+      }));
+    } catch (error) {
+      console.error('Delete workout error:', (error as Error).message);
       throw error;
     } finally {
       set({ isLoading: false });
