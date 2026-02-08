@@ -25,6 +25,7 @@ import { RootStackParamList, MainTabParamList } from '../navigation/types';
 import { useClientStore } from '../stores/clientStore';
 import { useAuthStore } from '../stores/authStore';
 import { Client } from '../types/database';
+import { STANDARD_SPORTS } from '../constants/sports';
 
 // ============================================
 // Navigation Props
@@ -155,6 +156,9 @@ interface AddClientModalProps {
     email: string;
     phone: string;
     notes: string;
+    sport: string;
+    age: string;
+    weight: string;
   }) => void;
   isLoading: boolean;
 }
@@ -169,12 +173,19 @@ function AddClientModal({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [sport, setSport] = useState('');
+  const [age, setAge] = useState('');
+  const [weight, setWeight] = useState('');
+  const [sportPickerVisible, setSportPickerVisible] = useState(false);
 
   const resetForm = () => {
     setName('');
     setEmail('');
     setPhone('');
     setNotes('');
+    setSport('');
+    setAge('');
+    setWeight('');
   };
 
   const handleClose = () => {
@@ -192,6 +203,9 @@ function AddClientModal({
       email: email.trim(),
       phone: phone.trim(),
       notes: notes.trim(),
+      sport: sport.trim(),
+      age: age.trim(),
+      weight: weight.trim(),
     });
     resetForm();
   };
@@ -285,6 +299,54 @@ function AddClientModal({
               />
             </View>
 
+            {/* Sport Field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Idrott</Text>
+              <TouchableOpacity
+                style={[styles.fieldInput, styles.fieldInputTouchable]}
+                onPress={() => setSportPickerVisible(true)}
+                disabled={isLoading}
+              >
+                <Text
+                  style={[
+                    styles.fieldInputText,
+                    !sport && styles.fieldInputPlaceholder,
+                  ]}
+                >
+                  {sport || 'Välj idrott...'}
+                </Text>
+                <Text style={styles.fieldInputArrow}>{'\u203A'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Age Field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Ålder</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="Ålder"
+                placeholderTextColor={colors.textSecondary}
+                value={age}
+                onChangeText={setAge}
+                keyboardType="number-pad"
+                editable={!isLoading}
+              />
+            </View>
+
+            {/* Weight Field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Vikt (kg)</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="Vikt i kg"
+                placeholderTextColor={colors.textSecondary}
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="decimal-pad"
+                editable={!isLoading}
+              />
+            </View>
+
             {/* Notes Field */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Anteckningar</Text>
@@ -303,6 +365,49 @@ function AddClientModal({
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      {/* Sport Picker Modal */}
+      <Modal
+        visible={sportPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSportPickerVisible(false)}
+      >
+        <View style={styles.pickerModalContainer}>
+          <View style={styles.pickerModalContent}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Välj idrott</Text>
+              <TouchableOpacity
+                onPress={() => setSportPickerVisible(false)}
+                style={styles.pickerModalCloseButton}
+              >
+                <Text style={styles.pickerModalCloseText}>Stäng</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={STANDARD_SPORTS}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.pickerItem}
+                  onPress={() => {
+                    setSport(item);
+                    setSportPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.pickerItemText}>{item}</Text>
+                  {sport === item && (
+                    <Text style={styles.pickerItemCheck}>{'\u2713'}</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => (
+                <View style={styles.pickerItemSeparator} />
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -383,6 +488,9 @@ export function ClientListScreen({ navigation }: Props) {
       email: string;
       phone: string;
       notes: string;
+      sport: string;
+      age: string;
+      weight: string;
     }) => {
       if (!user) {
         Alert.alert('Fel', 'Du måste vara inloggad för att lägga till klienter.');
@@ -397,6 +505,9 @@ export function ClientListScreen({ navigation }: Props) {
           email: data.email || null,
           phone: data.phone || null,
           notes: data.notes || null,
+          sport: data.sport || null,
+          age: data.age ? parseInt(data.age, 10) : null,
+          weight_kg: data.weight ? parseFloat(data.weight) : null,
           is_active: true,
         });
         setModalVisible(false);
@@ -927,8 +1038,82 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  fieldInputTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   fieldTextArea: {
     minHeight: 100,
     paddingTop: 14,
+  },
+  fieldInputText: {
+    fontSize: 16,
+    color: colors.text,
+    flex: 1,
+  },
+  fieldInputPlaceholder: {
+    color: colors.textSecondary,
+  },
+  fieldInputArrow: {
+    fontSize: 20,
+    color: colors.textSecondary,
+    marginLeft: 8,
+  },
+  pickerModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  pickerModalContent: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  pickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  pickerModalCloseButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  pickerModalCloseText: {
+    fontSize: 17,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  pickerItemText: {
+    fontSize: 17,
+    color: colors.text,
+  },
+  pickerItemCheck: {
+    fontSize: 20,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  pickerItemSeparator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginLeft: 16,
   },
 });

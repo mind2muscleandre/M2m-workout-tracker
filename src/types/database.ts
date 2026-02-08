@@ -49,6 +49,9 @@ export interface Client {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  sport: string | null;
+  age: number | null;
+  weight_kg: number | null;
   is_active: boolean;
   created_at: string;
 }

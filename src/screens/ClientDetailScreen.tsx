@@ -23,6 +23,7 @@ import { useClientStore } from '../stores/clientStore';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { Client, Workout } from '../types/database';
 import { formatDate } from '../utils/helpers';
+import { STANDARD_SPORTS } from '../constants/sports';
 
 // ============================================
 // Navigation Props
@@ -297,6 +298,10 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editNotes, setEditNotes] = useState('');
+  const [editSport, setEditSport] = useState('');
+  const [editAge, setEditAge] = useState('');
+  const [editWeight, setEditWeight] = useState('');
+  const [sportPickerVisible, setSportPickerVisible] = useState(false);
   const [copyModalVisible, setCopyModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -313,6 +318,9 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
       setEditEmail(foundClient.email ?? '');
       setEditPhone(foundClient.phone ?? '');
       setEditNotes(foundClient.notes ?? '');
+      setEditSport(foundClient.sport ?? '');
+      setEditAge(foundClient.age?.toString() ?? '');
+      setEditWeight(foundClient.weight_kg?.toString() ?? '');
     }
   }, [clients, clientId]);
 
@@ -358,6 +366,9 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
       setEditEmail(client.email ?? '');
       setEditPhone(client.phone ?? '');
       setEditNotes(client.notes ?? '');
+      setEditSport(client.sport ?? '');
+      setEditAge(client.age?.toString() ?? '');
+      setEditWeight(client.weight_kg?.toString() ?? '');
       setIsEditing(true);
     }
   }, [client]);
@@ -368,6 +379,9 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
       setEditEmail(client.email ?? '');
       setEditPhone(client.phone ?? '');
       setEditNotes(client.notes ?? '');
+      setEditSport(client.sport ?? '');
+      setEditAge(client.age?.toString() ?? '');
+      setEditWeight(client.weight_kg?.toString() ?? '');
     }
     setIsEditing(false);
   }, [client]);
@@ -385,6 +399,9 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
         email: editEmail.trim() || null,
         phone: editPhone.trim() || null,
         notes: editNotes.trim() || null,
+        sport: editSport.trim() || null,
+        age: editAge.trim() ? parseInt(editAge.trim(), 10) : null,
+        weight_kg: editWeight.trim() ? parseFloat(editWeight.trim()) : null,
       });
       setIsEditing(false);
     } catch {
@@ -392,7 +409,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [clientId, editName, editEmail, editPhone, editNotes, updateClient]);
+  }, [clientId, editName, editEmail, editPhone, editNotes, editSport, editAge, editWeight, updateClient]);
 
   // ----------------------------------------
   // Archive / Activate toggle
@@ -659,6 +676,54 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
                 />
               </View>
 
+              {/* Sport */}
+              <View style={styles.editFieldGroup}>
+                <Text style={styles.editFieldLabel}>Idrott</Text>
+                <TouchableOpacity
+                  style={[styles.editFieldInput, styles.editFieldInputTouchable]}
+                  onPress={() => setSportPickerVisible(true)}
+                  disabled={isSaving}
+                >
+                  <Text
+                    style={[
+                      styles.editFieldInputText,
+                      !editSport && styles.editFieldInputPlaceholder,
+                    ]}
+                  >
+                    {editSport || 'Välj idrott...'}
+                  </Text>
+                  <Text style={styles.editFieldInputArrow}>{'\u203A'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Age */}
+              <View style={styles.editFieldGroup}>
+                <Text style={styles.editFieldLabel}>Ålder</Text>
+                <TextInput
+                  style={styles.editFieldInput}
+                  value={editAge}
+                  onChangeText={setEditAge}
+                  placeholder="Ålder"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="number-pad"
+                  editable={!isSaving}
+                />
+              </View>
+
+              {/* Weight */}
+              <View style={styles.editFieldGroup}>
+                <Text style={styles.editFieldLabel}>Vikt (kg)</Text>
+                <TextInput
+                  style={styles.editFieldInput}
+                  value={editWeight}
+                  onChangeText={setEditWeight}
+                  placeholder="Vikt i kg"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="decimal-pad"
+                  editable={!isSaving}
+                />
+              </View>
+
               {/* Notes */}
               <View style={styles.editFieldGroup}>
                 <Text style={styles.editFieldLabel}>Anteckningar</Text>
@@ -693,6 +758,30 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
                 </View>
               )}
 
+              {/* Sport */}
+              {client.sport && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>{'\u{1F3C0}'}</Text>
+                  <Text style={styles.infoValue}>{client.sport}</Text>
+                </View>
+              )}
+
+              {/* Age */}
+              {client.age && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>{'\u{1F4C5}'}</Text>
+                  <Text style={styles.infoValue}>{client.age} år</Text>
+                </View>
+              )}
+
+              {/* Weight */}
+              {client.weight_kg && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>{'\u{1F3CB}'}</Text>
+                  <Text style={styles.infoValue}>{client.weight_kg} kg</Text>
+                </View>
+              )}
+
               {/* Notes */}
               {client.notes && (
                 <View style={styles.notesContainer}>
@@ -702,7 +791,7 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
               )}
 
               {/* No contact info placeholder */}
-              {!client.email && !client.phone && !client.notes && (
+              {!client.email && !client.phone && !client.notes && !client.sport && !client.age && !client.weight_kg && (
                 <Text style={styles.noInfoText}>
                   Ingen kontaktinfo tillagd
                 </Text>
@@ -844,6 +933,49 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
         onSelect={handleCopyWorkout}
         isLoading={workoutLoading}
       />
+
+      {/* Sport Picker Modal */}
+      <Modal
+        visible={sportPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSportPickerVisible(false)}
+      >
+        <View style={styles.pickerModalContainer}>
+          <View style={styles.pickerModalContent}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Välj idrott</Text>
+              <TouchableOpacity
+                onPress={() => setSportPickerVisible(false)}
+                style={styles.pickerModalCloseButton}
+              >
+                <Text style={styles.pickerModalCloseText}>Stäng</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={STANDARD_SPORTS}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.pickerItem}
+                  onPress={() => {
+                    setEditSport(item);
+                    setSportPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.pickerItemText}>{item}</Text>
+                  {editSport === item && (
+                    <Text style={styles.pickerItemCheck}>{'\u2713'}</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => (
+                <View style={styles.pickerItemSeparator} />
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1373,6 +1505,82 @@ const styles = StyleSheet.create({
   },
   archiveButtonTextSuccess: {
     color: colors.success,
+  },
+
+  // ---- Picker Styles ----
+  editFieldInputTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editFieldInputText: {
+    fontSize: 16,
+    color: colors.text,
+    flex: 1,
+  },
+  editFieldInputPlaceholder: {
+    color: colors.textSecondary,
+  },
+  editFieldInputArrow: {
+    fontSize: 20,
+    color: colors.textSecondary,
+    marginLeft: 8,
+  },
+  pickerModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  pickerModalContent: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  pickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  pickerModalCloseButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  pickerModalCloseText: {
+    fontSize: 17,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  pickerItemText: {
+    fontSize: 17,
+    color: colors.text,
+  },
+  pickerItemCheck: {
+    fontSize: 20,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  pickerItemSeparator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginLeft: 16,
   },
 
   // ---- Bottom Spacer ----
