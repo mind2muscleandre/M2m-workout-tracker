@@ -21,7 +21,7 @@ import { useWorkoutStore } from '../stores/workoutStore';
 import { useExerciseStore } from '../stores/exerciseStore';
 import { useAuthStore } from '../stores/authStore';
 import { useClientStore } from '../stores/clientStore';
-import { Exercise, ExerciseCategory, ExerciseInsert, MuscleGroup } from '../types/database';
+import { Exercise, ExerciseCategory, ExerciseInsert, ExerciseTrackingType, MuscleGroup } from '../types/database';
 import { getCategoryLabel, getTodayString } from '../utils/helpers';
 
 type Props = StackScreenProps<RootStackParamList, 'WorkoutCreate'>;
@@ -225,6 +225,7 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newCategory, setNewCategory] = useState<ExerciseCategory>('strength');
+  const [newTrackingType, setNewTrackingType] = useState<ExerciseTrackingType>('weight');
   const [newMuscleGroups, setNewMuscleGroups] = useState<MuscleGroup[]>([]);
   const [newEquipment, setNewEquipment] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -261,6 +262,7 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
   const resetCreateModal = () => {
     setNewName('');
     setNewCategory('strength');
+    setNewTrackingType('weight');
     setNewMuscleGroups([]);
     setNewEquipment('');
     setNewDescription('');
@@ -293,6 +295,7 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
       const exerciseData: ExerciseInsert = {
         name: newName.trim(),
         category: newCategory,
+        tracking_type: newTrackingType,
         muscle_group: newMuscleGroups,
         equipment: newEquipment.trim() || null,
         description: newDescription.trim() || null,
@@ -703,6 +706,64 @@ export function WorkoutCreateScreen({ route, navigation }: Props) {
                         </TouchableOpacity>
                       );
                     })}
+                  </View>
+                </View>
+
+                {/* Tracking Type Picker */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Spårningstyp *</Text>
+                  <View style={styles.trackingTypeRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.trackingTypeButton,
+                        newTrackingType === 'weight' && styles.trackingTypeButtonSelected,
+                      ]}
+                      onPress={() => setNewTrackingType('weight')}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.trackingTypeButtonText,
+                          newTrackingType === 'weight' && styles.trackingTypeButtonTextSelected,
+                        ]}
+                      >
+                        Vikt (kg)
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.trackingTypeButton,
+                        newTrackingType === 'time' && styles.trackingTypeButtonSelected,
+                      ]}
+                      onPress={() => setNewTrackingType('time')}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.trackingTypeButtonText,
+                          newTrackingType === 'time' && styles.trackingTypeButtonTextSelected,
+                        ]}
+                      >
+                        Tid (sek)
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.trackingTypeButton,
+                        newTrackingType === 'other' && styles.trackingTypeButtonSelected,
+                      ]}
+                      onPress={() => setNewTrackingType('other')}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.trackingTypeButtonText,
+                          newTrackingType === 'other' && styles.trackingTypeButtonTextSelected,
+                        ]}
+                      >
+                        Annat
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -1296,6 +1357,32 @@ const styles = StyleSheet.create({
   },
   muscleGroupChipTextSelected: {
     color: colors.primary,
+  },
+  trackingTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  trackingTypeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  trackingTypeButtonSelected: {
+    backgroundColor: colors.primary + '25',
+    borderColor: colors.primary,
+  },
+  trackingTypeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  trackingTypeButtonTextSelected: {
+    color: colors.primary,
+    fontWeight: '600',
   },
   modalSpacer: {
     height: 40,

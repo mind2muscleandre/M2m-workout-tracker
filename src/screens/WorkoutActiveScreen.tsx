@@ -13,6 +13,7 @@ import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../lib/theme';
 import { useWorkoutStore } from '../stores/workoutStore';
+import { useExerciseStore } from '../stores/exerciseStore';
 import { WorkoutExercise, WorkoutSet, Exercise } from '../types/database';
 import { formatTime, formatDate } from '../utils/helpers';
 import RestTimer from '../components/RestTimer';
@@ -28,6 +29,9 @@ const REPS_VALUES = Array.from({ length: 101 }, (_, i) => i);
 // Generate RPE values: 1 to 10 (with 0.5 increments)
 const RPE_VALUES = Array.from({ length: 19 }, (_, i) => (i + 2) * 0.5);
 
+// Generate time values: 0 to 3600 seconds (1 hour) in 5 second increments
+const TIME_VALUES = Array.from({ length: 721 }, (_, i) => i * 5);
+
 type Props = StackScreenProps<RootStackParamList, 'WorkoutActive'>;
 
 export function WorkoutActiveScreen({ route, navigation }: Props) {
@@ -40,8 +44,11 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
     logSet,
     updateSet,
     deleteSet,
+    addExerciseToWorkout,
+    removeExerciseFromWorkout,
     isLoading,
   } = useWorkoutStore();
+  const { exercises, fetchExercises } = useExerciseStore();
 
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   const [workoutStartTime, setWorkoutStartTime] = useState<number | null>(null);
@@ -50,7 +57,8 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     fetchWorkoutDetail(workoutId);
-  }, [workoutId, fetchWorkoutDetail]);
+    fetchExercises();
+  }, [workoutId, fetchWorkoutDetail, fetchExercises]);
 
   // Workout duration timer
   useEffect(() => {
@@ -98,13 +106,14 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
     ]);
   };
 
-  const handleAddSet = async (workoutExerciseId: string, existingSetsCount: number) => {
+  const handleAddSet = async (workoutExerciseId: string, existingSetsCount: number, trackingType?: string) => {
     try {
       await logSet({
         workout_exercise_id: workoutExerciseId,
         set_number: existingSetsCount + 1,
-        weight_kg: null,
-        reps: null,
+        weight_kg: trackingType === 'weight' ? null : null,
+        reps: trackingType === 'weight' ? null : null,
+        duration_seconds: trackingType === 'time' ? null : null,
         rest_time_seconds: null,
         rpe: null,
         rir: null,
@@ -114,6 +123,28 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
     } catch {
       Alert.alert('Fel', 'Kunde inte lägga till set');
     }
+  };
+
+  const handleAddExercise = () => {
+    navigation.navigate('ExercisePicker', { workoutId });
+  };
+
+  const handleRemoveExercise = (workoutExerciseId: string, exerciseName: string) => {
+    Alert.alert('Ta bort övning', `Är du säker att du vill ta bort "${exerciseName}"?`, [
+      { text: 'Avbryt', style: 'cancel' },
+      {
+        text: 'Ta bort',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeExerciseFromWorkout(workoutExerciseId);
+            await fetchWorkoutDetail(workoutId);
+          } catch {
+            Alert.alert('Fel', 'Kunde inte ta bort övningen');
+          }
+        },
+      },
+    ]);
   };
 
   const handleUpdateSet = useCallback(
@@ -220,22 +251,33 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
             onToggle={() =>
               setExpandedExercise(expandedExercise === we.id ? null : we.id)
             }
-            onAddSet={() => handleAddSet(we.id, we.sets.length)}
+            onAddSet={() => handleAddSet(we.id, we.sets.length, we.exercise?.tracking_type)}
             onUpdateSet={handleUpdateSet}
             onDeleteSet={handleDeleteSet}
             onRestTimeLogged={handleRestTimeLogged}
+            onRemoveExercise={isActive ? () => handleRemoveExercise(we.id, we.exercise?.name || 'Övning') : undefined}
           />
         ))}
 
         {activeWorkout.workout_exercises.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>Inga övningar i detta pass</Text>
+            {isActive && (
+              <TouchableOpacity style={styles.addExerciseButton} onPress={handleAddExercise}>
+                <Text style={styles.addExerciseButtonText}>+ Lägg till övning</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
 
       {/* Action buttons */}
       <View style={styles.footer}>
+        {isActive && (
+          <TouchableOpacity style={styles.addExerciseFooterButton} onPress={handleAddExercise}>
+            <Text style={styles.addExerciseFooterButtonText}>+ Lägg till övning</Text>
+          </TouchableOpacity>
+        )}
         {activeWorkout.status === 'planned' && (
           <TouchableOpacity style={styles.startButton} onPress={handleStartWorkout}>
             <Text style={styles.startButtonText}>Starta pass</Text>
@@ -266,6 +308,7 @@ interface ExerciseSectionProps {
   onUpdateSet: (setId: string, field: string, value: number | string | null) => void;
   onDeleteSet: (setId: string) => void;
   onRestTimeLogged: (setId: string, seconds: number) => void;
+  onRemoveExercise?: () => void;
 }
 
 function ExerciseSection({
@@ -279,8 +322,10 @@ function ExerciseSection({
   onUpdateSet,
   onDeleteSet,
   onRestTimeLogged,
+  onRemoveExercise,
 }: ExerciseSectionProps) {
   const exercise = workoutExercise.exercise;
+  const trackingType = exercise?.tracking_type || 'weight';
 
   return (
     <View style={styles.exerciseSection}>
@@ -304,8 +349,16 @@ function ExerciseSection({
           {/* Table Header */}
           <View style={styles.setTableHeader}>
             <Text style={[styles.setHeaderText, { width: 40 }]}>Set</Text>
-            <Text style={[styles.setHeaderText, { flex: 1 }]}>Vikt (kg)</Text>
-            <Text style={[styles.setHeaderText, { flex: 1 }]}>Reps</Text>
+            {trackingType === 'weight' ? (
+              <>
+                <Text style={[styles.setHeaderText, { flex: 1 }]}>Vikt (kg)</Text>
+                <Text style={[styles.setHeaderText, { flex: 1 }]}>Reps</Text>
+              </>
+            ) : trackingType === 'time' ? (
+              <Text style={[styles.setHeaderText, { flex: 2 }]}>Tid</Text>
+            ) : (
+              <Text style={[styles.setHeaderText, { flex: 2 }]}>-</Text>
+            )}
             <Text style={[styles.setHeaderText, { width: 50 }]}>RPE</Text>
             <Text style={[styles.setHeaderText, { width: 60 }]}>Vila</Text>
             {isActive && <Text style={[styles.setHeaderText, { width: 40 }]} />}
@@ -316,6 +369,7 @@ function ExerciseSection({
             <SetRow
               key={set.id}
               set={set}
+              exercise={exercise}
               isActive={isActive}
               isCompleted={isCompleted}
               onUpdateSet={onUpdateSet}
@@ -328,6 +382,13 @@ function ExerciseSection({
           {isActive && (
             <TouchableOpacity style={styles.addSetButton} onPress={onAddSet}>
               <Text style={styles.addSetText}>+ Lägg till set</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Remove Exercise button */}
+          {isActive && onRemoveExercise && (
+            <TouchableOpacity style={styles.removeExerciseButton} onPress={onRemoveExercise}>
+              <Text style={styles.removeExerciseText}>Ta bort övning</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -348,6 +409,7 @@ function ExerciseSection({
 
 interface SetRowProps {
   set: WorkoutSet;
+  exercise?: Exercise;
   isActive: boolean;
   isCompleted: boolean;
   onUpdateSet: (setId: string, field: string, value: number | string | null) => void;
@@ -355,11 +417,14 @@ interface SetRowProps {
   onRestTimeLogged: (setId: string, seconds: number) => void;
 }
 
-function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTimeLogged }: SetRowProps) {
+function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTimeLogged }: SetRowProps) {
   const [showTimer, setShowTimer] = useState(false);
   const [showWeightPicker, setShowWeightPicker] = useState(false);
   const [showRepsPicker, setShowRepsPicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [showRpePicker, setShowRpePicker] = useState(false);
+  
+  const trackingType = exercise?.tracking_type || 'weight';
 
   const handleWeightSelect = (value: number) => {
     onUpdateSet(set.id, 'weight_kg', value === 0 ? null : value);
@@ -373,9 +438,20 @@ function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTi
     onUpdateSet(set.id, 'rpe', value);
   };
 
+  const handleTimeSelect = (value: number) => {
+    onUpdateSet(set.id, 'duration_seconds', value === 0 ? null : value);
+  };
+
   const formatWeight = (weight: number | null) => {
     if (weight == null) return '-';
     return weight % 1 === 0 ? weight.toString() : weight.toFixed(1);
+  };
+
+  const formatTime = (seconds: number | null) => {
+    if (seconds == null) return '-';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
   };
 
   return (
@@ -386,37 +462,62 @@ function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTi
           {set.is_pr && <Text style={styles.prBadge}>PR</Text>}
         </View>
 
-        {/* Weight */}
-        <View style={{ flex: 1, paddingHorizontal: 4 }}>
-          {isActive ? (
-            <TouchableOpacity
-              style={styles.setInput}
-              onPress={() => setShowWeightPicker(true)}
-            >
-              <Text style={[styles.setInputText, !set.weight_kg && styles.placeholderText]}>
-                {formatWeight(set.weight_kg)}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.setValue}>{formatWeight(set.weight_kg)}</Text>
-          )}
-        </View>
+        {trackingType === 'weight' ? (
+          <>
+            {/* Weight */}
+            <View style={{ flex: 1, paddingHorizontal: 4 }}>
+              {isActive ? (
+                <TouchableOpacity
+                  style={styles.setInput}
+                  onPress={() => setShowWeightPicker(true)}
+                >
+                  <Text style={[styles.setInputText, !set.weight_kg && styles.placeholderText]}>
+                    {formatWeight(set.weight_kg)}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.setValue}>{formatWeight(set.weight_kg)}</Text>
+              )}
+            </View>
 
-        {/* Reps */}
-        <View style={{ flex: 1, paddingHorizontal: 4 }}>
-          {isActive ? (
-            <TouchableOpacity
-              style={styles.setInput}
-              onPress={() => setShowRepsPicker(true)}
-            >
-              <Text style={[styles.setInputText, !set.reps && styles.placeholderText]}>
-                {set.reps ?? '-'}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.setValue}>{set.reps ?? '-'}</Text>
-          )}
-        </View>
+            {/* Reps */}
+            <View style={{ flex: 1, paddingHorizontal: 4 }}>
+              {isActive ? (
+                <TouchableOpacity
+                  style={styles.setInput}
+                  onPress={() => setShowRepsPicker(true)}
+                >
+                  <Text style={[styles.setInputText, !set.reps && styles.placeholderText]}>
+                    {set.reps ?? '-'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.setValue}>{set.reps ?? '-'}</Text>
+              )}
+            </View>
+          </>
+        ) : trackingType === 'time' ? (
+          /* Duration */
+          <View style={{ flex: 2, paddingHorizontal: 4 }}>
+            {isActive ? (
+              <TouchableOpacity
+                style={styles.setInput}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text style={[styles.setInputText, !set.duration_seconds && styles.placeholderText]}>
+                  {formatTime(set.duration_seconds)}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.setValue}>{formatTime(set.duration_seconds)}</Text>
+            )}
+          </View>
+        ) : (
+          /* Other */
+          <View style={{ flex: 2, paddingHorizontal: 4 }}>
+            <Text style={styles.setValue}>-</Text>
+          </View>
+        )}
 
         {/* RPE */}
         <View style={{ width: 50, paddingHorizontal: 2 }}>
@@ -497,6 +598,17 @@ function SetRow({ set, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTi
         values={RPE_VALUES}
         unit=""
         title="Välj RPE"
+      />
+
+      {/* Time Picker */}
+      <WheelPicker
+        visible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onSelect={handleTimeSelect}
+        currentValue={set.duration_seconds ?? 0}
+        values={TIME_VALUES}
+        unit="sek"
+        title="Välj tid"
       />
     </>
   );
@@ -680,4 +792,32 @@ const styles = StyleSheet.create({
   completeButtonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '600' },
   emptyState: { alignItems: 'center', paddingTop: 40 },
   emptyText: { color: colors.textSecondary, fontSize: 15 },
+  addExerciseButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: colors.primary + '20',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  addExerciseButtonText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+  addExerciseFooterButton: {
+    marginBottom: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.primary + '20',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+  },
+  addExerciseFooterButtonText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+  removeExerciseButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: colors.danger + '15',
+    alignItems: 'center',
+  },
+  removeExerciseText: { color: colors.danger, fontSize: 14, fontWeight: '600' },
 });

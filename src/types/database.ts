@@ -13,6 +13,8 @@ export type ExerciseCategory =
 
 export type WorkoutStatus = 'planned' | 'in_progress' | 'completed';
 
+export type ExerciseTrackingType = 'weight' | 'time' | 'other';
+
 export type MuscleGroup =
   | 'chest'
   | 'back'
@@ -55,6 +57,7 @@ export interface Exercise {
   id: string;
   name: string;
   category: ExerciseCategory;
+  tracking_type: ExerciseTrackingType;
   muscle_group: string[];
   equipment: string | null;
   description: string | null;
@@ -98,6 +101,7 @@ export interface WorkoutSet {
   set_number: number;
   weight_kg: number | null;
   reps: number | null;
+  duration_seconds: number | null;
   rest_time_seconds: number | null;
   rpe: number | null;
   rir: number | null;
@@ -213,6 +217,7 @@ export interface Database {
       user_role: UserRole;
       exercise_category: ExerciseCategory;
       workout_status: WorkoutStatus;
+      exercise_tracking_type: ExerciseTrackingType;
     };
     CompositeTypes: Record<string, never>;
   };

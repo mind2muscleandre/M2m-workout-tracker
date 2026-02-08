@@ -1,4 +1,4 @@
--- ============================================
+npx expo start -c-- ============================================
 -- PT Workout Tracker - Supabase Database Schema
 -- ============================================
 
@@ -23,6 +23,12 @@ CREATE TYPE workout_status AS ENUM (
   'planned',
   'in_progress',
   'completed'
+);
+
+CREATE TYPE exercise_tracking_type AS ENUM (
+  'weight',
+  'time',
+  'other'
 );
 
 -- ============================================
@@ -57,6 +63,7 @@ CREATE TABLE exercises (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   category exercise_category NOT NULL DEFAULT 'strength',
+  tracking_type exercise_tracking_type NOT NULL DEFAULT 'weight',
   muscle_group TEXT[] NOT NULL DEFAULT '{}',
   equipment TEXT,
   description TEXT,
@@ -101,6 +108,7 @@ CREATE TABLE sets (
   set_number INTEGER NOT NULL,
   weight_kg DECIMAL(6,2),
   reps INTEGER,
+  duration_seconds INTEGER,
   rest_time_seconds INTEGER,
   rpe INTEGER CHECK (rpe >= 1 AND rpe <= 10),
   rir INTEGER CHECK (rir >= 0 AND rir <= 10),
