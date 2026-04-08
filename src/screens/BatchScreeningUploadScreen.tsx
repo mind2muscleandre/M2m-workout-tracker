@@ -86,6 +86,9 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
   const slots = SCREENING_SLOTS[mode];
 
   const isQueueReady = queue.length > 0 && activePerson !== null;
+  const uploadStatusText = activePerson
+    ? `Laddar upp ${activePerson.name} (${activeIndex + 1}/${queue.length})...`
+    : 'Laddar upp...';
   const isCurrentPersonComplete = useMemo(
     () => slots.every((slot) => Boolean(photos[slot])),
     [slots, photos]
@@ -267,7 +270,10 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               disabled={!isCurrentPersonComplete || isUploading}
             >
               {isUploading ? (
-                <ActivityIndicator color={colors.background} />
+                <View style={styles.uploadingContainer}>
+                  <ActivityIndicator color={colors.background} />
+                  <Text style={styles.primaryButtonText}>{uploadStatusText}</Text>
+                </View>
               ) : (
                 <Text style={styles.primaryButtonText}>Spara och nästa</Text>
               )}
@@ -352,6 +358,11 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: colors.background,
     fontWeight: '700',
+  },
+  uploadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   modeRow: {
     flexDirection: 'row',

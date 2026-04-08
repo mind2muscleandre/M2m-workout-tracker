@@ -20,6 +20,20 @@ interface UploadResponse {
   error?: string;
 }
 
+const UPLOAD_TIMEOUT_MS = 30000;
+const MAX_UPLOAD_ATTEMPTS = 2;
+const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const parseJsonSafely = async (response: Response): Promise<UploadResponse> => {
+  try {
+    return (await response.json()) as UploadResponse;
+  } catch {
+    return { success: false, error: 'Ogiltigt svar från servern.' };
+  }
+};
+
 export const uploadPtScreening = async (
   payload: UploadPayload
 ): Promise<UploadResponse> => {
@@ -46,22 +60,56 @@ export const uploadPtScreening = async (
     } as any);
   });
 
-  const response = await fetch(
-    `${SUPABASE_URL}/functions/v1/pt-upload-screening`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: formData,
-    }
-  );
+  for (let attempt = 1; attempt <= MAX_UPLOAD_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
-  const data = (await response.json()) as UploadResponse;
-  if (!response.ok || !data.success) {
-    throw new Error(data.error || 'Uppladdningen misslyckades.');
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/pt-upload-screening`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: SUPABASE_ANON_KEY,
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+
+      const data = await parseJsonSafely(response);
+      if (response.ok && data.success) {
+        return data;
+      }
+
+      const shouldRetry =
+        attempt < MAX_UPLOAD_ATTEMPTS && RETRYABLE_STATUS_CODES.has(response.status);
+      if (shouldRetry) {
+        await wait(600);
+        continue;
+      }
+
+      throw new Error(data.error || 'Uppladdningen misslyckades.');
+    } catch (error) {
+      const isAbortError = error instanceof Error && error.name === 'AbortError';
+      const shouldRetry = attempt < MAX_UPLOAD_ATTEMPTS;
+
+      if (shouldRetry) {
+        await wait(600);
+        continue;
+      }
+
+      if (isAbortError) {
+        throw new Error(
+          'Uppladdningen tog för lång tid. Kontrollera anslutningen och försök igen.'
+        );
+      }
+
+      throw error instanceof Error
+        ? error
+        : new Error('Uppladdningen misslyckades. Försök igen.');
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
-  return data;
+  throw new Error('Uppladdningen misslyckades. Försök igen.');
 };
