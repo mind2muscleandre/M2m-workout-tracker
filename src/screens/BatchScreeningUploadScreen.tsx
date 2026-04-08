@@ -19,6 +19,7 @@ import { uploadPtScreening, QueuePerson } from '../services/ptScreeningUpload';
 type Props = StackScreenProps<RootStackParamList, 'BatchScreeningUpload'>;
 type ScreeningMode = 'overhead_squat' | 'mobility';
 type SlotKey = 'front' | 'right' | 'left' | 'mobility';
+type UploadFlowMode = 'single' | 'queue';
 
 interface PickedPhoto {
   uri: string;
@@ -34,6 +35,7 @@ const colors = {
   textSecondary: '#8E8E93',
   border: '#2C2C2E',
   danger: '#FF3B30',
+  success: '#34C759',
 };
 
 const ANALYSIS_FOR_SLOT: Record<SlotKey, string> = {
@@ -74,6 +76,8 @@ const parseQueueInput = (input: string): QueuePerson[] =>
     .filter((person) => person.email.includes('@'));
 
 export function BatchScreeningUploadScreen({ navigation }: Props) {
+  const [flowMode, setFlowMode] = useState<UploadFlowMode>('single');
+  const [singlePerson, setSinglePerson] = useState<QueuePerson>({ name: '', email: '', team: '' });
   const [queueInput, setQueueInput] = useState('');
   const [queue, setQueue] = useState<QueuePerson[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -81,18 +85,44 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
   const [injuryHistory, setInjuryHistory] = useState('');
   const [photos, setPhotos] = useState<Partial<Record<SlotKey, PickedPhoto>>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const activePerson = queue[activeIndex] ?? null;
+  const singlePersonReady =
+    singlePerson.name.trim().length > 0 && singlePerson.email.trim().includes('@');
+  const activePerson =
+    flowMode === 'single'
+      ? singlePersonReady
+        ? {
+            name: singlePerson.name.trim(),
+            email: singlePerson.email.trim().toLowerCase(),
+            team: singlePerson.team?.trim() || undefined,
+          }
+        : null
+      : queue[activeIndex] ?? null;
+  const personCount = flowMode === 'single' ? 1 : queue.length;
+  const isLastInQueue = flowMode === 'queue' && activeIndex >= queue.length - 1;
   const slots = SCREENING_SLOTS[mode];
 
-  const isQueueReady = queue.length > 0 && activePerson !== null;
+  const isQueueReady = activePerson !== null;
   const uploadStatusText = activePerson
-    ? `Laddar upp ${activePerson.name} (${activeIndex + 1}/${queue.length})...`
+    ? `Laddar upp ${activePerson.name} (${activeIndex + 1}/${personCount})...`
     : 'Laddar upp...';
+  const primaryActionLabel =
+    flowMode === 'queue' && !isLastInQueue ? 'Spara och nästa' : 'Spara';
   const isCurrentPersonComplete = useMemo(
     () => slots.every((slot) => Boolean(photos[slot])),
     [slots, photos]
   );
+
+  const switchFlowMode = (nextMode: UploadFlowMode) => {
+    setFlowMode(nextMode);
+    setQueue([]);
+    setQueueInput('');
+    setActiveIndex(0);
+    setPhotos({});
+    setInjuryHistory('');
+    setSuccessMessage(null);
+  };
 
   const buildQueue = () => {
     const parsed = parseQueueInput(queueInput);
@@ -103,6 +133,8 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
     setQueue(parsed);
     setActiveIndex(0);
     setPhotos({});
+    setInjuryHistory('');
+    setSuccessMessage(null);
     Alert.alert('Kö skapad', `${parsed.length} personer är redo för screening.`);
   };
 
@@ -130,12 +162,18 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
       type: asset.mimeType || `image/${extension}`,
     };
 
+    setSuccessMessage(null);
     setPhotos((prev) => ({ ...prev, [slot]: image }));
   };
 
   const saveAndNext = async () => {
     if (!activePerson) {
-      Alert.alert('Kön är tom', 'Skapa en kö först.');
+      Alert.alert(
+        flowMode === 'single' ? 'Personuppgifter saknas' : 'Kön är tom',
+        flowMode === 'single'
+          ? 'Fyll i namn och en giltig e-post för personen.'
+          : 'Skapa en kö först.'
+      );
       return;
     }
 
@@ -146,6 +184,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
 
     try {
       setIsUploading(true);
+      setSuccessMessage(null);
       const selectedPhotos = slots.map((slot) => photos[slot]).filter(Boolean) as PickedPhoto[];
       const analysisTypes = slots.map((slot) => ANALYSIS_FOR_SLOT[slot]);
 
@@ -156,18 +195,29 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
         files: selectedPhotos,
       });
 
-      const isLast = activeIndex >= queue.length - 1;
-      if (isLast) {
-        Alert.alert('Klart', 'Alla personer i kön har laddats upp.');
+      if (flowMode === 'single') {
         setPhotos({});
         setInjuryHistory('');
+        setSinglePerson({ name: '', email: '', team: '' });
+        setSuccessMessage('Uppladdning klar.');
+        return;
+      }
+
+      const isLast = activeIndex >= queue.length - 1;
+      if (isLast) {
+        setQueue([]);
+        setQueueInput('');
+        setActiveIndex(0);
+        setPhotos({});
+        setInjuryHistory('');
+        setSuccessMessage('Klart. Alla personer i kön är uppladdade.');
         return;
       }
 
       setActiveIndex((prev) => prev + 1);
       setPhotos({});
       setInjuryHistory('');
-      Alert.alert('Sparat', 'Screeningen är sparad. Fortsätt med nästa person.');
+      setSuccessMessage('Sparat. Fortsätt med nästa person.');
     } catch (error) {
       Alert.alert(
         'Uppladdning misslyckades',
@@ -189,32 +239,92 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>1) Bygg kö</Text>
-          <Text style={styles.helperText}>
-            En rad per person: namn,email,team eller endast email.
-          </Text>
-          <TextInput
-            style={styles.multilineInput}
-            multiline
-            value={queueInput}
-            onChangeText={setQueueInput}
-            placeholder="Anna Andersson,anna@exempel.se,Team A"
-            placeholderTextColor={colors.textSecondary}
-          />
-          <TouchableOpacity style={styles.primaryButton} onPress={buildQueue}>
-            <Text style={styles.primaryButtonText}>Skapa kö</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>1) Välj läge</Text>
+          <View style={styles.modeRow}>
+            <TouchableOpacity
+              style={[styles.modeButton, flowMode === 'single' && styles.modeButtonActive]}
+              onPress={() => switchFlowMode('single')}
+            >
+              <Text style={styles.modeButtonText}>En person</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeButton, flowMode === 'queue' && styles.modeButtonActive]}
+              onPress={() => switchFlowMode('queue')}
+            >
+              <Text style={styles.modeButtonText}>Skapa kö</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {flowMode === 'single' ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>2) Personuppgifter</Text>
+            <TextInput
+              style={styles.singleInput}
+              placeholder="Namn"
+              placeholderTextColor={colors.textSecondary}
+              value={singlePerson.name}
+              onChangeText={(value) => {
+                setSinglePerson((prev) => ({ ...prev, name: value }));
+                setSuccessMessage(null);
+              }}
+            />
+            <TextInput
+              style={styles.singleInput}
+              placeholder="E-post"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholderTextColor={colors.textSecondary}
+              value={singlePerson.email}
+              onChangeText={(value) => {
+                setSinglePerson((prev) => ({ ...prev, email: value }));
+                setSuccessMessage(null);
+              }}
+            />
+            <TextInput
+              style={styles.singleInput}
+              placeholder="Team (valfritt)"
+              placeholderTextColor={colors.textSecondary}
+              value={singlePerson.team ?? ''}
+              onChangeText={(value) => {
+                setSinglePerson((prev) => ({ ...prev, team: value }));
+                setSuccessMessage(null);
+              }}
+            />
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>2) Bygg kö</Text>
+            <Text style={styles.helperText}>
+              En rad per person: namn,email,team eller endast email.
+            </Text>
+            <TextInput
+              style={styles.multilineInput}
+              multiline
+              value={queueInput}
+              onChangeText={(value) => {
+                setQueueInput(value);
+                setSuccessMessage(null);
+              }}
+              placeholder="Anna Andersson,anna@exempel.se,Team A"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <TouchableOpacity style={styles.primaryButton} onPress={buildQueue}>
+              <Text style={styles.primaryButtonText}>Skapa kö</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {isQueueReady && activePerson && (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>2) Aktiv person</Text>
+            <Text style={styles.sectionTitle}>3) Aktiv person</Text>
             <Text style={styles.personText}>
               {activePerson.name} - {activePerson.email}
             </Text>
             <Text style={styles.helperText}>
-              {activeIndex + 1} / {queue.length}
+              {activeIndex + 1} / {personCount}
             </Text>
+            {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
 
             <View style={styles.modeRow}>
               <TouchableOpacity
@@ -222,6 +332,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
                 onPress={() => {
                   setMode('overhead_squat');
                   setPhotos({});
+                  setSuccessMessage(null);
                 }}
               >
                 <Text style={styles.modeButtonText}>Overhead squat</Text>
@@ -231,6 +342,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
                 onPress={() => {
                   setMode('mobility');
                   setPhotos({});
+                  setSuccessMessage(null);
                 }}
               >
                 <Text style={styles.modeButtonText}>Mobility</Text>
@@ -242,7 +354,10 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               placeholder="Skadehistorik (valfritt)"
               placeholderTextColor={colors.textSecondary}
               value={injuryHistory}
-              onChangeText={setInjuryHistory}
+              onChangeText={(value) => {
+                setInjuryHistory(value);
+                setSuccessMessage(null);
+              }}
             />
 
             {slots.map((slot) => (
@@ -275,7 +390,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
                   <Text style={styles.primaryButtonText}>{uploadStatusText}</Text>
                 </View>
               ) : (
-                <Text style={styles.primaryButtonText}>Spara och nästa</Text>
+                <Text style={styles.primaryButtonText}>{primaryActionLabel}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -408,6 +523,10 @@ const styles = StyleSheet.create({
   },
   missingText: {
     color: colors.danger,
+    fontWeight: '600',
+  },
+  successText: {
+    color: colors.success,
     fontWeight: '600',
   },
 });
