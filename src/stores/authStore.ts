@@ -53,6 +53,45 @@ const fetchUserProfile = async (userId: string): Promise<User | null> => {
   return data;
 };
 
+const fetchUserProfileFromAiScreening = async (
+  userId: string
+): Promise<User | null> => {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('user_id, name, email, role')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching AI screening profile:', error.message);
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    id: data.user_id,
+    email: data.email ?? '',
+    full_name: data.name ?? 'Unknown',
+    role: (data.role ?? 'user') as UserRole,
+    gym_id: null,
+    created_at: new Date().toISOString(),
+  };
+};
+
+const fetchAnyUserProfile = async (userId: string): Promise<User | null> => {
+  const legacyProfile = await fetchUserProfile(userId);
+  if (legacyProfile) {
+    return legacyProfile;
+  }
+  return fetchUserProfileFromAiScreening(userId);
+};
+
+const isPtRole = (profile: User | null): boolean =>
+  profile?.role === 'pt' || profile?.role === 'admin';
+
 // ============================================
 // Store
 // ============================================
@@ -132,10 +171,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
         // Fetch the user profile that was created by the database trigger
         if (data.user) {
-          const profile = await fetchUserProfile(data.user.id);
+          const profile = await fetchAnyUserProfile(data.user.id);
           set({
             user: profile,
-            isAuthenticated: true,
+            isAuthenticated: !!profile && isPtRole(profile),
           });
         }
       }
@@ -170,7 +209,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       if (data.session && data.user) {
-        const profile = await fetchUserProfile(data.user.id);
+        const profile = await fetchAnyUserProfile(data.user.id);
+        if (!isPtRole(profile)) {
+          await supabase.auth.signOut();
+          throw new Error('Det här kontot saknar PT-behörighet (pt/admin).');
+        }
         set({
           session: data.session,
           user: profile,
@@ -221,7 +264,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       if (sessionData.session) {
-        const profile = await fetchUserProfile(sessionData.session.user.id);
+        const profile = await fetchAnyUserProfile(sessionData.session.user.id);
+        if (!isPtRole(profile)) {
+          await supabase.auth.signOut();
+          set({
+            user: null,
+            session: null,
+            isAuthenticated: false,
+          });
+          return;
+        }
         set({
           session: sessionData.session,
           user: profile,
@@ -235,7 +287,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           set({ session });
 
           if (session?.user) {
-            const profile = await fetchUserProfile(session.user.id);
+            const profile = await fetchAnyUserProfile(session.user.id);
+            if (!isPtRole(profile)) {
+              await supabase.auth.signOut();
+              return;
+            }
             set({
               user: profile,
               isAuthenticated: true,

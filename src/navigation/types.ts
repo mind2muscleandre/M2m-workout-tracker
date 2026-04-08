@@ -11,6 +11,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type RootStackParamList = {
   Auth: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
+  BatchScreeningUpload: undefined;
   ClientDetail: { clientId: string };
   WorkoutCreate: { clientId: string; templateWorkoutId?: string };
   WorkoutActive: { workoutId: string };

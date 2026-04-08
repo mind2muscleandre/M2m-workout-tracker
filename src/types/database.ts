@@ -2,7 +2,7 @@
 // PT Workout Tracker - Database Types
 // ============================================
 
-export type UserRole = 'pt' | 'client';
+export type UserRole = 'pt' | 'client' | 'admin';
 
 export type ExerciseCategory =
   | 'strength'

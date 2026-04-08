@@ -3,14 +3,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 // In Expo, try Constants.expoConfig.extra first (from app.config.js), then process.env
-const SUPABASE_URL = 
+export const SUPABASE_URL =
   Constants.expoConfig?.extra?.supabaseUrl ||
-  process.env.EXPO_PUBLIC_SUPABASE_URL || 
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
   'https://your-project.supabase.co';
   
-const SUPABASE_ANON_KEY = 
+export const SUPABASE_ANON_KEY =
   Constants.expoConfig?.extra?.supabaseAnonKey ||
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'your-anon-key';
 
 // #region agent log - Debug Supabase configuration

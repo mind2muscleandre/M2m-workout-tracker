@@ -23,6 +23,7 @@ import { WorkoutActiveScreen } from '../screens/WorkoutActiveScreen';
 import { ExercisePickerScreen } from '../screens/ExercisePickerScreen';
 import { ExerciseDetailScreen } from '../screens/ExerciseDetailScreen';
 import { ProgressionScreen } from '../screens/ProgressionScreen';
+import { BatchScreeningUploadScreen } from '../screens/BatchScreeningUploadScreen';
 
 // ============================================
 // Navigation Theme
@@ -259,6 +260,11 @@ export const AppNavigator: React.FC = () => {
                   name="MainTabs"
                   component={MainTabs}
                   options={mainTabsOptions}
+                />
+                <Stack.Screen
+                  name="BatchScreeningUpload"
+                  component={BatchScreeningUploadScreen}
+                  options={{ title: 'Batch Screening' }}
                 />
                 <Stack.Screen
                   name="ClientDetail"

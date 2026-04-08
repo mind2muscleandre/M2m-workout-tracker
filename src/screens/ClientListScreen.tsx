@@ -559,15 +559,26 @@ export function ClientListScreen({ navigation }: Props) {
       {/* ---- Header ---- */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mina Klienter</Text>
-        <TouchableOpacity
-          style={styles.headerAddButton}
-          onPress={() => setModalVisible(true)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="Lägg till klient"
-          accessibilityRole="button"
-        >
-          <Text style={styles.headerAddIcon}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerBatchButton}
+            onPress={() => navigation.navigate('BatchScreeningUpload')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Öppna batch screening"
+            accessibilityRole="button"
+          >
+            <Text style={styles.headerBatchText}>Screening</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerAddButton}
+            onPress={() => setModalVisible(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Lägg till klient"
+            accessibilityRole="button"
+          >
+            <Text style={styles.headerAddIcon}>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ---- Search Bar ---- */}
@@ -733,6 +744,26 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: colors.text,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerBatchButton: {
+    height: 44,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  headerBatchText: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 12,
   },
   headerAddButton: {
     width: 44,
