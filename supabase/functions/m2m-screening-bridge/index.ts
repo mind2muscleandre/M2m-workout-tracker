@@ -76,7 +76,8 @@ serve(async (req) => {
     const formData = await req.formData()
     const targetEmail = String(formData.get('target_email') ?? '').trim().toLowerCase()
     const targetName = String(formData.get('target_name') ?? '').trim()
-    const files = formData.getAll('files').filter((f) => f instanceof File)
+    // React Native multipart often yields Blob in Deno, not File — File extends Blob.
+    const files = formData.getAll('files').filter((f): f is Blob => f instanceof Blob)
 
     if (!targetEmail || !targetName) {
       return new Response(
