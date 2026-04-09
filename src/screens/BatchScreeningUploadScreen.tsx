@@ -124,6 +124,16 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
     setSuccessMessage(null);
   };
 
+  const goToHomeAfterSuccess = (message: string) => {
+    setSuccessMessage(message);
+    Alert.alert('Uppladdning klar', message, [
+      {
+        text: 'OK',
+        onPress: () => navigation.navigate('MainTabs', { screen: 'Clients' }),
+      },
+    ]);
+  };
+
   const buildQueue = () => {
     const parsed = parseQueueInput(queueInput);
     if (parsed.length === 0) {
@@ -199,7 +209,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
         setPhotos({});
         setInjuryHistory('');
         setSinglePerson({ name: '', email: '', team: '' });
-        setSuccessMessage('Uppladdning klar.');
+        goToHomeAfterSuccess('Screeningen är uppladdad.');
         return;
       }
 
@@ -210,7 +220,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
         setActiveIndex(0);
         setPhotos({});
         setInjuryHistory('');
-        setSuccessMessage('Klart. Alla personer i kön är uppladdade.');
+        goToHomeAfterSuccess('Alla personer i kön är uppladdade.');
         return;
       }
 
