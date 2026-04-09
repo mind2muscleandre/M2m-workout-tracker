@@ -86,6 +86,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
   const [photos, setPhotos] = useState<Partial<Record<SlotKey, PickedPhoto>>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const singlePersonReady =
     singlePerson.name.trim().length > 0 && singlePerson.email.trim().includes('@');
@@ -122,10 +123,12 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
     setPhotos({});
     setInjuryHistory('');
     setSuccessMessage(null);
+    setErrorMessage(null);
   };
 
   const goToHomeAfterSuccess = (message: string) => {
     setSuccessMessage(message);
+    setErrorMessage(null);
     Alert.alert('Uppladdning klar', message, [
       {
         text: 'OK',
@@ -145,6 +148,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
     setPhotos({});
     setInjuryHistory('');
     setSuccessMessage(null);
+    setErrorMessage(null);
     Alert.alert('Kö skapad', `${parsed.length} personer är redo för screening.`);
   };
 
@@ -173,6 +177,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
     };
 
     setSuccessMessage(null);
+    setErrorMessage(null);
     setPhotos((prev) => ({ ...prev, [slot]: image }));
   };
 
@@ -195,15 +200,26 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
     try {
       setIsUploading(true);
       setSuccessMessage(null);
+      setErrorMessage(null);
+      const slowUploadWarningTimer = setTimeout(() => {
+        Alert.alert(
+          'Uppladdning pågår',
+          'Det tar längre tid än väntat. Vänta kvar eller försök igen om inget händer.'
+        );
+      }, 20000);
       const selectedPhotos = slots.map((slot) => photos[slot]).filter(Boolean) as PickedPhoto[];
       const analysisTypes = slots.map((slot) => ANALYSIS_FOR_SLOT[slot]);
 
-      await uploadPtScreening({
-        person: activePerson,
-        injuryHistory,
-        analysisTypes,
-        files: selectedPhotos,
-      });
+      try {
+        await uploadPtScreening({
+          person: activePerson,
+          injuryHistory,
+          analysisTypes,
+          files: selectedPhotos,
+        });
+      } finally {
+        clearTimeout(slowUploadWarningTimer);
+      }
 
       if (flowMode === 'single') {
         setPhotos({});
@@ -229,9 +245,11 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
       setInjuryHistory('');
       setSuccessMessage('Sparat. Fortsätt med nästa person.');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Försök igen.';
+      setErrorMessage(message);
       Alert.alert(
         'Uppladdning misslyckades',
-        error instanceof Error ? error.message : 'Försök igen.'
+        message
       );
     } finally {
       setIsUploading(false);
@@ -277,6 +295,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               onChangeText={(value) => {
                 setSinglePerson((prev) => ({ ...prev, name: value }));
                 setSuccessMessage(null);
+                setErrorMessage(null);
               }}
             />
             <TextInput
@@ -289,6 +308,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               onChangeText={(value) => {
                 setSinglePerson((prev) => ({ ...prev, email: value }));
                 setSuccessMessage(null);
+                setErrorMessage(null);
               }}
             />
             <TextInput
@@ -299,6 +319,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               onChangeText={(value) => {
                 setSinglePerson((prev) => ({ ...prev, team: value }));
                 setSuccessMessage(null);
+                setErrorMessage(null);
               }}
             />
           </View>
@@ -315,6 +336,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               onChangeText={(value) => {
                 setQueueInput(value);
                 setSuccessMessage(null);
+                setErrorMessage(null);
               }}
               placeholder="Anna Andersson,anna@exempel.se,Team A"
               placeholderTextColor={colors.textSecondary}
@@ -335,6 +357,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               {activeIndex + 1} / {personCount}
             </Text>
             {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
             <View style={styles.modeRow}>
               <TouchableOpacity
@@ -343,6 +366,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
                   setMode('overhead_squat');
                   setPhotos({});
                   setSuccessMessage(null);
+                  setErrorMessage(null);
                 }}
               >
                 <Text style={styles.modeButtonText}>Overhead squat</Text>
@@ -353,6 +377,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
                   setMode('mobility');
                   setPhotos({});
                   setSuccessMessage(null);
+                  setErrorMessage(null);
                 }}
               >
                 <Text style={styles.modeButtonText}>Mobility</Text>
@@ -367,6 +392,7 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
               onChangeText={(value) => {
                 setInjuryHistory(value);
                 setSuccessMessage(null);
+                setErrorMessage(null);
               }}
             />
 
@@ -537,6 +563,10 @@ const styles = StyleSheet.create({
   },
   successText: {
     color: colors.success,
+    fontWeight: '600',
+  },
+  errorText: {
+    color: colors.danger,
     fontWeight: '600',
   },
 });
