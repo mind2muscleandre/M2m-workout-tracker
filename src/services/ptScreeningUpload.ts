@@ -22,9 +22,25 @@ interface UploadResponse {
 
 const UPLOAD_TIMEOUT_MS = 45000;
 const MAX_UPLOAD_ATTEMPTS = 2;
-const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+const RETRYABLE_STATUS_CODES = new Set([401, 408, 429, 500, 502, 503, 504]);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Prefer a freshly minted access token; edge functions reject expired JWTs with 401. */
+const resolveAccessToken = async (): Promise<string> => {
+  const { data: refreshed } = await supabase.auth.refreshSession();
+  const fromRefresh = refreshed.session?.access_token;
+  if (fromRefresh) {
+    return fromRefresh;
+  }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Du måste vara inloggad som PT för att ladda upp screening.');
+  }
+  return session.access_token;
+};
 
 const buildFormData = (payload: UploadPayload): FormData => {
   const formData = new FormData();
@@ -70,16 +86,9 @@ const parseJsonSafely = async (response: Response): Promise<UploadResponse> => {
 export const uploadPtScreening = async (
   payload: UploadPayload
 ): Promise<UploadResponse> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error('Du måste vara inloggad som PT för att ladda upp screening.');
-  }
-
   for (let attempt = 1; attempt <= MAX_UPLOAD_ATTEMPTS; attempt += 1) {
     const formData = buildFormData(payload);
+    const accessToken = await resolveAccessToken();
 
     try {
       const response = await fetchWithHardTimeout(
@@ -87,7 +96,7 @@ export const uploadPtScreening = async (
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${accessToken}`,
             apikey: SUPABASE_ANON_KEY,
           },
           body: formData,
@@ -107,7 +116,12 @@ export const uploadPtScreening = async (
         continue;
       }
 
-      throw new Error(data.error || 'Uppladdningen misslyckades.');
+      const msg =
+        response.status === 401
+          ? data.error ||
+            'Inloggningen verkar ha gått ut. Logga in igen och försök på nytt.'
+          : data.error || 'Uppladdningen misslyckades.';
+      throw new Error(msg);
     } catch (error) {
       const isTimeout = error instanceof Error && error.message === 'UPLOAD_TIMEOUT';
       const shouldRetry = attempt < MAX_UPLOAD_ATTEMPTS;
