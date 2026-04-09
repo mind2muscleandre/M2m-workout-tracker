@@ -20,11 +20,44 @@ interface UploadResponse {
   error?: string;
 }
 
-const UPLOAD_TIMEOUT_MS = 30000;
+const UPLOAD_TIMEOUT_MS = 45000;
 const MAX_UPLOAD_ATTEMPTS = 2;
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const buildFormData = (payload: UploadPayload): FormData => {
+  const formData = new FormData();
+  formData.append('target_email', payload.person.email.trim().toLowerCase());
+  formData.append('target_name', payload.person.name.trim());
+  formData.append('team', payload.person.team?.trim() ?? '');
+  formData.append('injury_history', payload.injuryHistory?.trim() ?? '');
+  formData.append('analysis_types', JSON.stringify(payload.analysisTypes));
+  payload.files.forEach((file) => {
+    formData.append('files', {
+      uri: file.uri,
+      name: file.name,
+      type: file.type,
+    } as any);
+  });
+  return formData;
+};
+
+const fetchWithHardTimeout = (url: string, init: RequestInit, timeoutMs: number): Promise<Response> =>
+  new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error('UPLOAD_TIMEOUT'));
+    }, timeoutMs);
+    fetch(url, init)
+      .then((res) => {
+        clearTimeout(timeoutId);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      });
+  });
 
 const parseJsonSafely = async (response: Response): Promise<UploadResponse> => {
   try {
@@ -45,35 +78,22 @@ export const uploadPtScreening = async (
     throw new Error('Du måste vara inloggad som PT för att ladda upp screening.');
   }
 
-  const formData = new FormData();
-  formData.append('target_email', payload.person.email.trim().toLowerCase());
-  formData.append('target_name', payload.person.name.trim());
-  formData.append('team', payload.person.team?.trim() ?? '');
-  formData.append('injury_history', payload.injuryHistory?.trim() ?? '');
-  formData.append('analysis_types', JSON.stringify(payload.analysisTypes));
-
-  payload.files.forEach((file) => {
-    formData.append('files', {
-      uri: file.uri,
-      name: file.name,
-      type: file.type,
-    } as any);
-  });
-
   for (let attempt = 1; attempt <= MAX_UPLOAD_ATTEMPTS; attempt += 1) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+    const formData = buildFormData(payload);
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/m2m-screening-bridge`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: SUPABASE_ANON_KEY,
+      const response = await fetchWithHardTimeout(
+        `${SUPABASE_URL}/functions/v1/m2m-screening-bridge`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: SUPABASE_ANON_KEY,
+          },
+          body: formData,
         },
-        body: formData,
-        signal: controller.signal,
-      });
+        UPLOAD_TIMEOUT_MS
+      );
 
       const data = await parseJsonSafely(response);
       if (response.ok && data.success) {
@@ -89,15 +109,15 @@ export const uploadPtScreening = async (
 
       throw new Error(data.error || 'Uppladdningen misslyckades.');
     } catch (error) {
-      const isAbortError = error instanceof Error && error.name === 'AbortError';
+      const isTimeout = error instanceof Error && error.message === 'UPLOAD_TIMEOUT';
       const shouldRetry = attempt < MAX_UPLOAD_ATTEMPTS;
 
-      if (shouldRetry) {
+      if (shouldRetry && (isTimeout || (error instanceof Error && error.name === 'AbortError'))) {
         await wait(600);
         continue;
       }
 
-      if (isAbortError) {
+      if (isTimeout) {
         throw new Error(
           'Uppladdningen tog för lång tid. Kontrollera anslutningen och försök igen.'
         );
@@ -106,8 +126,6 @@ export const uploadPtScreening = async (
       throw error instanceof Error
         ? error
         : new Error('Uppladdningen misslyckades. Försök igen.');
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 
