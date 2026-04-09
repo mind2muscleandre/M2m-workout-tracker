@@ -26,20 +26,31 @@ const RETRYABLE_STATUS_CODES = new Set([401, 408, 429, 500, 502, 503, 504]);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Prefer a freshly minted access token; edge functions reject expired JWTs with 401. */
+/** Valid access token for Edge Functions; refresh before expiry to avoid gateway 401. */
 const resolveAccessToken = async (): Promise<string> => {
-  const { data: refreshed } = await supabase.auth.refreshSession();
-  const fromRefresh = refreshed.session?.access_token;
-  if (fromRefresh) {
-    return fromRefresh;
-  }
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session?.access_token) {
     throw new Error('Du måste vara inloggad som PT för att ladda upp screening.');
   }
-  return session.access_token;
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = session.expires_at ?? 0;
+  const refreshIfBefore = now + 120;
+  if (expiresAt >= refreshIfBefore) {
+    return session.access_token;
+  }
+  const { data, error } = await supabase.auth.refreshSession();
+  const token = data.session?.access_token;
+  if (token) {
+    return token;
+  }
+  if (error) {
+    throw new Error(
+      'Inloggningen har gått ut. Logga in igen och försök på nytt.'
+    );
+  }
+  throw new Error('Inloggningen har gått ut. Logga in igen och försök på nytt.');
 };
 
 const buildFormData = (payload: UploadPayload): FormData => {

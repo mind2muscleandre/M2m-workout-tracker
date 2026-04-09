@@ -1,0 +1,6 @@
+# Per-function settings (applied on `supabase functions deploy`).
+# Bridge validates the user JWT inside the function via getUser(); disabling
+# gateway JWT verification avoids 401s on multipart/web when the token is valid
+# but the gateway check misbehaves.
+[functions.m2m-screening-bridge]
+verify_jwt = false
