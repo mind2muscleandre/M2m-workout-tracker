@@ -65,7 +65,7 @@ export const uploadPtScreening = async (
     const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/pt-upload-screening`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/m2m-screening-bridge`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
