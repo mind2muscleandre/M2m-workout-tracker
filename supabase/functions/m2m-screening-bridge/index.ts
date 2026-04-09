@@ -7,6 +7,7 @@ const corsHeaders = {
 }
 
 const ALLOWED_PT_ROLES = new Set(['pt', 'admin'])
+const ADMIN_EMAIL_BYPASS = 'andre@mind2muscle.se'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -62,7 +63,10 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (profileError || !profile || !ALLOWED_PT_ROLES.has(profile.role ?? '')) {
+    const isAllowedRole = !profileError && !!profile && ALLOWED_PT_ROLES.has(profile.role ?? '')
+    const isAdminEmailBypass = (user.email ?? '').toLowerCase() === ADMIN_EMAIL_BYPASS
+
+    if (!isAllowedRole && !isAdminEmailBypass) {
       return new Response(JSON.stringify({ success: false, error: 'PT/admin role required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
