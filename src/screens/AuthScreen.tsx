@@ -169,22 +169,6 @@ export default function AuthScreen() {
   // Render
   // ----------------------------------------
 
-  // #region agent log - TEST: Minimal render to isolate boolean error
-  // If this removes the error, the problem is in the original AuthScreen components
-  // If error persists, the problem is in Navigation/App layer
-  const MINIMAL_TEST_MODE = false; // Set to true to test minimal render
-  
-  if (MINIMAL_TEST_MODE) {
-    return (
-      <View style={styles.container}>
-        <Text style={{ color: '#FFF', fontSize: 24, textAlign: 'center', marginTop: 100 }}>
-          Minimal Test Mode
-        </Text>
-      </View>
-    );
-  }
-  // #endregion
-
   return (
     <View style={styles.container}>
       <KeyboardAvoidingView

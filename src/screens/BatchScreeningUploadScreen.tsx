@@ -10,6 +10,7 @@ import {
   View,
   ActivityIndicator,
   Image,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { StackScreenProps } from '@react-navigation/stack';
@@ -129,6 +130,10 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
   const goToHomeAfterSuccess = (message: string) => {
     setSuccessMessage(message);
     setErrorMessage(null);
+    if (Platform.OS === 'web') {
+      navigation.navigate('MainTabs', { screen: 'Clients' });
+      return;
+    }
     Alert.alert('Uppladdning klar', message, [
       {
         text: 'OK',

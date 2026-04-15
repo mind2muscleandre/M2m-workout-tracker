@@ -495,6 +495,10 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
     navigation.navigate('Progression', { clientId });
   }, [navigation, clientId]);
 
+  const handleMovementAssessmentPress = useCallback(() => {
+    navigation.navigate('MovementAssessment', { clientId });
+  }, [navigation, clientId]);
+
   // ----------------------------------------
   // Loading state
   // ----------------------------------------
@@ -849,6 +853,16 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
               <Text style={styles.secondaryActionText}>Se progression</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.tertiaryActionButton}
+            onPress={handleMovementAssessmentPress}
+            activeOpacity={0.7}
+            accessibilityLabel="Öppna rörelsebedömning"
+          >
+            <Text style={styles.secondaryActionIcon}>{'\u{1F9D8}'}</Text>
+            <Text style={styles.secondaryActionText}>Rörelsebedömning</Text>
+          </TouchableOpacity>
         </View>
 
         {/* ============================================ */}
@@ -1330,6 +1344,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primaryLight,
     textAlign: 'center',
+  },
+  tertiaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+    minHeight: 52,
   },
 
   // ---- Workouts List ----

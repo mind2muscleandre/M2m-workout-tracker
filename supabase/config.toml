@@ -4,3 +4,9 @@
 # but the gateway check misbehaves.
 [functions.m2m-screening-bridge]
 verify_jwt = false
+
+[functions.m2m-assessment-bridge]
+verify_jwt = false
+
+[functions.pt-upload-movement-assessment]
+verify_jwt = false

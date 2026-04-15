@@ -24,36 +24,13 @@ import { ExercisePickerScreen } from '../screens/ExercisePickerScreen';
 import { ExerciseDetailScreen } from '../screens/ExerciseDetailScreen';
 import { ProgressionScreen } from '../screens/ProgressionScreen';
 import { BatchScreeningUploadScreen } from '../screens/BatchScreeningUploadScreen';
+import ScreeningHubScreen from '../screens/ScreeningHubScreen';
+import MovementAssessmentClientPickScreen from '../screens/MovementAssessmentClientPickScreen';
+import MovementAssessmentScreen from '../screens/MovementAssessmentScreen';
 
 // ============================================
 // Navigation Theme
 // ============================================
-
-// #region agent log
-const logDebug = (location: string, message: string, data: any, hypothesisId: string = 'A') => {
-  fetch('http://127.0.0.1:7245/ingest/02e11a2b-a3b0-46ff-a481-9b2a69f4cc9c', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId
-    })
-  }).catch(() => {});
-};
-// #endregion
-
-// #region agent log
-logDebug('AppNavigator.tsx:47', 'Checking DefaultTheme structure', {
-  defaultThemeKeys: DefaultTheme ? Object.keys(DefaultTheme) : 'DefaultTheme is null/undefined',
-  defaultThemeHasFonts: DefaultTheme && 'fonts' in DefaultTheme,
-  defaultThemeHasColors: DefaultTheme && 'colors' in DefaultTheme
-}, 'B');
-// #endregion
 
 // Use DefaultTheme directly but override colors
 // CRITICAL: Must ALWAYS provide fonts object - DefaultTheme.fonts may be undefined or empty
@@ -77,23 +54,6 @@ const navigationTheme = {
   },
 };
 
-// #region agent log
-logDebug('AppNavigator.tsx:64', 'navigationTheme created (spreading DefaultTheme)', {
-  hasColors: !!navigationTheme.colors,
-  hasFonts: 'fonts' in navigationTheme,
-  themeKeys: Object.keys(navigationTheme),
-  colorsKeys: navigationTheme.colors ? Object.keys(navigationTheme.colors) : [],
-  fontsKeys: navigationTheme.fonts ? Object.keys(navigationTheme.fonts) : [],
-  hasFontsRegular: navigationTheme.fonts && 'regular' in navigationTheme.fonts,
-  fontsRegularValue: navigationTheme.fonts?.regular,
-  defaultThemeHadFonts: !!DefaultTheme.fonts,
-  usedSafeguard: !DefaultTheme.fonts,
-  hasDark: 'dark' in navigationTheme,
-  darkType: typeof (navigationTheme as any).dark,
-  darkValue: (navigationTheme as any).dark
-}, 'A');
-// #endregion
-
 // ============================================
 // Stack Navigator
 // ============================================
@@ -110,19 +70,6 @@ export const AppNavigator: React.FC = () => {
   const isLoading = useAuthStore((state) => state.isLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const initialize = useAuthStore((state) => state.initialize);
-
-  // #region agent log
-  logDebug('AppNavigator.tsx:112', 'Values from useAuthStore (via selectors)', {
-    isLoadingType: typeof isLoading,
-    isLoadingValue: isLoading,
-    isLoadingStringified: String(isLoading),
-    isAuthenticatedType: typeof isAuthenticated,
-    isAuthenticatedValue: isAuthenticated,
-    isAuthenticatedStringified: String(isAuthenticated),
-    isLoadingIsPrimitive: isLoading === true || isLoading === false,
-    isAuthenticatedIsPrimitive: isAuthenticated === true || isAuthenticated === false
-  }, 'D');
-  // #endregion
 
   useEffect(() => {
     initialize();
@@ -142,19 +89,6 @@ export const AppNavigator: React.FC = () => {
     return val === true ? true : false;
   }, [isAuthenticated]);
 
-  // #region agent log
-  logDebug('AppNavigator.tsx:130', 'After valueOf conversion', {
-    isLoadingBoolType: typeof isLoadingBool,
-    isLoadingBoolValue: isLoadingBool,
-    isLoadingBoolConstructor: isLoadingBool?.constructor?.name,
-    isLoadingIsPrimitive: isLoadingBool === true || isLoadingBool === false,
-    isAuthenticatedBoolType: typeof isAuthenticatedBool,
-    isAuthenticatedBoolValue: isAuthenticatedBool,
-    isAuthenticatedBoolConstructor: isAuthenticatedBool?.constructor?.name,
-    isAuthenticatedIsPrimitive: isAuthenticatedBool === true || isAuthenticatedBool === false
-  }, 'D');
-  // #endregion
-
   // Create screenOptions with useMemo BEFORE any early returns to ensure consistent hook order
   // This must be called unconditionally to follow Rules of Hooks
   // JS stack screenOptions - disable native headers to avoid fonts issue
@@ -171,80 +105,21 @@ export const AppNavigator: React.FC = () => {
     return <LoadingScreen />;
   }
 
-  // #region agent log
-  logDebug('AppNavigator.tsx:71', 'Rendering NavigationContainer (POST-FIX)', {
-    themeHasFonts: 'fonts' in navigationTheme,
-    themeHasColors: 'colors' in navigationTheme,
-    themeStructure: JSON.stringify(Object.keys(navigationTheme)),
-    fontsRegularExists: navigationTheme.fonts && 'regular' in navigationTheme.fonts
-  }, 'A');
-  // #endregion
-
-  // #region agent log
-  try {
-    // Test access to fonts.regular before passing to NavigationContainer
-    const testFontsRegular = navigationTheme.fonts?.regular;
-    logDebug('AppNavigator.tsx:119', 'Testing fonts.regular access before NavigationContainer', {
-      fontsRegularValue: testFontsRegular,
-      fontsRegularType: typeof testFontsRegular,
-      fontsObject: navigationTheme.fonts ? Object.keys(navigationTheme.fonts) : 'fonts is undefined'
-    }, 'C');
-  } catch (error: any) {
-    logDebug('AppNavigator.tsx:119', 'ERROR accessing fonts.regular', {
-      errorMessage: error?.message,
-      errorStack: error?.stack
-    }, 'C');
-  }
-  // #endregion
-
-  // #region agent log
-  // POST-FIX: Using JS stack with headers disabled
-  logDebug('AppNavigator.tsx:175', 'screenOptions before Stack.Navigator (headers disabled)', {
-    screenOptionsKeys: Object.keys(screenOptions),
-    headerShown: screenOptions.headerShown,
-    cardStyleType: typeof screenOptions.cardStyle,
-    detachInactiveScreens: screenOptions.detachInactiveScreens,
-    navigationThemeKeys: Object.keys(navigationTheme),
-    navigationThemeHasDark: 'dark' in navigationTheme,
-  }, 'E');
-  // #endregion
-
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator
         screenOptions={screenOptions}
       >
         {(() => {
-          // #region agent log
           const showAuth = !isAuthenticatedBool;
-          logDebug('AppNavigator.tsx:189', 'Before conditional render', {
-            isAuthenticatedBoolType: typeof isAuthenticatedBool,
-            isAuthenticatedBoolValue: isAuthenticatedBool,
-            showAuthType: typeof showAuth,
-            showAuthValue: showAuth
-          }, 'E');
-          // #endregion
-          
-          // Use explicit boolean literals directly in options to avoid any serialization issues
-          // Log all options before passing to Stack.Screen
+
           const authOptions = { headerShown: false };
           const mainTabsOptions = { headerShown: false };
           const workoutActiveOptions = {
             title: 'Aktivt pass',
             gestureEnabled: false,
           };
-          
-          // #region agent log
-          logDebug('AppNavigator.tsx:242', 'Screen options before Stack.Screen', {
-            authOptionsHeaderShownType: typeof authOptions.headerShown,
-            authOptionsHeaderShownValue: authOptions.headerShown,
-            mainTabsOptionsHeaderShownType: typeof mainTabsOptions.headerShown,
-            mainTabsOptionsHeaderShownValue: mainTabsOptions.headerShown,
-            workoutActiveOptionsGestureEnabledType: typeof workoutActiveOptions.gestureEnabled,
-            workoutActiveOptionsGestureEnabledValue: workoutActiveOptions.gestureEnabled
-          }, 'F');
-          // #endregion
-          
+
           if (showAuth) {
             return (
               <Stack.Screen
@@ -262,9 +137,24 @@ export const AppNavigator: React.FC = () => {
                   options={mainTabsOptions}
                 />
                 <Stack.Screen
+                  name="ScreeningHub"
+                  component={ScreeningHubScreen}
+                  options={{ title: 'Screeningar' }}
+                />
+                <Stack.Screen
                   name="BatchScreeningUpload"
                   component={BatchScreeningUploadScreen}
-                  options={{ title: 'Batch Screening' }}
+                  options={{ title: 'Bild-screening' }}
+                />
+                <Stack.Screen
+                  name="MovementAssessmentClientPick"
+                  component={MovementAssessmentClientPickScreen}
+                  options={{ title: 'Välj klient' }}
+                />
+                <Stack.Screen
+                  name="MovementAssessment"
+                  component={MovementAssessmentScreen}
+                  options={{ title: 'Rörelsebedömning' }}
                 />
                 <Stack.Screen
                   name="ClientDetail"

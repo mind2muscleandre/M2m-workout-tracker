@@ -562,12 +562,12 @@ export function ClientListScreen({ navigation }: Props) {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerBatchButton}
-            onPress={() => navigation.navigate('BatchScreeningUpload')}
+            onPress={() => navigation.navigate('ScreeningHub')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="Öppna batch screening"
+            accessibilityLabel="Öppna screeningar: bild-screening eller rörelsebedömning"
             accessibilityRole="button"
           >
-            <Text style={styles.headerBatchText}>Screening</Text>
+            <Text style={styles.headerBatchText}>Screeningar</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerAddButton}

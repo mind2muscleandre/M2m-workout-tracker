@@ -105,36 +105,6 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
   const hasNoResults = sortedExercises.length === 0;
   const showCreateButton = hasSearchQuery && hasNoResults;
 
-  // #region agent log - Debug button visibility
-  React.useEffect(() => {
-    const logData = {
-      location: 'ExercisePickerScreen.tsx:105',
-      message: 'Button visibility calculation',
-      data: {
-        searchQuery,
-        searchQueryTrimmed: searchQuery.trim(),
-        searchQueryLength: searchQuery.trim().length,
-        hasSearchQuery,
-        exercisesLength: exercises.length,
-        filteredExercisesLength: filteredExercises.length,
-        sortedExercisesLength: sortedExercises.length,
-        hasNoResults,
-        showCreateButton,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A',
-    };
-    console.log('[DEBUG] Button visibility:', logData);
-    fetch('http://127.0.0.1:7245/ingest/02e11a2b-a3b0-46ff-a481-9b2a69f4cc9c', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(logData),
-    }).catch((err) => console.error('[DEBUG] Fetch failed:', err));
-  }, [searchQuery, hasSearchQuery, hasNoResults, showCreateButton, exercises.length, filteredExercises.length, sortedExercises.length]);
-  // #endregion
-
   const handleSelectExercise = async (exercise: Exercise) => {
     const currentCount = activeWorkout?.workout_exercises.length || 0;
     try {
@@ -221,29 +191,7 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
           placeholder="Sök övning..."
           placeholderTextColor={colors.textSecondary}
           value={searchQuery}
-          onChangeText={(text) => {
-            // #region agent log - Debug search query update
-            fetch('http://127.0.0.1:7245/ingest/02e11a2b-a3b0-46ff-a481-9b2a69f4cc9c', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                location: 'ExercisePickerScreen.tsx:186',
-                message: 'Search query onChangeText',
-                data: {
-                  newText: text,
-                  newTextLength: text.length,
-                  newTextTrimmed: text.trim(),
-                  newTextTrimmedLength: text.trim().length,
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'D',
-              }),
-            }).catch(() => {});
-            // #endregion
-            setSearchQuery(text);
-          }}
+          onChangeText={setSearchQuery}
           autoFocus
         />
       </View>
@@ -309,31 +257,6 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
         ]}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            {(() => {
-              // #region agent log - Debug ListEmptyComponent render
-              const logData = {
-                location: 'ExercisePickerScreen.tsx:307',
-                message: 'ListEmptyComponent rendering',
-                data: {
-                  showCreateButton,
-                  searchQuery,
-                  exercisesLength: exercises.length,
-                  sortedExercisesLength: sortedExercises.length,
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'B',
-              };
-              console.log('[DEBUG] ListEmptyComponent render:', logData);
-              fetch('http://127.0.0.1:7245/ingest/02e11a2b-a3b0-46ff-a481-9b2a69f4cc9c', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(logData),
-              }).catch((err) => console.error('[DEBUG] Fetch failed:', err));
-              // #endregion
-              return null;
-            })()}
             <Text style={styles.emptyTitle}>Inga övningar hittades</Text>
             <Text style={styles.emptyMessage}>
               {showCreateButton
@@ -342,42 +265,17 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
                 ? 'Skapa övningar i övningsbiblioteket först'
                 : 'Inga övningar matchar din sökning'}
             </Text>
-            {(() => {
-              // #region agent log - Debug button render condition
-              const logData = {
-                location: 'ExercisePickerScreen.tsx:339',
-                message: 'Button render condition check',
-                data: {
-                  showCreateButton,
-                  willRenderButton: !!showCreateButton,
-                  searchQuery,
-                  hasSearchQuery,
-                  hasNoResults,
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'C',
-              };
-              console.log('[DEBUG] Button render check:', logData);
-              fetch('http://127.0.0.1:7245/ingest/02e11a2b-a3b0-46ff-a481-9b2a69f4cc9c', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(logData),
-              }).catch((err) => console.error('[DEBUG] Fetch failed:', err));
-              // #endregion
-              return showCreateButton ? (
-                <TouchableOpacity
-                  style={styles.createButton}
-                  onPress={handleOpenCreateModal}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.createButtonText}>
-                    Skapa "{searchQuery}"
-                  </Text>
-                </TouchableOpacity>
-              ) : null;
-            })()}
+            {showCreateButton ? (
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={handleOpenCreateModal}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.createButtonText}>
+                  Skapa "{searchQuery}"
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         }
       />

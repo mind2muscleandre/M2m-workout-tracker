@@ -12,6 +12,9 @@ export type RootStackParamList = {
   Auth: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   BatchScreeningUpload: undefined;
+  ScreeningHub: undefined;
+  MovementAssessmentClientPick: undefined;
+  MovementAssessment: { clientId: string };
   ClientDetail: { clientId: string };
   WorkoutCreate: { clientId: string; templateWorkoutId?: string };
   WorkoutActive: { workoutId: string };
