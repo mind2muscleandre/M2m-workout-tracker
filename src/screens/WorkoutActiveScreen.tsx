@@ -193,6 +193,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
   const isActive = activeWorkout.status === 'in_progress';
   const isCompleted = activeWorkout.status === 'completed';
   const isPlanned = activeWorkout.status === 'planned';
+  const isDraft = activeWorkout.status === 'draft';
 
   return (
     <SafeAreaView 
@@ -204,7 +205,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         {/* Back button for completed/planned workouts */}
-        {(isCompleted || isPlanned) && (
+        {(isCompleted || isPlanned || isDraft) && (
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -227,9 +228,9 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
       </View>
 
       {/* Status bar */}
-      <View style={[styles.statusBar, { backgroundColor: isCompleted ? colors.success + '20' : isActive ? colors.warning + '20' : colors.info + '20' }]}>
-        <Text style={[styles.statusText, { color: isCompleted ? colors.success : isActive ? colors.warning : colors.info }]}>
-          {isCompleted ? 'Avslutat' : isActive ? 'Pågående' : 'Planerat'}
+      <View style={[styles.statusBar, { backgroundColor: isCompleted ? colors.success + '20' : isActive ? colors.warning + '20' : isDraft ? colors.textSecondary + '20' : colors.info + '20' }]}>
+        <Text style={[styles.statusText, { color: isCompleted ? colors.success : isActive ? colors.warning : isDraft ? colors.textSecondary : colors.info }]}>
+          {isCompleted ? 'Avslutat' : isActive ? 'Pågående' : isDraft ? 'Utkast' : 'Planerat'}
         </Text>
       </View>
 
@@ -278,9 +279,9 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
             <Text style={styles.addExerciseFooterButtonText}>+ Lägg till övning</Text>
           </TouchableOpacity>
         )}
-        {activeWorkout.status === 'planned' && (
+        {(activeWorkout.status === 'planned' || activeWorkout.status === 'draft') && (
           <TouchableOpacity style={styles.startButton} onPress={handleStartWorkout}>
-            <Text style={styles.startButtonText}>Starta pass</Text>
+            <Text style={styles.startButtonText}>{activeWorkout.status === 'draft' ? 'Publicera och starta' : 'Starta pass'}</Text>
           </TouchableOpacity>
         )}
         {isActive && (

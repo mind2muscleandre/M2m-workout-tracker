@@ -229,7 +229,15 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
       });
       if (res.success) {
         Alert.alert('Skickat', 'Bedömningen har sparats i screening.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          {
+            text: 'Skapa åtgärdsprogram',
+            onPress: () =>
+              navigation.navigate('MovementAssessmentProgramBuilder', {
+                clientId,
+                assessmentId: res.assessment_id ?? assessment.id,
+              }),
+          },
+          { text: 'Klart', onPress: () => navigation.goBack() },
         ]);
       } else {
         throw new Error(res.error || 'Okänt fel');

@@ -27,6 +27,7 @@ import { BatchScreeningUploadScreen } from '../screens/BatchScreeningUploadScree
 import ScreeningHubScreen from '../screens/ScreeningHubScreen';
 import MovementAssessmentClientPickScreen from '../screens/MovementAssessmentClientPickScreen';
 import MovementAssessmentScreen from '../screens/MovementAssessmentScreen';
+import MovementAssessmentProgramBuilderScreen from '../screens/MovementAssessmentProgramBuilderScreen';
 
 // ============================================
 // Navigation Theme
@@ -155,6 +156,11 @@ export const AppNavigator: React.FC = () => {
                   name="MovementAssessment"
                   component={MovementAssessmentScreen}
                   options={{ title: 'Rörelsebedömning' }}
+                />
+                <Stack.Screen
+                  name="MovementAssessmentProgramBuilder"
+                  component={MovementAssessmentProgramBuilderScreen}
+                  options={{ title: 'Åtgärdsprogram' }}
                 />
                 <Stack.Screen
                   name="ClientDetail"

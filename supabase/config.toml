@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.pt-upload-movement-assessment]
 verify_jwt = false
+
+[functions.pt-list-exercises]
+verify_jwt = false

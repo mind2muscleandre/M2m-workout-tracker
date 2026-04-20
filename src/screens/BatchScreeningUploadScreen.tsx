@@ -186,6 +186,36 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
     setPhotos((prev) => ({ ...prev, [slot]: image }));
   };
 
+  const pickFromLibrary = async (slot: SlotKey) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Bildbibliotek nekat', 'Tillåt bildbibliotek för att kunna välja screeningbilder.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsMultipleSelection: false,
+    });
+
+    if (result.canceled || !result.assets?.[0]) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    const extension = asset.mimeType?.includes('png') ? 'png' : 'jpg';
+    const image: PickedPhoto = {
+      uri: asset.uri,
+      name: `${slot}-${Date.now()}.${extension}`,
+      type: asset.mimeType || `image/${extension}`,
+    };
+
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    setPhotos((prev) => ({ ...prev, [slot]: image }));
+  };
+
   const saveAndNext = async () => {
     if (!activePerson) {
       Alert.alert(
@@ -403,12 +433,20 @@ export function BatchScreeningUploadScreen({ navigation }: Props) {
 
             {slots.map((slot) => (
               <View key={slot} style={styles.photoRow}>
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() => pickFromCamera(slot)}
-                >
-                  <Text style={styles.secondaryButtonText}>Fota {SLOT_LABELS[slot]}</Text>
-                </TouchableOpacity>
+                <View style={styles.photoButtons}>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() => pickFromCamera(slot)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Fota {SLOT_LABELS[slot]}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() => pickFromLibrary(slot)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Välj från bibliotek</Text>
+                  </TouchableOpacity>
+                </View>
                 {photos[slot] ? (
                   <Image source={{ uri: photos[slot]?.uri }} style={styles.preview} />
                 ) : (
@@ -545,6 +583,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  photoButtons: {
+    flexDirection: 'column',
+    gap: 8,
+    flex: 1,
   },
   secondaryButton: {
     paddingVertical: 10,

@@ -19,20 +19,23 @@ import { formatDate } from '../utils/helpers';
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 const statusColors: Record<string, string> = {
+  draft: '#8E8E93',
   planned: '#5AC8FA',
   in_progress: '#FF9500',
   completed: '#34C759',
 };
 
 const statusLabels: Record<string, string> = {
+  draft: 'Utkast',
   planned: 'Planerat',
   in_progress: 'Pågående',
   completed: 'Avslutat',
 };
 
-const filterOptions = ['Alla', 'Planerade', 'Pågående', 'Avslutade'] as const;
+const filterOptions = ['Alla', 'Utkast', 'Planerade', 'Pågående', 'Avslutade'] as const;
 const filterMap: Record<string, string | null> = {
   Alla: null,
+  Utkast: 'draft',
   Planerade: 'planned',
   Pågående: 'in_progress',
   Avslutade: 'completed',

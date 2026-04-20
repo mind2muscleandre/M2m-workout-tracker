@@ -10,6 +10,7 @@ const ALLOWED_PT_ROLES = new Set(['pt', 'admin'])
 const ADMIN_EMAIL_BYPASS = 'andre@mind2muscle.se'
 
 type JsonBody = {
+  action?: 'upload_assessment' | 'list_exercises'
   access_token?: string
   target_email?: string
   target_name?: string
@@ -19,6 +20,9 @@ type JsonBody = {
   export_payload?: Record<string, unknown>
   /** Flat kolumner per test (whitelistas i pt-upload-movement-assessment). */
   flat_assessment_columns?: Record<string, unknown>
+  category?: string
+  query?: string
+  limit?: number
 }
 
 serve(async (req) => {
@@ -31,6 +35,7 @@ serve(async (req) => {
     const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const aiAssessmentUrl = Deno.env.get('AI_SCREENING_ASSESSMENT_FUNCTION_URL') ?? ''
+    const aiExercisesUrl = Deno.env.get('AI_SCREENING_EXERCISES_FUNCTION_URL') ?? ''
     const bridgeSecret = Deno.env.get('M2M_BRIDGE_SHARED_SECRET') ?? ''
     const aiScreeningAnon = Deno.env.get('AI_SCREENING_ANON_KEY') ?? ''
     const aiScreeningService = Deno.env.get('AI_SCREENING_SERVICE_ROLE_KEY') ?? ''
@@ -38,9 +43,7 @@ serve(async (req) => {
     if (!supabaseUrl || !supabaseAnon || !serviceKey) {
       throw new Error('Missing required Supabase environment variables')
     }
-    if (!aiAssessmentUrl || !bridgeSecret) {
-      throw new Error('Missing AI_SCREENING_ASSESSMENT_FUNCTION_URL or M2M_BRIDGE_SHARED_SECRET')
-    }
+    if (!bridgeSecret) throw new Error('Missing M2M_BRIDGE_SHARED_SECRET')
     const upstreamBearer = aiScreeningService || aiScreeningAnon
     const upstreamApikey = aiScreeningAnon || aiScreeningService
     if (!upstreamBearer || !upstreamApikey) {
@@ -124,6 +127,41 @@ serve(async (req) => {
     const trackerClientId = String(parsed.tracker_client_id ?? '').trim()
     const assessment = parsed.assessment
     const exportPayload = parsed.export_payload
+    const action = parsed.action ?? 'upload_assessment'
+
+    if (action === 'list_exercises') {
+      if (!aiExercisesUrl) {
+        throw new Error('Missing AI_SCREENING_EXERCISES_FUNCTION_URL')
+      }
+      const query = String(parsed.query ?? '').trim()
+      const category = String(parsed.category ?? '').trim()
+      const limit = Number.isFinite(parsed.limit) ? Math.max(1, Math.min(200, Number(parsed.limit))) : 100
+      const upstreamResponse = await fetch(aiExercisesUrl, {
+        method: 'POST',
+        headers: {
+          'x-bridge-secret': bridgeSecret,
+          'x-bridge-pt-id': user.id,
+          Authorization: `Bearer ${upstreamBearer}`,
+          apikey: upstreamApikey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          category: category || null,
+          limit,
+        }),
+      })
+
+      const upstreamBody = await upstreamResponse.text()
+      return new Response(upstreamBody, {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'x-bridge-reached': '1' },
+        status: upstreamResponse.status,
+      })
+    }
+
+    if (!aiAssessmentUrl) {
+      throw new Error('Missing AI_SCREENING_ASSESSMENT_FUNCTION_URL')
+    }
 
     if (!targetEmail || !targetName) {
       return new Response(

@@ -15,6 +15,7 @@ export type RootStackParamList = {
   ScreeningHub: undefined;
   MovementAssessmentClientPick: undefined;
   MovementAssessment: { clientId: string };
+  MovementAssessmentProgramBuilder: { clientId: string; assessmentId: string };
   ClientDetail: { clientId: string };
   WorkoutCreate: { clientId: string; templateWorkoutId?: string };
   WorkoutActive: { workoutId: string };

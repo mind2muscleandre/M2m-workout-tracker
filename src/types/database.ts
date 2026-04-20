@@ -11,7 +11,7 @@ export type ExerciseCategory =
   | 'mobility'
   | 'injury_prevention';
 
-export type WorkoutStatus = 'planned' | 'in_progress' | 'completed';
+export type WorkoutStatus = 'draft' | 'planned' | 'in_progress' | 'completed';
 
 export type ExerciseTrackingType = 'weight' | 'time' | 'other';
 
