@@ -385,7 +385,7 @@ export function ClientListScreen({ navigation }: Props) {
   } = useClientStore();
   const { workouts, fetchAllWorkouts } = useWorkoutStore();
   const { loadForClients, getTimerSessions, getAggregate } = usePlatformStore();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
@@ -396,19 +396,22 @@ export function ClientListScreen({ navigation }: Props) {
   const [isAssigningAthlete, setIsAssigningAthlete] = useState(false);
 
   // ----------------------------------------
-  // Fetch clients on mount
+  // Fetch clients — wait for auth to be confirmed
+  // (Safari/iPad reads AsyncStorage slower than Chrome, causing a race
+  //  where fetchClients fires before the user is in the auth store)
   // ----------------------------------------
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     (async () => {
-      await fetchClients().catch(() => {});
-      await fetchAllWorkouts().catch(() => {});
+      await fetchClients().catch((e) => console.error('fetchClients:', e));
+      await fetchAllWorkouts().catch((e) => console.error('fetchAllWorkouts:', e));
       await loadForClients(
         useClientStore.getState().clients,
         useWorkoutStore.getState().workouts
-      ).catch(() => {});
+      ).catch((e) => console.error('loadForClients:', e));
     })();
-  }, [fetchClients, fetchAllWorkouts, loadForClients]);
+  }, [isAuthenticated, fetchClients, fetchAllWorkouts, loadForClients]);
 
   // ----------------------------------------
   // Filtered & searched clients
