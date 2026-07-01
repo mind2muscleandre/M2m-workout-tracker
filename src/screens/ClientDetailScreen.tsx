@@ -27,6 +27,8 @@ import { formatDate } from '../utils/helpers';
 import { STANDARD_SPORTS } from '../constants/sports';
 import { listMovementAssessmentsForClient } from '../services/clientAssessments';
 import { listImageScreeningsForClient } from '../services/clientScreenings';
+import { fetchUserProfile, fetchUserProfileByEmail } from '../services/platformAthlete';
+import type { PlatformUserProfile } from '../types/platform';
 import type { MovementAssessmentSummary, ScreeningSummary } from '../types/athlete';
 import { parseMaAssessmentId, isActionProgramWorkout } from '../lib/programMarkers';
 import { bandDisplaySv } from '../lib/movementAssessment/exportPayload';
@@ -253,6 +255,47 @@ function WorkoutCard({ workout, onPress, onDelete, subtitle }: WorkoutCardProps)
 }
 
 // ============================================
+// Info Row — reusable label/value row for the profile modal
+// ============================================
+
+function InfoRow({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+  return (
+    <View style={infoRowStyles.row}>
+      <Text style={infoRowStyles.label}>{label}</Text>
+      <Text style={[infoRowStyles.value, mono && infoRowStyles.mono]} numberOfLines={1} selectable>
+        {value ?? '—'}
+      </Text>
+    </View>
+  );
+}
+
+const infoRowStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  label: {
+    width: 140,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.45)',
+    fontWeight: '500',
+  },
+  value: {
+    flex: 1,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.88)',
+  },
+  mono: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: 'rgba(255,255,255,0.5)',
+  },
+});
+
+// ============================================
 // Copy Workout Modal Component
 // ============================================
 
@@ -374,6 +417,9 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
   const [editWeight, setEditWeight] = useState('');
   const [sportPickerVisible, setSportPickerVisible] = useState(false);
   const [copyModalVisible, setCopyModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<PlatformUserProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [clientLookupResolved, setClientLookupResolved] = useState(() =>
     useClientStore.getState().clients.some((c) => c.id === clientId)
@@ -558,6 +604,27 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
     }
     setIsEditing(false);
   }, [client]);
+
+  const handleOpenInfo = useCallback(async () => {
+    if (!client) return;
+    setInfoModalVisible(true);
+    if (userProfile) return; // already loaded
+    setIsLoadingProfile(true);
+    try {
+      let profile: PlatformUserProfile | null = null;
+      if (client.client_user_id) {
+        profile = await fetchUserProfile(client.client_user_id);
+      }
+      if (!profile && client.email) {
+        profile = await fetchUserProfileByEmail(client.email);
+      }
+      setUserProfile(profile);
+    } catch (e) {
+      console.error('fetchUserProfile:', e);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }, [client, userProfile]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!editName.trim()) {
@@ -818,10 +885,15 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
                 </View>
               </View>
 
-              {/* Edit button */}
-              <TouchableOpacity style={styles.heroEditBtn} onPress={handleStartEdit}>
-                <Text style={styles.heroEditBtnText}>Redigera</Text>
-              </TouchableOpacity>
+              {/* Action buttons */}
+              <View style={styles.heroActionBtns}>
+                <TouchableOpacity style={styles.heroInfoBtn} onPress={handleOpenInfo}>
+                  <Text style={styles.heroInfoBtnText}>Info</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.heroEditBtn} onPress={handleStartEdit}>
+                  <Text style={styles.heroEditBtnText}>Redigera</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
@@ -1281,6 +1353,80 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
         {/* Bottom spacing */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* ---- User Profile Info Modal ---- */}
+      <Modal
+        visible={infoModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setInfoModalVisible(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.modalHeaderButton}
+              onPress={() => setInfoModalVisible(false)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Text style={styles.modalCancelText}>Stäng</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Användarinfo</Text>
+            <View style={styles.modalHeaderButton} />
+          </View>
+
+          {isLoadingProfile ? (
+            <View style={styles.modalLoading}>
+              <ActivityIndicator color={colors.primary} size="large" />
+            </View>
+          ) : !userProfile ? (
+            <View style={styles.modalEmpty}>
+              <Text style={styles.modalEmptyIcon}>{'👤'}</Text>
+              <Text style={styles.modalEmptyText}>
+                Ingen användarprofil hittades.{'\n'}Kontrollera att atleten har ett konto och är kopplad via e-post eller user_id.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView style={styles.infoModalScroll} contentContainerStyle={styles.infoModalContent}>
+              <View style={styles.infoModalSection}>
+                <Text style={styles.infoModalSectionTitle}>Grundinfo</Text>
+                <InfoRow label="Namn" value={userProfile.name} />
+                <InfoRow label="E-post" value={userProfile.email} />
+                <InfoRow label="Idrott" value={userProfile.sport} />
+                <InfoRow label="Lag" value={userProfile.team} />
+                <InfoRow label="Position" value={userProfile.position} />
+                <InfoRow label="Ålder" value={userProfile.age != null ? `${userProfile.age} år` : null} />
+              </View>
+
+              <View style={styles.infoModalSection}>
+                <Text style={styles.infoModalSectionTitle}>Aktivitet</Text>
+                <InfoRow label="Poäng" value={userProfile.points != null ? String(userProfile.points) : null} />
+                <InfoRow label="Nuvarande streak" value={userProfile.current_streak != null ? `${userProfile.current_streak} dagar` : null} />
+                <InfoRow label="Senaste träning" value={userProfile.last_workout_at ? formatDate(userProfile.last_workout_at) : null} />
+              </View>
+
+              {(userProfile.goal_weight != null ||
+                userProfile.activity_level != null ||
+                userProfile.goal_type != null ||
+                userProfile.macro_mode != null ||
+                userProfile.current_tdee_estimate != null) && (
+                <View style={styles.infoModalSection}>
+                  <Text style={styles.infoModalSectionTitle}>Mål & Hälsa</Text>
+                  <InfoRow label="Målvikt" value={userProfile.goal_weight != null ? `${userProfile.goal_weight} kg` : null} />
+                  <InfoRow label="Aktivitetsnivå" value={userProfile.activity_level} />
+                  <InfoRow label="Måltyp" value={userProfile.goal_type} />
+                  <InfoRow label="Makroläge" value={userProfile.macro_mode} />
+                  <InfoRow label="TDEE-uppskattning" value={userProfile.current_tdee_estimate != null ? `${userProfile.current_tdee_estimate} kcal` : null} />
+                </View>
+              )}
+
+              <View style={styles.infoModalSection}>
+                <Text style={styles.infoModalSectionTitle}>Systeminfo</Text>
+                <InfoRow label="User ID" value={userProfile.user_id} mono />
+              </View>
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
 
       {/* ---- Copy Workout Modal ---- */}
       <CopyWorkoutModal
@@ -2179,6 +2325,24 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 10,
   },
+  heroActionBtns: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  heroInfoBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: coachColors.coach + '60',
+    backgroundColor: coachColors.coach + '15',
+  },
+  heroInfoBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: coachColors.coach,
+  },
   heroEditBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -2190,6 +2354,25 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: coachColors.mutedHi,
+  },
+  infoModalScroll: {
+    flex: 1,
+  },
+  infoModalContent: {
+    padding: 20,
+    paddingBottom: 40,
+    gap: 24,
+  },
+  infoModalSection: {
+    gap: 0,
+  },
+  infoModalSectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.35)',
+    marginBottom: 8,
   },
   heroEmail: {
     fontFamily: fonts.body,
