@@ -528,11 +528,22 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
         sport: client.sport,
         age: client.age,
       });
+
+      // Refresh client from DB so client_user_id + email are up to date
+      const refreshedClient = await fetchClientById(client.id);
+      if (refreshedClient) {
+        setResolvedClient(refreshedClient);
+        // Reload full aggregate with the new user link
+        const agg = await fetchAthleteAggregate(refreshedClient, workouts).catch(() => null);
+        if (agg) setAggregate(agg);
+      }
+
       // Refresh profile in modal
       setIsLoadingProfile(true);
       const profile = await fetchUserProfile(result.user_id).catch(() => null);
       setUserProfile(profile);
       setIsLoadingProfile(false);
+
       showAlert(
         result.already_linked ? 'Redan kopplad' : result.invited ? 'Inbjudan skickad!' : 'Konto kopplat',
         result.already_linked
@@ -546,7 +557,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
     } finally {
       setIsInviting(false);
     }
-  }, [client, inviteEmail, showAlert]);
+  }, [client, inviteEmail, showAlert, fetchClientById, workouts]);
 
   const handleAutoGenerate = useCallback(
     async (assessment: MovementAssessmentRow) => {
