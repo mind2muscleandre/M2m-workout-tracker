@@ -8,6 +8,9 @@ import {
   TextInput,
   Alert,
   Platform,
+  Modal,
+  ScrollView,
+  SafeAreaView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
@@ -72,6 +75,9 @@ import { coachColors, fonts, borderRadius, statusLabels, statusColors } from '..
 import { bandDisplaySv } from '../lib/movementAssessment/exportPayload';
 import type { ScoreBand } from '../types/movementAssessment';
 import { supabase } from '../lib/supabase';
+import { fetchUserProfile, fetchUserProfileByEmail } from '../services/platformAthlete';
+import type { PlatformUserProfile } from '../types/platform';
+import { formatDate } from '../utils/helpers';
 import { fetchCorrectiveMobilityExercises } from '../services/exerciseBankService';
 import { buildProgramSuggestion } from '../lib/movementAssessment/programSuggestion';
 import type { MovementAssessmentRow } from '../types/platform';
@@ -366,6 +372,9 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
   const [coachPickerVisible, setCoachPickerVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<PlatformUserProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   const client = resolvedClient ?? clients.find((c) => c.id === clientId) ?? null;
   const isAssignedToMe = isClientAssignedToCurrentUser(client, authUser?.id);
@@ -480,6 +489,23 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
       Alert.alert(title, message);
     }
   }, []);
+
+  const handleOpenInfo = useCallback(async () => {
+    setInfoModalVisible(true);
+    if (userProfile) return;
+    setIsLoadingProfile(true);
+    try {
+      const uid = client?.client_user_id ?? aggregate?.userId ?? null;
+      let profile: PlatformUserProfile | null = null;
+      if (uid) profile = await fetchUserProfile(uid);
+      if (!profile && client?.email) profile = await fetchUserProfileByEmail(client.email);
+      setUserProfile(profile);
+    } catch (e) {
+      console.error('fetchUserProfile:', e);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }, [client, aggregate, userProfile]);
 
   const handleAutoGenerate = useCallback(
     async (assessment: MovementAssessmentRow) => {
@@ -675,6 +701,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
             <Text style={styles.back}>← Tillbaka</Text>
           </TouchableOpacity>
         }
+        onInfo={handleOpenInfo}
         onMessage={isAssignedToMe && client?.client_user_id ? () => navigation.navigate('MainTabs', { screen: 'Messages' }) : undefined}
         onSession={isAssignedToMe && client ? () => navigation.navigate('SessionTimer', { clientId: client.id }) : undefined}
       />
@@ -830,9 +857,118 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
       isSelecting={isAssigning}
       fetchTrainers={loadTrainers}
     />
+
+    {/* ---- User Profile Info Modal ---- */}
+    <Modal
+      visible={infoModalVisible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setInfoModalVisible(false)}
+    >
+      <SafeAreaView style={athleteInfoStyles.container}>
+        <View style={athleteInfoStyles.header}>
+          <TouchableOpacity onPress={() => setInfoModalVisible(false)} hitSlop={12}>
+            <Text style={athleteInfoStyles.closeBtn}>Stäng</Text>
+          </TouchableOpacity>
+          <Text style={athleteInfoStyles.title}>Användarinfo</Text>
+          <View style={{ width: 48 }} />
+        </View>
+
+        {isLoadingProfile ? (
+          <View style={athleteInfoStyles.center}>
+            <ActivityIndicator color="#00D4AA" size="large" />
+          </View>
+        ) : !userProfile ? (
+          <View style={athleteInfoStyles.center}>
+            <Text style={athleteInfoStyles.emptyIcon}>{'👤'}</Text>
+            <Text style={athleteInfoStyles.emptyText}>
+              Ingen användarprofil hittades.{'\n'}Kontrollera att atleten har ett konto och är kopplad via e-post eller user_id.
+            </Text>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={athleteInfoStyles.scroll}>
+            <AthleteInfoSection title="Grundinfo">
+              <AthleteInfoRow label="Namn" value={userProfile.name} />
+              <AthleteInfoRow label="E-post" value={userProfile.email} />
+              <AthleteInfoRow label="Idrott" value={userProfile.sport} />
+              <AthleteInfoRow label="Lag" value={userProfile.team} />
+              <AthleteInfoRow label="Position" value={userProfile.position} />
+              <AthleteInfoRow label="Ålder" value={userProfile.age != null ? `${userProfile.age} år` : null} />
+            </AthleteInfoSection>
+
+            <AthleteInfoSection title="Aktivitet">
+              <AthleteInfoRow label="Poäng" value={userProfile.points != null ? String(userProfile.points) : null} />
+              <AthleteInfoRow label="Nuvarande streak" value={userProfile.current_streak != null ? `${userProfile.current_streak} dagar` : null} />
+              <AthleteInfoRow label="Senaste träning" value={userProfile.last_workout_at ? formatDate(userProfile.last_workout_at) : null} />
+            </AthleteInfoSection>
+
+            {(userProfile.goal_weight != null || userProfile.activity_level != null || userProfile.goal_type != null || userProfile.macro_mode != null || userProfile.current_tdee_estimate != null) && (
+              <AthleteInfoSection title="Mål & Hälsa">
+                <AthleteInfoRow label="Målvikt" value={userProfile.goal_weight != null ? `${userProfile.goal_weight} kg` : null} />
+                <AthleteInfoRow label="Aktivitetsnivå" value={userProfile.activity_level} />
+                <AthleteInfoRow label="Måltyp" value={userProfile.goal_type} />
+                <AthleteInfoRow label="Makroläge" value={userProfile.macro_mode} />
+                <AthleteInfoRow label="TDEE-uppskattning" value={userProfile.current_tdee_estimate != null ? `${userProfile.current_tdee_estimate} kcal` : null} />
+              </AthleteInfoSection>
+            )}
+
+            <AthleteInfoSection title="Systeminfo">
+              <AthleteInfoRow label="User ID" value={userProfile.user_id} mono />
+            </AthleteInfoSection>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </Modal>
     </>
   );
 }
+
+function AthleteInfoSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={athleteInfoStyles.section}>
+      <Text style={athleteInfoStyles.sectionTitle}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+function AthleteInfoRow({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+  return (
+    <View style={athleteInfoStyles.row}>
+      <Text style={athleteInfoStyles.rowLabel}>{label}</Text>
+      <Text style={[athleteInfoStyles.rowValue, mono && athleteInfoStyles.rowValueMono]} numberOfLines={1} selectable>
+        {value ?? '—'}
+      </Text>
+    </View>
+  );
+}
+
+const athleteInfoStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1A1E24' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  closeBtn: { fontSize: 15, color: '#00D4AA' },
+  title: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
+  emptyIcon: { fontSize: 40 },
+  emptyText: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 20 },
+  scroll: { padding: 20, gap: 24 },
+  section: { gap: 0 },
+  sectionTitle: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1,
+    textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  rowLabel: { width: 140, fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
+  rowValue: { flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.88)' },
+  rowValueMono: { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
+});
 
 function OverviewTab({
   aggregate,

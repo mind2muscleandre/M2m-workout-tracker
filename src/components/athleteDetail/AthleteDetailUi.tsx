@@ -871,6 +871,7 @@ export interface WhoopHeroProps {
   backButton?: React.ReactNode;
   onMessage?: () => void;
   onSession?: () => void;
+  onInfo?: () => void;
 }
 
 export function WhoopHeroSection({
@@ -893,6 +894,7 @@ export function WhoopHeroSection({
   backButton,
   onMessage,
   onSession,
+  onInfo,
 }: WhoopHeroProps) {
   const { width } = useWindowDimensions();
   const compact = width < 768;
@@ -962,6 +964,11 @@ export function WhoopHeroSection({
           ) : null}
 
           <View style={heroSectionStyles.btnRow}>
+            {onInfo ? (
+              <TouchableOpacity style={heroSectionStyles.btnInfo} onPress={onInfo}>
+                <Text style={heroSectionStyles.btnInfoTxt}>Info</Text>
+              </TouchableOpacity>
+            ) : null}
             {onMessage ? (
               <TouchableOpacity style={heroSectionStyles.btnSecondary} onPress={onMessage}>
                 <Text style={heroSectionStyles.btnSecondaryTxt}>Meddelande</Text>
@@ -1036,6 +1043,12 @@ const heroSectionStyles = StyleSheet.create({
     backgroundColor: coachColors.coach,
   },
   btnPrimaryTxt: { fontSize: 13, color: '#000', fontFamily: 'DMSans_600SemiBold' },
+  btnInfo: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
+    borderWidth: 1, borderColor: coachColors.coach + '60',
+    backgroundColor: coachColors.coach + '18',
+  },
+  btnInfoTxt: { fontSize: 13, color: coachColors.coach, fontFamily: 'DMSans_400Regular' },
   btnSecondary: {
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
     borderWidth: 1, borderColor: coachColors.glassBorder,
