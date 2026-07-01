@@ -378,6 +378,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteEmailError, setInviteEmailError] = useState(false);
 
   const client = resolvedClient ?? clients.find((c) => c.id === clientId) ?? null;
   const isAssignedToMe = isClientAssignedToCurrentUser(client, authUser?.id);
@@ -513,14 +514,11 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
   const handleInvite = useCallback(async () => {
     if (!client) return;
     const email = (client.email?.trim() || inviteEmail.trim());
-    if (!email) {
-      showAlert('E-post saknas', 'Ange en e-postadress.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setInviteEmailError(true);
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showAlert('Ogiltig e-post', 'Ange en giltig e-postadress.');
-      return;
-    }
+    setInviteEmailError(false);
     setIsInviting(true);
     try {
       const result = await inviteAthlete({
@@ -929,17 +927,25 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
             </Text>
             <View style={athleteInfoStyles.inviteForm}>
               {!client?.email && (
-                <TextInput
-                  style={athleteInfoStyles.emailInput}
-                  value={inviteEmail}
-                  onChangeText={setInviteEmail}
-                  placeholder="E-postadress till atleten"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isInviting}
-                />
+                <>
+                  <TextInput
+                    style={[
+                      athleteInfoStyles.emailInput,
+                      inviteEmailError && athleteInfoStyles.emailInputError,
+                    ]}
+                    value={inviteEmail}
+                    onChangeText={(t) => { setInviteEmail(t); setInviteEmailError(false); }}
+                    placeholder="E-postadress till atleten"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isInviting}
+                  />
+                  {inviteEmailError && (
+                    <Text style={athleteInfoStyles.emailErrorTxt}>Ange en giltig e-postadress</Text>
+                  )}
+                </>
               )}
               <TouchableOpacity
                 style={[athleteInfoStyles.inviteBtn, isInviting && { opacity: 0.6 }]}
@@ -949,9 +955,12 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
                 {isInviting ? (
                   <ActivityIndicator color="#000" size="small" />
                 ) : (
-                  <Text style={athleteInfoStyles.inviteBtnTxt}>Skapa konto & skicka inbjudan</Text>
+                  <Text style={athleteInfoStyles.inviteBtnTxt}>✉ Skapa konto & skicka inbjudan via e-post</Text>
                 )}
               </TouchableOpacity>
+              <Text style={athleteInfoStyles.inviteHint}>
+                Atleten får ett mail via Resend med en länk för att aktivera sitt konto.
+              </Text>
             </View>
           </View>
         ) : (
@@ -1032,6 +1041,16 @@ const athleteInfoStyles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12,
     fontSize: 15, color: '#fff',
+  },
+  emailInputError: {
+    borderColor: '#ff4d4d',
+    backgroundColor: 'rgba(255,77,77,0.08)',
+  },
+  emailErrorTxt: {
+    fontSize: 12, color: '#ff4d4d', alignSelf: 'flex-start',
+  },
+  inviteHint: {
+    fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 16,
   },
   inviteBtn: {
     width: '100%', paddingVertical: 13,
