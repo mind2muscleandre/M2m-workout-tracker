@@ -377,6 +377,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
   const [userProfile, setUserProfile] = useState<PlatformUserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
 
   const client = resolvedClient ?? clients.find((c) => c.id === clientId) ?? null;
   const isAssignedToMe = isClientAssignedToCurrentUser(client, authUser?.id);
@@ -511,9 +512,13 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
 
   const handleInvite = useCallback(async () => {
     if (!client) return;
-    const email = client.email?.trim();
+    const email = (client.email?.trim() || inviteEmail.trim());
     if (!email) {
-      showAlert('E-post saknas', 'Lägg till en e-postadress på atleten innan du skapar ett konto.');
+      showAlert('E-post saknas', 'Ange en e-postadress.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showAlert('Ogiltig e-post', 'Ange en giltig e-postadress.');
       return;
     }
     setIsInviting(true);
@@ -922,25 +927,32 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
             <Text style={athleteInfoStyles.emptyText}>
               Atleten saknar ett M2M-konto.{'\n'}Skapa ett konto så kan atleten logga in i appen.
             </Text>
-            {client?.email ? (
+            <View style={athleteInfoStyles.inviteForm}>
+              {!client?.email && (
+                <TextInput
+                  style={athleteInfoStyles.emailInput}
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  placeholder="E-postadress till atleten"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isInviting}
+                />
+              )}
               <TouchableOpacity
-                style={athleteInfoStyles.inviteBtn}
+                style={[athleteInfoStyles.inviteBtn, isInviting && { opacity: 0.6 }]}
                 onPress={handleInvite}
                 disabled={isInviting}
               >
                 {isInviting ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color="#000" size="small" />
                 ) : (
                   <Text style={athleteInfoStyles.inviteBtnTxt}>Skapa konto & skicka inbjudan</Text>
                 )}
               </TouchableOpacity>
-            ) : (
-              <View style={athleteInfoStyles.noEmailWarning}>
-                <Text style={athleteInfoStyles.noEmailTxt}>
-                  Lägg till en e-postadress på atleten först.
-                </Text>
-              </View>
-            )}
+            </View>
           </View>
         ) : (
           <ScrollView contentContainerStyle={athleteInfoStyles.scroll}>
@@ -1012,16 +1024,20 @@ const athleteInfoStyles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   emptyIcon: { fontSize: 40 },
   emptyText: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 20 },
+  inviteForm: {
+    marginTop: 20, width: '100%', maxWidth: 320, gap: 12, alignItems: 'center',
+  },
+  emailInput: {
+    width: '100%', backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12,
+    fontSize: 15, color: '#fff',
+  },
   inviteBtn: {
-    marginTop: 20, paddingHorizontal: 24, paddingVertical: 12,
-    borderRadius: 10, backgroundColor: '#00D4AA', minWidth: 220, alignItems: 'center',
+    width: '100%', paddingVertical: 13,
+    borderRadius: 10, backgroundColor: '#00D4AA', alignItems: 'center',
   },
   inviteBtnTxt: { fontSize: 15, fontWeight: '600', color: '#000' },
-  noEmailWarning: {
-    marginTop: 16, paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 8, backgroundColor: 'rgba(255,180,0,0.12)', borderWidth: 1, borderColor: 'rgba(255,180,0,0.3)',
-  },
-  noEmailTxt: { fontSize: 13, color: 'rgba(255,180,0,0.9)', textAlign: 'center' },
   scroll: { padding: 20, gap: 24 },
   section: { gap: 0 },
   sectionTitle: {
