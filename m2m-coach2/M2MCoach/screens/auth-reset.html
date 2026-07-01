@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Återställ lösenord</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+html, body {
+  overflow: auto; display: flex; align-items: center; justify-content: center;
+  min-height: 100dvh; background: var(--bg);
+}
+.auth-page {
+  min-height: 100dvh; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px; position: relative;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(0,212,170,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 80% 80%, rgba(247,233,40,0.05) 0%, transparent 60%);
+}
+.auth-card {
+  width: 100%; max-width: 400px;
+  background: var(--glass-bg); backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border); border-radius: var(--r-xl);
+  box-shadow: var(--glass-shadow); padding: 36px 32px;
+}
+.auth-logo { text-align: center; margin-bottom: 28px; }
+.auth-logo-mark { font-family: var(--font-display); font-size: 36px; font-weight: 700; letter-spacing: 0.08em; color: var(--coach); text-shadow: var(--glow-coach); line-height: 1; }
+.auth-logo-sub { font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; margin-top: 5px; }
+.auth-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
+.auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.5; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-family: var(--font-mono); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.10em; color: var(--muted); margin-bottom: 6px; }
+.form-input { width: 100%; height: 44px; padding: 0 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--r-md); color: var(--fg); font-size: 14px; outline: none; transition: border-color 0.15s; }
+.form-input:focus { border-color: var(--coach); background: rgba(0,212,170,0.05); }
+.form-input::placeholder { color: var(--muted); }
+.auth-btn { width: 100%; height: 48px; border-radius: var(--r-lg); background: var(--coach); border: none; color: #000; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: var(--glow-coach); display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+.auth-btn:hover { background: oklch(80% 0.14 165); transform: scale(1.02); }
+.auth-btn:disabled { background: var(--border-hi); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+.back-link { text-align: center; font-size: 12px; color: var(--muted); }
+.back-link a { color: var(--coach); text-decoration: none; }
+.back-link a:hover { opacity: 0.75; }
+.success-state { text-align: center; display: none; }
+.success-icon { font-size: 48px; margin-bottom: 12px; }
+.success-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
+.success-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.loading-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(0,0,0,0.2); border-top-color: #000; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 420px) { .auth-card { padding: 28px 20px; } }
+</style>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-mark">M2M</div>
+      <div class="auth-logo-sub">Coach Platform</div>
+    </div>
+
+    <div id="formState">
+      <div class="auth-title">Glömt lösenord?</div>
+      <div class="auth-sub">Ange din e-postadress så skickar vi en länk för att återställa ditt lösenord.</div>
+      <form onsubmit="sendReset(event)">
+        <div class="form-group">
+          <label class="form-label" for="resetEmail">E-postadress</label>
+          <input id="resetEmail" class="form-input" type="email" placeholder="coach@m2m.se" required>
+        </div>
+        <button type="submit" class="auth-btn" id="resetBtn">
+          Skicka återställningslänk
+        </button>
+      </form>
+      <div class="back-link"><a href="auth-login.html">← Tillbaka till inloggning</a></div>
+    </div>
+
+    <div class="success-state" id="successState">
+      <div class="success-icon">📧</div>
+      <div class="success-title">Kolla din e-post</div>
+      <div class="success-sub" id="successEmail">Vi har skickat en återställningslänk till <strong>—</strong>. Länken är giltig i 30 minuter.</div>
+      <div style="margin-top:20px"><a href="auth-login.html" class="btn btn-primary" style="display:flex;justify-content:center">Tillbaka till inloggning</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function sendReset(e) {
+  e.preventDefault();
+  const email = document.getElementById('resetEmail').value;
+  const btn = document.getElementById('resetBtn');
+  btn.innerHTML = '<div class="loading-spinner"></div>';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    document.getElementById('formState').style.display = 'none';
+    const succ = document.getElementById('successState');
+    succ.style.display = 'block';
+    document.getElementById('successEmail').innerHTML = `Vi har skickat en återställningslänk till <strong>${email}</strong>. Länken är giltig i 30 minuter.`;
+  }, 1500);
+}
+</script>
+</body>
+</html>

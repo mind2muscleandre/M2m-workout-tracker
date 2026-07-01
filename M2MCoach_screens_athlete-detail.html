@@ -1,0 +1,1848 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Athletprofil</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted); cursor: pointer;
+  transition: color 0.15s; text-decoration: none;
+}
+.back-btn:hover { color: var(--fg); }
+
+/* Hero */
+.athlete-hero {
+  padding: 20px;
+  display: flex; align-items: center; gap: 18px;
+  background: var(--glass-bg-coach);
+  border-bottom: 1px solid rgba(0,212,170,0.12);
+  flex-shrink: 0;
+}
+.hero-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 26px; font-weight: 700;
+  color: #000; flex-shrink: 0;
+  border: 2px solid var(--coach);
+  box-shadow: var(--glow-coach);
+  background: linear-gradient(135deg, rgba(0,212,170,0.50) 0%, rgba(0,212,170,0.18) 100%);
+}
+.hero-name { font-family: var(--font-display); font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; }
+.hero-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.hero-sport { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+/* ── Full-page scroll unlock ── */
+html, body { overflow: auto !important; height: auto !important; }
+.app-shell  { overflow: visible !important; height: auto !important; }
+.main-content { overflow: visible !important; height: auto !important; }
+
+/* Tab nav — sticky so it stays visible while scrolling */
+.tab-nav {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  position: sticky; top: 0; z-index: 50;
+  background: var(--screen-bg, var(--bg));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: 0 20px; height: 44px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.tab-btn.active { color: var(--coach); border-bottom-color: var(--coach); }
+
+/* Tab panels — natural height, no inner scroll */
+.tab-panel { display: none; padding: 16px 20px 80px; gap: 12px; flex-direction: column; overflow: visible; }
+.tab-panel.active { display: flex; }
+@media (min-width: 768px) { .tab-panel { padding-bottom: 40px; } }
+
+/* Goal card */
+.goal-card { padding: 16px; border-radius: var(--r-lg); }
+.goal-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.goal-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.goal-bar-row { display: flex; align-items: center; gap: 10px; }
+.goal-bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.goal-fill { height: 100%; border-radius: 4px; background: var(--coach); }
+.goal-pct-big { font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1; color: var(--coach); }
+
+/* Breakdown factors */
+.factors-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 900px) { .factors-grid { grid-template-columns: repeat(4, 1fr); } }
+.factor-card {
+  padding: 12px; border-radius: var(--r-md);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+}
+.factor-name { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+.factor-val { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.factor-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.factor-fill { height: 100%; border-radius: 2px; }
+
+/* Session log */
+.session-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--r-md);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  cursor: pointer; transition: background 0.15s;
+}
+.session-row:hover { background: var(--glass-bg-hi); }
+.session-date { font-family: var(--font-mono); font-size: 10px; color: var(--muted); width: 64px; flex-shrink: 0; }
+.session-type { flex: 1; }
+.session-type-name { font-size: 13px; font-weight: 500; }
+.session-type-sys { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.session-load { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--coach); }
+.session-load-label { font-family: var(--font-mono); font-size: 8px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+/* Program card */
+.program-card { padding: 16px; border-radius: var(--r-lg); background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.prog-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+.prog-day { border-radius: var(--r-sm); padding: 6px 4px; text-align: center; background: var(--glass-bg-hi); border: 1px solid var(--border); }
+.prog-day-label { font-family: var(--font-mono); font-size: 7px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.prog-day-type { font-size: 10px; font-weight: 600; margin-top: 4px; }
+.prog-day.rest { opacity: 0.4; }
+.prog-day.today { border-color: var(--coach); background: var(--coach-dim); }
+
+/* Routine items */
+.routine-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: var(--r-md);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+}
+.ri-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--glass-border-hi);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ri-check.done { background: var(--coach); border-color: var(--coach); }
+.ri-check.done svg { display: block; }
+.ri-check svg { display: none; width: 11px; height: 11px; stroke: #000; stroke-width: 2.5; }
+.ri-label { font-size: 13px; flex: 1; }
+.ri-time { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+/* ── App section wrappers ── */
+.app-section { display: flex; flex-direction: column; gap: 8px; }
+.app-section-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 2px;
+}
+.app-section-source { display: flex; align-items: center; gap: 8px; }
+.app-section-bar { width: 3px; height: 16px; border-radius: 2px; flex-shrink: 0; }
+.app-section-name {
+  font-family: var(--font-mono); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.10em;
+}
+.app-section-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.app-section-link {
+  display: flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); text-decoration: none; transition: color 0.15s;
+}
+.app-section-link:hover { color: var(--fg); }
+
+/* ── Perform widgets ── */
+.pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pf-card {
+  background: linear-gradient(160deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.01) 100%), rgba(20,23,28,0.90);
+  backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.10); border-radius: 16px;
+  padding: 14px 12px; text-align: left; cursor: pointer;
+  transition: border-color 0.15s, transform 0.12s;
+  width: 100%; display: block;
+}
+.pf-card:active { transform: scale(0.965); }
+.pf-card-full {
+  background: linear-gradient(160deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.01) 100%), rgba(20,23,28,0.90);
+  backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.10); border-radius: 16px;
+  padding: 12px 14px 10px; cursor: pointer; text-align: left;
+  transition: border-color 0.15s, transform 0.12s; width: 100%; display: block;
+}
+.pf-card-full:active { transform: scale(0.99); }
+.pf-card-label {
+  font-family: var(--font-mono); font-size: 8px;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--accent); margin-bottom: 10px; display: block; opacity: 0.85;
+}
+.pf-ring-wrap { position: relative; width: 80px; height: 80px; margin: 0 auto 6px; }
+.pf-ring-svg { width: 80px; height: 80px; display: block; }
+.pf-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.pf-ring-val { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1; }
+.pf-ring-pct { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.45); line-height: 1; margin-top: 1px; }
+.pf-delta { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--coach); text-align: center; margin-top: 4px; }
+.pf-prog-wrap { position: relative; height: 68px; overflow: hidden; }
+
+/* Progress track (shared) */
+.prog-track { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 2px; transition: width 0.55s ease; }
+
+/* OHSquat cells */
+.pf-ohsq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.pf-ohsq-cell { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--r-md); padding: 8px 10px; }
+.pf-ohsq-val { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 2px; }
+.pf-ohsq-lbl { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+/* Area risk rows */
+.pf-area-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer; transition: opacity 0.12s;
+  user-select: none; -webkit-user-select: none;
+}
+.pf-area-row:last-of-type { border-bottom: none; }
+.pf-area-row:active { opacity: 0.65; }
+.pf-area-label { font-size: 12px; font-weight: 500; width: 98px; flex-shrink: 0; line-height: 1.3; }
+.pf-area-bwrap { flex: 1; }
+.pf-area-val { font-family: var(--font-display); font-size: 16px; font-weight: 700; width: 24px; text-align: right; flex-shrink: 0; }
+.pf-area-toggle { flex-shrink: 0; color: var(--muted); transition: transform 0.22s; display: flex; align-items: center; width: 16px; }
+.pf-area-row.open .pf-area-toggle { transform: rotate(90deg); }
+
+/* ── Mobile hero compaction ── */
+@media (max-width: 767px) {
+  .athlete-hero {
+    padding: 10px 14px 12px;
+  }
+  .athlete-hero > div[style] {
+    margin-top: 14px !important;
+    gap: 12px !important;
+  }
+  .hero-avatar {
+    width: 44px; height: 44px; font-size: 16px;
+  }
+  .hero-name { font-size: 18px; }
+  .hero-meta { margin-top: 3px; }
+  /* Icon-only action buttons */
+  .hero-btn-lbl { display: none; }
+  .hero-icon-btn {
+    width: 34px; height: 34px;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: flex; align-items: center; justify-content: center;
+    gap: 0;
+  }
+}
+.pf-area-detail { overflow: hidden; max-height: 0; transition: max-height 0.30s cubic-bezier(0.4,0,0.2,1); }
+.pf-area-detail.open { max-height: 200px; }
+.pf-area-detail-inner { padding: 8px 0 10px; }
+.pf-side-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.pf-side-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); width: 56px; flex-shrink: 0; }
+.pf-side-val { font-family: var(--font-display); font-size: 15px; font-weight: 700; width: 24px; text-align: right; flex-shrink: 0; }
+.pf-risk-warn { display: flex; align-items: flex-start; gap: 7px; padding: 7px 9px; background: rgba(235,168,0,0.09); border: 1px solid rgba(235,168,0,0.26); border-radius: 7px; margin-top: 4px; }
+.pf-risk-txt { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.09em; color: #EBA800; line-height: 1.5; }
+
+/* Exercise rows in Perform tab */
+.pf-ex-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-md);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+}
+.pf-ex-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pf-ex-body { flex: 1; min-width: 0; }
+.pf-ex-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-ex-desc { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 2px; }
+.pf-ex-target { text-align: right; flex-shrink: 0; }
+.pf-ex-area { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.pf-ex-sets { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--fg); line-height: 1.2; }
+
+/* Åtgärdsprogram rec-cards */
+.rec-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--r-lg); padding: 12px 14px; }
+.rec-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 5px; }
+.rec-icon { font-size: 15px; flex-shrink: 0; }
+.rec-title { font-size: 13px; font-weight: 600; flex: 1; }
+.rec-priority { flex-shrink: 0; font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.07em; padding: 2px 7px; border-radius: var(--r-full); }
+.rp-high { background: rgba(255,95,31,0.12); color: var(--orange); border: 1px solid rgba(255,95,31,0.22); }
+.rp-med { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(247,233,40,0.20); }
+.rp-low { background: var(--coach-dim); color: var(--coach); border: 1px solid rgba(0,212,170,0.20); }
+.rec-text { font-size: 12px; color: var(--muted-hi); line-height: 1.5; }
+
+/* Exercise remove + add controls */
+.pf-ex-remove {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); transition: background 0.13s, color 0.13s;
+  opacity: 0;
+}
+.pf-ex-row:hover .pf-ex-remove { opacity: 1; }
+@media (hover: none) { .pf-ex-remove { opacity: 1; } }
+.pf-ex-remove:hover { background: rgba(255,60,60,0.10); color: #FF4545; }
+.pf-ex-add-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  width: 100%; padding: 9px 12px; border-radius: var(--r-md);
+  background: transparent; border: 1px dashed var(--glass-border);
+  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--muted); cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.pf-ex-add-btn:hover {
+  border-color: var(--add-color, var(--coach));
+  color: var(--add-color, var(--coach));
+  background: rgba(255,255,255,0.04);
+}
+
+/* Add exercise modal */
+.ex-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.60);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 1000; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.ex-modal-overlay.open { opacity: 1; pointer-events: all; }
+.ex-modal {
+  background: #161C1F; border: 1px solid var(--glass-border);
+  border-top-left-radius: var(--r-lg); border-top-right-radius: var(--r-lg);
+  padding: 20px; width: 100%; max-width: 540px;
+  transform: translateY(24px); transition: transform 0.22s cubic-bezier(.32,.72,0,1);
+  max-height: 92dvh; overflow-y: auto;
+}
+.ex-modal-overlay.open .ex-modal { transform: translateY(0); }
+.ex-modal-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.ex-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.ex-field label { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.ex-field input, .ex-field select {
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--r-sm);
+  padding: 9px 11px; font-size: 13px; color: var(--fg); font-family: var(--font-body);
+  outline: none; transition: border-color 0.15s;
+}
+.ex-field input:focus, .ex-field select:focus { border-color: var(--coach); }
+.ex-field select option { background: #161C1F; }
+.ex-modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ex-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.ex-modal-actions button { flex: 1; height: 40px; border-radius: var(--r-md); cursor: pointer; font-size: 13px; font-weight: 600; border: none; transition: opacity 0.15s; }
+.ex-modal-actions button:hover { opacity: 0.84; }
+.ex-btn-save { background: var(--coach); color: #000; }
+.ex-btn-cancel { background: var(--glass-bg); color: var(--muted); border: 1px solid var(--glass-border) !important; }
+.ex-static-fallback, .ex-static-fallback ~ div { display: none !important; }
+
+/* ── Whoop-style hero ── */
+.whoop-hero { position:relative; flex-shrink:0; overflow:hidden; }
+.whoop-hero::before {
+  content:''; position:absolute; inset:0; z-index:0;
+  background: radial-gradient(ellipse 60% 90% at 80% 50%, rgba(0,212,170,0.07) 0%, transparent 65%),
+              radial-gradient(ellipse 40% 60% at 20% 80%, rgba(63,167,214,0.05) 0%, transparent 60%);
+}
+.whoop-hero-inner { display:flex; width:100%; position:relative; z-index:1; }
+.wh-left {
+  width:280px; flex-shrink:0;
+  padding:20px 18px 18px;
+  border-right:1px solid rgba(255,255,255,0.07);
+  display:flex; flex-direction:column;
+}
+.wh-right { flex:1; min-width:0; padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+.wh-back { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); text-decoration:none; margin-bottom:14px; transition:color .15s; }
+.wh-back:hover { color:var(--fg); }
+.wh-avatar { width:76px; height:76px; border-radius:50%; background:linear-gradient(135deg,rgba(0,212,170,0.40) 0%,rgba(0,212,170,0.12) 100%); border:2px solid var(--coach); box-shadow:var(--glow-coach); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:26px; font-weight:700; color:#000; margin-bottom:12px; }
+.wh-name { font-family:var(--font-display); font-size:22px; font-weight:700; line-height:1.1; letter-spacing:-0.01em; margin-bottom:4px; }
+.wh-status-line { font-size:13px; line-height:1.4; color:var(--muted-hi); margin-bottom:4px; }
+.wh-status-steady { color:var(--coach); font-weight:600; }
+.wh-body-txt { font-size:11px; color:var(--muted); line-height:1.65; margin-bottom:12px; }
+.wh-meta { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--muted); margin-bottom:7px; }
+.wh-meta svg { flex-shrink:0; opacity:.55; }
+.wh-chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; margin-top:2px; }
+.wh-chip { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:10px; font-family:var(--font-mono); font-size:7px; text-transform:uppercase; letter-spacing:.06em; border:1px solid; }
+.wh-chip-green  { color:var(--coach); border-color:rgba(0,212,170,0.30); background:var(--coach-dim); }
+.wh-chip-red    { color:#E8335B; border-color:rgba(232,51,91,0.28); background:rgba(232,51,91,0.08); }
+.wh-chip-apple  { color:#FA2D55; border-color:rgba(250,45,85,0.28); background:rgba(250,45,85,0.08); }
+.wh-chip-garmin { color:#3FA7D6; border-color:rgba(63,167,214,0.28); background:rgba(63,167,214,0.08); }
+.wh-goal-row { display:flex; align-items:center; gap:6px; padding:7px 10px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--r-md); margin-bottom:10px; }
+.wh-goal-icon { width:18px; height:18px; border-radius:50%; background:var(--coach-dim); border:1px solid rgba(0,212,170,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.wh-goal-txt { font-size:11px; font-weight:500; }
+.wh-notes { background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--r-md); padding:9px 11px; margin-bottom:0; flex:1; }
+.wh-notes-lbl { font-family:var(--font-mono); font-size:7px; text-transform:uppercase; letter-spacing:.10em; color:var(--muted); margin-bottom:4px; }
+.wh-notes-txt { font-size:11px; color:var(--muted-hi); line-height:1.6; }
+.wh-actions { display:flex; gap:8px; margin-top:12px; }
+.wh-actions .btn { flex:1; }
+
+/* Metric rings */
+.wh-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.wh-metric { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 8px 10px; text-align:center; cursor:pointer; transition:background .15s; }
+.wh-metric:hover { background:rgba(255,255,255,0.07); }
+.wh-metric-lbl { display:flex; align-items:center; justify-content:center; gap:4px; font-family:var(--font-mono); font-size:7px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin-bottom:8px; }
+.wh-ring-wrap { position:relative; width:80px; height:80px; margin:0 auto 5px; }
+.wh-ring-svg { width:80px; height:80px; display:block; }
+.wh-ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.wh-ring-val { font-family:var(--font-display); font-size:24px; font-weight:700; line-height:1; }
+.wh-ring-denom { font-family:var(--font-display); font-size:10px; color:rgba(255,255,255,0.38); line-height:1; }
+.wh-metric-status { font-family:var(--font-mono); font-size:8px; color:var(--muted); }
+.wh-metric-delta { font-family:var(--font-mono); font-size:7px; color:var(--muted); margin-top:2px; }
+
+/* Chart area */
+.wh-chart-area { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:12px 14px 8px; flex:1; min-height:120px; }
+.wh-chart-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.wh-chart-title { font-size:12px; font-weight:600; }
+.wh-chart-legend { display:flex; gap:10px; margin-left:10px; }
+.wh-chart-leg-item { display:flex; align-items:center; gap:4px; font-family:var(--font-mono); font-size:7px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+.wh-chart-dot { width:6px; height:6px; border-radius:50%; }
+.wh-period-row { display:flex; gap:2px; }
+.wh-period-btn { padding:2px 7px; border-radius:5px; font-family:var(--font-mono); font-size:7px; text-transform:uppercase; letter-spacing:.07em; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:background .12s,color .12s; }
+.wh-period-btn.active { background:rgba(255,255,255,0.10); color:var(--fg); }
+
+/* Today row */
+.wh-today { background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--r-lg); padding:14px 16px; }
+.wh-today-hdr { display:flex; align-items:center; gap:6px; margin-bottom:12px; }
+.wh-today-title { font-size:13px; font-weight:600; flex:1; }
+.wh-today-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+@media (max-width:900px) { .wh-today-grid { grid-template-columns:repeat(3,1fr); } }
+@media (max-width:600px) { .wh-today-grid { grid-template-columns:repeat(2,1fr); } }
+.wh-stat-lbl { display:flex; align-items:center; gap:4px; font-family:var(--font-mono); font-size:7px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:4px; }
+.wh-stat-val { font-family:var(--font-display); font-size:20px; font-weight:700; line-height:1; margin-bottom:1px; }
+.wh-stat-sub { font-size:9px; color:var(--muted); margin-bottom:5px; }
+.wh-stat-bar { height:3px; background:rgba(255,255,255,0.07); border-radius:2px; overflow:hidden; }
+.wh-stat-fill { height:100%; border-radius:2px; transition:width .55s ease; }
+
+/* Vital Trends */
+.wh-trends { background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--r-lg); padding:14px 16px; }
+.wh-trends-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.wh-trends-title { font-size:13px; font-weight:600; }
+.wh-trends-period { font-family:var(--font-mono); font-size:7px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+.wh-trend-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.wh-trend-row:last-child { border-bottom:none; }
+.wh-trend-icon { width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.wh-trend-lbl { font-size:11px; font-weight:500; flex:1; min-width:0; }
+.wh-trend-val { font-family:var(--font-display); font-size:17px; font-weight:700; line-height:1; }
+.wh-trend-unit { font-family:var(--font-mono); font-size:7px; color:var(--muted); text-transform:uppercase; margin-left:2px; }
+.wh-trend-delta { font-family:var(--font-mono); font-size:8px; font-weight:600; margin-left:6px; }
+.wh-trend-delta.up { color:var(--coach); }
+.wh-trend-delta.dn { color:#FF4545; }
+.wh-trend-spark { width:60px; flex-shrink:0; }
+
+/* Two-col section layout */
+.wh-two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media (max-width:768px) { .wh-two-col { grid-template-columns:1fr; } }
+
+/* Mobile hero collapse */
+@media (max-width:767px) {
+  .whoop-hero-inner { flex-direction:column; }
+  .wh-left { width:100%; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); padding:14px 16px 12px; }
+  .wh-right { padding:12px 16px 14px; }
+  .wh-metrics { grid-template-columns:repeat(2,1fr); }
+  .wh-ring-wrap,.wh-ring-svg { width:68px; height:68px; }
+  .wh-ring-val { font-size:20px; }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-mark">M2M</span><span class="logo-sub">COACH</span></div>
+    <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Trupp</span>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <span class="sidebar-section-label">Träning</span>
+      <a href="program-builder.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span><span class="s-nav-label">Adapt Program</span></a>
+      <a href="exercise-library.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span><span class="s-nav-label">Övningsbibliotek</span></a>
+      <a href="sessions-list.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span><span class="s-nav-label">Sessioner</span></a>
+      <a href="session-timer.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span><span class="s-nav-label">Session Timer</span></a>
+      <a href="progression.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span><span class="s-nav-label">Progression</span></a>
+      <span class="sidebar-section-label">Kommunikation</span>
+      <a href="messages.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span><span class="s-nav-label">Meddelanden</span></a>
+      <a href="notes.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span><span class="s-nav-label">Anteckningar</span></a>
+      <span class="sidebar-section-label">Hälsa &amp; Analys</span>
+      <a href="screening-hub.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">PL</div>
+        <div><div class="coach-footer-name">Per Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <!-- Whoop-style hero -->
+    <div class="whoop-hero">
+      <div class="whoop-hero-inner">
+
+        <!-- LEFT: Athlete card -->
+        <div class="wh-left">
+          <a href="dashboard.html" class="wh-back">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 1.5L3 5.5l4 4"/></svg>
+            Tillbaka
+          </a>
+          <div class="wh-avatar">AL</div>
+          <div class="wh-name">Alex Lindqvist</div>
+          <div class="wh-status-line">är i ett <span class="wh-status-steady">stabilt</span> tillstånd idag</div>
+          <div class="wh-body-txt">Återhämtning ser bra ut och beredskapen är god. Sömnen låg under målet, men kost och belastning är hanterbara. Energin förväntas hålla sig stabil under eftermiddagen med måttlig stress.</div>
+
+          <div class="wh-meta">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 2.5h9a.5.5 0 01.5.5v5a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z"/><path d="M.5 3l5 3.5L10.5 3"/></svg>
+            alex.lindqvist@gmail.com
+          </div>
+          <div class="wh-meta">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 1.5h2l1 2.5-1.5 1a6 6 0 002.5 2.5l1-1.5L9.5 8v2a.5.5 0 01-.5.5A7.5 7.5 0 011.5 3a.5.5 0 01.5-.5z"/></svg>
+            +46 70 123 4567
+          </div>
+          <div class="wh-meta">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="5.5" cy="5.5" r="4.5"/><path d="M5.5 3v2.5l1.5 1.5"/></svg>
+            Senast synkad · 3 tim sedan
+          </div>
+
+          <div class="wh-chips" style="margin-top:6px">
+            <span class="wh-chip wh-chip-green">M2M</span>
+            <span class="wh-chip wh-chip-red">Whoop</span>
+            <span class="wh-chip wh-chip-apple">Apple Health</span>
+            <span class="wh-chip wh-chip-garmin">Garmin</span>
+          </div>
+
+          <div class="wh-goal-row">
+            <div class="wh-goal-icon">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="var(--coach)" stroke-width="1.5" stroke-linecap="round"><circle cx="4.5" cy="4.5" r="3.5"/><circle cx="4.5" cy="4.5" r="1.5"/></svg>
+            </div>
+            <span class="wh-goal-txt">Mål: OS-Kvalificering Paris 2028</span>
+          </div>
+
+          <div class="wh-notes">
+            <div class="wh-notes-lbl">Coach-anteckningar</div>
+            <div class="wh-notes-txt">Sömnen har sjunkit denna vecka — dra ner intensiteten och förstärk nedvarvningsrutinen med vindrutinerna.</div>
+          </div>
+
+          <div class="wh-actions">
+            <button class="btn btn-sm" onclick="window.location='messages.html'">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 1.5h9a.5.5 0 01.5.5v5a.5.5 0 01-.5.5H5l-3.5 2V2a.5.5 0 01.5-.5z"/></svg>
+              Meddelande
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="window.location='session-timer.html'">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="6" cy="7" r="4.5"/><path d="M6 4.5V7l1.5 1.5M4 1h4M6 1v1.5"/></svg>
+              Session
+            </button>
+          </div>
+        </div>
+
+        <!-- RIGHT: Metrics + Chart -->
+        <div class="wh-right">
+          <!-- 4 metric rings -->
+          <div class="wh-metrics">
+            <!-- Recovery 72 -->
+            <div class="wh-metric">
+              <div class="wh-metric-lbl">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1.5L5 3h1.5L5.5 4l.5 1.5L4 4.5 2 5.5l.5-1.5L1.5 3H3z"/></svg>
+                Återhämtning
+              </div>
+              <div class="wh-ring-wrap">
+                <svg class="wh-ring-svg" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="40" stroke="rgba(0,212,170,0.12)" stroke-width="8"/>
+                  <circle cx="50" cy="50" r="40" stroke="var(--coach)" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray="251.3" stroke-dashoffset="70.4" transform="rotate(-90 50 50)"
+                    style="filter:drop-shadow(0 0 8px rgba(0,212,170,0.50))"/>
+                </svg>
+                <div class="wh-ring-center">
+                  <span class="wh-ring-val" style="color:var(--coach)">72</span>
+                  <span class="wh-ring-denom">/100</span>
+                </div>
+              </div>
+              <div class="wh-metric-status">Bra</div>
+              <div class="wh-metric-delta">↑ 6 vs igår</div>
+            </div>
+
+            <!-- Strain 68 -->
+            <div class="wh-metric">
+              <div class="wh-metric-lbl">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 7L3.5 3 5 5 6.5 1"/></svg>
+                Belastning
+              </div>
+              <div class="wh-ring-wrap">
+                <svg class="wh-ring-svg" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="40" stroke="rgba(255,95,31,0.12)" stroke-width="8"/>
+                  <circle cx="50" cy="50" r="40" stroke="var(--orange)" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray="251.3" stroke-dashoffset="80.4" transform="rotate(-90 50 50)"
+                    style="filter:drop-shadow(0 0 8px rgba(255,95,31,0.45))"/>
+                </svg>
+                <div class="wh-ring-center">
+                  <span class="wh-ring-val" style="color:var(--orange)">68</span>
+                  <span class="wh-ring-denom">/100</span>
+                </div>
+              </div>
+              <div class="wh-metric-status">Rimlig</div>
+              <div class="wh-metric-delta">↑ 3 vs igår</div>
+            </div>
+
+            <!-- Nutrition 78 -->
+            <div class="wh-metric">
+              <div class="wh-metric-lbl">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1v2M2 3a2 2 0 004 0"/><path d="M1.5 3v4h5V3"/></svg>
+                Kost
+              </div>
+              <div class="wh-ring-wrap">
+                <svg class="wh-ring-svg" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="40" stroke="rgba(63,167,214,0.12)" stroke-width="8"/>
+                  <circle cx="50" cy="50" r="40" stroke="#3FA7D6" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray="251.3" stroke-dashoffset="55.3" transform="rotate(-90 50 50)"
+                    style="filter:drop-shadow(0 0 8px rgba(63,167,214,0.45))"/>
+                </svg>
+                <div class="wh-ring-center">
+                  <span class="wh-ring-val" style="color:#3FA7D6">78</span>
+                  <span class="wh-ring-denom">/100</span>
+                </div>
+              </div>
+              <div class="wh-metric-status">Bra</div>
+              <div class="wh-metric-delta">↑ 5 vs igår</div>
+            </div>
+
+            <!-- Sleep 42 -->
+            <div class="wh-metric">
+              <div class="wh-metric-lbl">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 1.5A3.5 3.5 0 011.5 5.5a3.5 3.5 0 105.5-5.5 0 0 0-.5 0z"/></svg>
+                Sömn
+              </div>
+              <div class="wh-ring-wrap">
+                <svg class="wh-ring-svg" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="40" stroke="rgba(155,89,182,0.12)" stroke-width="8"/>
+                  <circle cx="50" cy="50" r="40" stroke="#9B59B6" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray="251.3" stroke-dashoffset="145.8" transform="rotate(-90 50 50)"
+                    style="filter:drop-shadow(0 0 8px rgba(155,89,182,0.45))"/>
+                </svg>
+                <div class="wh-ring-center">
+                  <span class="wh-ring-val" style="color:#9B59B6">42</span>
+                  <span class="wh-ring-denom">/100</span>
+                </div>
+              </div>
+              <div class="wh-metric-status">Måttlig</div>
+              <div class="wh-metric-delta">↓ 2 vs igår</div>
+            </div>
+          </div>
+
+          <!-- Energy & Stress chart -->
+          <div class="wh-chart-area">
+            <div class="wh-chart-hdr">
+              <div style="display:flex;align-items:center;gap:0">
+                <span class="wh-chart-title">Energi &amp; Belastning</span>
+                <div class="wh-chart-legend" style="margin-left:12px">
+                  <span class="wh-chart-leg-item"><span class="wh-chart-dot" style="background:var(--coach)"></span>Energi</span>
+                  <span class="wh-chart-leg-item"><span class="wh-chart-dot" style="background:var(--orange)"></span>Belastning</span>
+                </div>
+              </div>
+              <div class="wh-period-row">
+                <button class="wh-period-btn active" onclick="setEnergyPeriod(this,'1D')">1D</button>
+                <button class="wh-period-btn" onclick="setEnergyPeriod(this,'7D')">7D</button>
+                <button class="wh-period-btn" onclick="setEnergyPeriod(this,'30D')">30D</button>
+                <button class="wh-period-btn" onclick="setEnergyPeriod(this,'90D')">90D</button>
+              </div>
+            </div>
+            <canvas id="wh-energy-canvas" style="width:100%;display:block"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="overview">Översikt</button>
+      <button class="tab-btn" data-tab="sessions">Sessioner</button>
+      <button class="tab-btn" data-tab="program">Adapt Program</button>
+      <button class="tab-btn" data-tab="perform">Perform</button>
+      <button class="tab-btn" data-tab="goalsetter">Goalsetter</button>
+    </div>
+
+    <!-- ═══ Tab: Overview (consolidated dashboard) ═══ -->
+    <div class="tab-panel active" id="tab-overview">
+
+      <!-- TODAY stats row -->
+      <div class="wh-today">
+        <div class="wh-today-hdr">
+          <span class="wh-today-title">Idag</span>
+          <span style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Fredag · 5 jun 2026</span>
+        </div>
+        <div class="wh-today-grid">
+          <div>
+            <div class="wh-stat-lbl">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4.5 1v7M2 3l2.5-2 2.5 2"/></svg>
+              Steg
+            </div>
+            <div class="wh-stat-val">7 842</div>
+            <div class="wh-stat-sub">/ 10 000</div>
+            <div class="wh-stat-bar"><div class="wh-stat-fill" style="width:78%;background:var(--coach)"></div></div>
+          </div>
+          <div>
+            <div class="wh-stat-lbl">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4.5 1a3.5 3.5 0 100 7 3.5 3.5 0 000-7z"/><path d="M4.5 3.5v1.5l1 1"/></svg>
+              Kalorier
+            </div>
+            <div class="wh-stat-val">612</div>
+            <div class="wh-stat-sub">kcal aktiva / 800</div>
+            <div class="wh-stat-bar"><div class="wh-stat-fill" style="width:76%;background:var(--orange)"></div></div>
+          </div>
+          <div>
+            <div class="wh-stat-lbl">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M1 7l2-3 2 2 3-5"/></svg>
+              Träning
+            </div>
+            <div class="wh-stat-val">42</div>
+            <div class="wh-stat-sub">min / 60 min</div>
+            <div class="wh-stat-bar"><div class="wh-stat-fill" style="width:70%;background:#3FA7D6"></div></div>
+          </div>
+          <div>
+            <div class="wh-stat-lbl">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5A3 3 0 012 4.5a3 3 0 004.5-3z"/></svg>
+              Sömn
+            </div>
+            <div class="wh-stat-val">7h 12m</div>
+            <div class="wh-stat-sub">av 8 tim mål</div>
+            <div class="wh-stat-bar"><div class="wh-stat-fill" style="width:90%;background:#9B59B6"></div></div>
+          </div>
+          <div>
+            <div class="wh-stat-lbl">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4.5 1v2M3 2l3 0M2.5 4a2 2 0 004 0V3h-4v1z"/><path d="M4.5 6v2"/></svg>
+              Hydrering
+            </div>
+            <div class="wh-stat-val">1,6 L</div>
+            <div class="wh-stat-sub">av 2,5 L mål</div>
+            <div class="wh-stat-bar"><div class="wh-stat-fill" style="width:64%;background:#3FA7D6"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VITAL TRENDS -->
+      <div class="wh-two-col">
+        <div class="wh-trends">
+          <div class="wh-trends-hdr">
+            <span class="wh-trends-title">Vitala trender</span>
+            <span class="wh-trends-period">vs 7-dagars snitt</span>
+          </div>
+          <!-- HRV -->
+          <div class="wh-trend-row">
+            <div class="wh-trend-icon">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#E8335B" stroke-width="1.5" stroke-linecap="round"><path d="M1 6l1.5-3 1.5 3 1-1.5 1 1.5 2-4 1 5 1-2 1 1"/></svg>
+            </div>
+            <span class="wh-trend-lbl">HRV</span>
+            <span class="wh-trend-val" style="color:var(--coach)">72</span>
+            <span class="wh-trend-unit">ms</span>
+            <span class="wh-trend-delta up">+6</span>
+            <svg class="wh-trend-spark" viewBox="0 0 60 28" fill="none">
+              <polyline points="0,20 10,16 20,18 30,12 40,14 50,10 60,8" stroke="var(--coach)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8"/>
+            </svg>
+          </div>
+          <!-- Resting HR -->
+          <div class="wh-trend-row">
+            <div class="wh-trend-icon">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#E8335B" stroke-width="1.5" stroke-linecap="round"><path d="M6 10.5S1 7 1 4a2.5 2.5 0 015 0 2.5 2.5 0 015 0c0 3-5 6.5-5 6.5z"/></svg>
+            </div>
+            <span class="wh-trend-lbl">Vilopuls</span>
+            <span class="wh-trend-val">58</span>
+            <span class="wh-trend-unit">bpm</span>
+            <span class="wh-trend-delta up">+3</span>
+            <svg class="wh-trend-spark" viewBox="0 0 60 28" fill="none">
+              <polyline points="0,14 10,16 20,12 30,14 40,10 50,12 60,10" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+            </svg>
+          </div>
+          <!-- Resp rate -->
+          <div class="wh-trend-row">
+            <div class="wh-trend-icon">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#3FA7D6" stroke-width="1.5" stroke-linecap="round"><path d="M2 8c1-3 2-5 4-5s3 2 4 5"/><path d="M4 8c.5-2 1-3 2-3s1.5 1 2 3"/></svg>
+            </div>
+            <span class="wh-trend-lbl">Andningsfrekvens</span>
+            <span class="wh-trend-val">14,2</span>
+            <span class="wh-trend-unit">rpm</span>
+            <span class="wh-trend-delta up">+1</span>
+            <svg class="wh-trend-spark" viewBox="0 0 60 28" fill="none">
+              <polyline points="0,16 10,14 20,16 30,13 40,15 50,12 60,13" stroke="#3FA7D6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Source connections -->
+        <div style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:14px 16px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:12px">Kopplade appar</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:30px;height:30px;border-radius:8px;background:rgba(232,51,91,0.12);border:1px solid rgba(232,51,91,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#E8335B" stroke-width="1.5" stroke-linecap="round"><path d="M7 12S1.5 8.5 1.5 5a2.8 2.8 0 015.5 0 2.8 2.8 0 015.5 0C12.5 8.5 7 12 7 12z"/></svg>
+              </div>
+              <div style="flex:1"><div style="font-size:12px;font-weight:500">Whoop 4.0</div><div style="font-family:var(--font-mono);font-size:9px;color:var(--muted)">HRV · Återhämtning · Strain</div></div>
+              <span style="font-family:var(--font-mono);font-size:8px;color:var(--coach)">Aktiv</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:30px;height:30px;border-radius:8px;background:rgba(250,45,85,0.10);border:1px solid rgba(250,45,85,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#FA2D55" stroke-width="1.5" stroke-linecap="round"><path d="M7 1.5l1.5 3H12l-2.8 2 1 3L7 8l-3.2 1.5 1-3L2 4.5h3.5z"/></svg>
+              </div>
+              <div style="flex:1"><div style="font-size:12px;font-weight:500">Apple Health</div><div style="font-family:var(--font-mono);font-size:9px;color:var(--muted)">Steg · Sömn · Kalorier</div></div>
+              <span style="font-family:var(--font-mono);font-size:8px;color:var(--coach)">Aktiv</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:30px;height:30px;border-radius:8px;background:rgba(63,167,214,0.10);border:1px solid rgba(63,167,214,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#3FA7D6" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M7 4v3l2 2"/></svg>
+              </div>
+              <div style="flex:1"><div style="font-size:12px;font-weight:500">Garmin Connect</div><div style="font-family:var(--font-mono);font-size:9px;color:var(--muted)">Träning · Hydrering · GPS</div></div>
+              <span style="font-family:var(--font-mono);font-size:8px;color:var(--coach)">Aktiv</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:30px;height:30px;border-radius:8px;background:var(--coach-dim);border:1px solid rgba(0,212,170,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--coach)" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="4" height="4" rx="1"/><rect x="8" y="2" width="4" height="4" rx="1"/><rect x="2" y="8" width="4" height="4" rx="1"/><rect x="8" y="8" width="4" height="4" rx="1"/></svg>
+              </div>
+              <div style="flex:1"><div style="font-size:12px;font-weight:500">M2M Perform</div><div style="font-family:var(--font-mono);font-size:9px;color:var(--muted)">Screening · Athletic Score</div></div>
+              <span style="font-family:var(--font-mono);font-size:8px;color:var(--coach)">Aktiv</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1. Primary goal -->
+      <div class="goal-card card card-coach">
+        <div class="section-label">Primärt mål</div>
+        <div class="goal-title">OS-Kvalificering — Paris 2028</div>
+        <div class="goal-sub">100m Fjärilsim · Måltid: 52.8s · Nuvarande PB: 54.1s</div>
+        <div class="goal-bar-row">
+          <div class="goal-bar-track"><div class="goal-fill" style="width:78%"></div></div>
+          <div class="goal-pct-big">78%</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px">
+          <span style="font-size:11px;color:var(--muted)">Startad: Jan 2026</span>
+          <span style="font-size:11px;color:var(--muted)">Deadline: Maj 2028</span>
+        </div>
+      </div>
+
+      <!-- 2. Key factors -->
+      <div>
+        <div class="section-label mb-12">Nyckelfaktorer</div>
+        <div class="factors-grid">
+          <div class="factor-card">
+            <div class="factor-name">Teknik</div>
+            <div class="factor-val" style="color:var(--coach)">82%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:82%;background:var(--coach)"></div></div>
+          </div>
+          <div class="factor-card">
+            <div class="factor-name">Kondition</div>
+            <div class="factor-val" style="color:var(--accent)">74%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:74%;background:var(--accent)"></div></div>
+          </div>
+          <div class="factor-card">
+            <div class="factor-name">Styrka</div>
+            <div class="factor-val" style="color:var(--coach)">68%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:68%;background:var(--coach)"></div></div>
+          </div>
+          <div class="factor-card">
+            <div class="factor-name">Mental träning</div>
+            <div class="factor-val" style="color:var(--orange)">55%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:55%;background:var(--orange)"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. M2M PERFORM -->
+      <div class="app-section">
+        <div class="app-section-hdr">
+          <div class="app-section-source">
+            <div class="app-section-bar" style="background:var(--accent);box-shadow:0 0 10px rgba(247,233,40,0.45)"></div>
+            <div>
+              <div class="app-section-name" style="color:var(--accent)">M2M Perform</div>
+              <div class="app-section-sub">Senaste screening · 2 jun 2026</div>
+            </div>
+          </div>
+          <a href="../../M2MPerform/screens/results.html" class="app-section-link">
+            Se mer
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+
+        <!-- Athletic Score + Radar mini -->
+        <div class="pf-grid">
+          <button class="pf-card" type="button">
+            <span class="pf-card-label">Athletic Score</span>
+            <div class="pf-ring-wrap">
+              <svg class="pf-ring-svg" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
+                <circle cx="50" cy="50" r="40" stroke="#F7E928" stroke-width="7" stroke-linecap="round"
+                  stroke-dasharray="251.3" stroke-dashoffset="65.3" transform="rotate(-90 50 50)"
+                  style="filter:drop-shadow(0 0 9px rgba(247,233,40,0.55))"/>
+              </svg>
+              <div class="pf-ring-center">
+                <span class="pf-ring-val">74</span>
+                <span class="pf-ring-pct">%</span>
+              </div>
+            </div>
+            <div class="pf-delta">↑ +6 · Jun 2026</div>
+          </button>
+
+          <button class="pf-card" type="button" style="padding:14px 8px 10px">
+            <span class="pf-card-label">Radar Analys</span>
+            <svg id="pf-radar-mini" viewBox="0 0 180 165" fill="none" style="width:100%;overflow:visible;display:block"></svg>
+          </button>
+        </div>
+
+        <!-- Progression sparkline -->
+        <button class="pf-card-full" type="button">
+          <span class="pf-card-label">Progression</span>
+          <div class="pf-prog-wrap"><canvas id="pf-prog-canvas"></canvas></div>
+        </button>
+
+        <!-- OH-Squat summary -->
+        <div class="card" style="padding:12px 14px">
+          <div class="section-label" style="margin-bottom:8px">OH-Squat · 3 jun 2026</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px">
+            <span style="font-family:var(--font-display);font-size:38px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 18px rgba(247,233,40,0.30)">71</span>
+            <span style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--muted);line-height:1;margin-bottom:4px">/100</span>
+            <span style="margin-left:auto;font-family:var(--font-mono);font-size:9px;color:var(--coach)">↑ +4 sedan senaste</span>
+          </div>
+          <div class="pf-ohsq-grid">
+            <div class="pf-ohsq-cell"><div class="pf-ohsq-val" style="color:var(--accent)">78</div><div class="pf-ohsq-lbl">Djup</div></div>
+            <div class="pf-ohsq-cell"><div class="pf-ohsq-val" style="color:#EBA800">64</div><div class="pf-ohsq-lbl">Axlar</div></div>
+            <div class="pf-ohsq-cell"><div class="pf-ohsq-val" style="color:var(--accent)">80</div><div class="pf-ohsq-lbl">Stabilitet</div></div>
+            <div class="pf-ohsq-cell"><div class="pf-ohsq-val" style="color:#EBA800">62</div><div class="pf-ohsq-lbl">Torso</div></div>
+          </div>
+        </div>
+
+        <!-- Top risk areas -->
+        <div class="card" style="padding:12px 14px">
+          <div class="section-label" style="margin-bottom:4px">Riskområden</div>
+          <div id="pf-area-rows"></div>
+        </div>
+
+        <!-- Åtgärdsprogram -->
+        <div class="card" style="padding:12px 14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="section-label" style="margin-bottom:0">Åtgärdsprogram · Rörelsebedömning</div>
+            <a href="movement-result.html" class="app-section-link">
+              Se bedömning
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="rec-card">
+              <div class="rec-header">
+                <div class="rec-icon">🤸</div>
+                <div class="rec-title">Förbättra höft- och ankelrörlighet</div>
+                <div class="rec-priority rp-high">Hög prioritet</div>
+              </div>
+              <div class="rec-text">Hip Flexor Stretch + Foam Roll IT-band dagligen. Förväntat förbättringsresultat +0.8p inom 6 veckor med konsekvent träning.</div>
+            </div>
+            <div class="rec-card">
+              <div class="rec-header">
+                <div class="rec-icon">💪</div>
+                <div class="rec-title">Stärk anti-extensions-kontroll</div>
+                <div class="rec-priority rp-med">Medel prioritet</div>
+              </div>
+              <div class="rec-text">Dead Bug och Lateral Plank 3×/vecka. Fokus på att hålla neutralt bäcken under rörelse — direkt kopplat till löpsteg-effektivitet.</div>
+            </div>
+            <div class="rec-card">
+              <div class="rec-header">
+                <div class="rec-icon">🧍</div>
+                <div class="rec-title">Behåll stark hållningsrutin</div>
+                <div class="rec-priority rp-low">Bibehåll</div>
+              </div>
+              <div class="rec-text">Skulder och lumbalkurva i gott skick. Fortsätt med befintliga hållningsövningar 2×/vecka.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. ADAPT PROGRAM -->
+      <div class="app-section">
+        <div class="app-section-hdr">
+          <div class="app-section-source">
+            <div class="app-section-bar" style="background:var(--coach);box-shadow:var(--glow-coach)"></div>
+            <div>
+              <div class="app-section-name" style="color:var(--coach)">Adapt Program</div>
+              <div class="app-section-sub">Sprint-block · Vecka 4 av 8</div>
+            </div>
+          </div>
+          <a href="program-builder.html" class="app-section-link">
+            Redigera
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+
+        <div class="program-card">
+          <div style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:8px">Fas: Toppning · Denna vecka</div>
+          <div class="prog-week">
+            <div class="prog-day"><div class="prog-day-label">MÅN</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+            <div class="prog-day"><div class="prog-day-label">TIS</div><div class="prog-day-type" style="color:var(--muted)">AERO</div></div>
+            <div class="prog-day"><div class="prog-day-label">ONS</div><div class="prog-day-type" style="color:var(--accent)">STYRKA</div></div>
+            <div class="prog-day"><div class="prog-day-label">TOR</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+            <div class="prog-day today"><div class="prog-day-label">FRE</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+            <div class="prog-day rest"><div class="prog-day-label">LÖR</div><div class="prog-day-type" style="color:var(--muted)">VILA</div></div>
+            <div class="prog-day rest"><div class="prog-day-label">SÖN</div><div class="prog-day-type" style="color:var(--muted)">VILA</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:14px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div>
+              <div style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.07em;color:var(--coach);margin-bottom:4px">Idag · ATP-PC</div>
+              <div style="font-size:14px;font-weight:600;margin-bottom:3px">Sprint-intervaller 8×50m</div>
+              <div style="font-size:11px;color:var(--muted)">Uppvärmning 20min · Drills 15min · Intervaller · Nedvarvning 15min</div>
+            </div>
+            <button class="btn btn-primary btn-sm" style="flex-shrink:0;margin-top:2px" onclick="window.location='session-timer.html'">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 1.5v9M9 1.5v9M3 6h6"/></svg>
+              Starta
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. GOALSETTER RUTINER -->
+      <div class="app-section">
+        <div class="app-section-hdr">
+          <div class="app-section-source">
+            <div class="app-section-bar" style="background:var(--coach);box-shadow:var(--glow-coach)"></div>
+            <div>
+              <div class="app-section-name" style="color:var(--coach)">Goalsetter</div>
+              <div class="app-section-sub">Dagliga rutiner · 3 av 6 klara</div>
+            </div>
+          </div>
+          <a href="#tab-goalsetter-link" class="app-section-link" onclick="switchTabById('goalsetter');return false">
+            Se alla
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="routine-item">
+            <div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <span class="ri-label">Morgonmobility 15 min</span>
+            <span class="ri-time">06:45</span>
+          </div>
+          <div class="routine-item">
+            <div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <span class="ri-label">Frukost + hydrering</span>
+            <span class="ri-time">07:30</span>
+          </div>
+          <div class="routine-item">
+            <div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <span class="ri-label">Träningssession AM</span>
+            <span class="ri-time">09:15</span>
+          </div>
+          <div class="routine-item">
+            <div class="ri-check"></div>
+            <span class="ri-label">Proteinkost efter session</span>
+            <span class="ri-time" style="color:var(--muted)">—</span>
+          </div>
+        </div>
+
+        <div class="card card-accent" style="padding:14px">
+          <div class="section-label" style="color:var(--accent)">Season Mode — Aktiv</div>
+          <div style="font-size:13px;font-weight:500;margin-bottom:3px">Toppningsfas: 28 dagar kvar</div>
+          <div style="font-size:11px;color:var(--muted)">SM simning 4 jul 2026 · Göteborg Sim-arena</div>
+        </div>
+      </div>
+
+      <!-- 6. Recent sessions (mini) -->
+      <div class="app-section">
+        <div class="app-section-hdr">
+          <div class="app-section-source">
+            <div class="app-section-bar" style="background:var(--coach);box-shadow:var(--glow-coach)"></div>
+            <div>
+              <div class="app-section-name" style="color:var(--muted-hi)">Senaste sessioner</div>
+            </div>
+          </div>
+          <a href="#tab-sessions-link" class="app-section-link" onclick="switchTabById('sessions');return false">
+            Se alla
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div class="session-row">
+            <div class="session-date">Idag</div>
+            <div class="session-type"><div class="session-type-name">Sprint-intervaller · Pool</div><div class="session-type-sys">ATP-PC · 90 min</div></div>
+            <div style="text-align:right"><div class="session-load">87</div><div class="session-load-label">Belastning</div></div>
+          </div>
+          <div class="session-row">
+            <div class="session-date">Igår</div>
+            <div class="session-type"><div class="session-type-name">Aerob grundkondition</div><div class="session-type-sys">Aerob · 120 min</div></div>
+            <div style="text-align:right"><div class="session-load" style="color:var(--muted-hi)">62</div><div class="session-load-label">Belastning</div></div>
+          </div>
+          <div class="session-row">
+            <div class="session-date">4 jun</div>
+            <div class="session-type"><div class="session-type-name">Styrketräning</div><div class="session-type-sys">Glykolytisk · 60 min</div></div>
+            <div style="text-align:right"><div class="session-load" style="color:var(--accent)">74</div><div class="session-load-label">Belastning</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-overview -->
+
+    <!-- ═══ Tab: Sessions ═══ -->
+    <div class="tab-panel" id="tab-sessions">
+      <div class="section-label">Senaste 7 sessioner</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="session-row"><div class="session-date">Idag</div><div class="session-type"><div class="session-type-name">Sprint-intervaller · Pool</div><div class="session-type-sys">ATP-PC · 90 min</div></div><div style="text-align:right"><div class="session-load">87</div><div class="session-load-label">Belastning</div></div></div>
+        <div class="session-row"><div class="session-date">Igår</div><div class="session-type"><div class="session-type-name">Aerob grundkondition</div><div class="session-type-sys">Aerob · 120 min</div></div><div style="text-align:right"><div class="session-load" style="color:var(--muted-hi)">62</div><div class="session-load-label">Belastning</div></div></div>
+        <div class="session-row"><div class="session-date">4 jun</div><div class="session-type"><div class="session-type-name">Styrketräning</div><div class="session-type-sys">Glykolytisk · 60 min</div></div><div style="text-align:right"><div class="session-load" style="color:var(--accent)">74</div><div class="session-load-label">Belastning</div></div></div>
+        <div class="session-row"><div class="session-date">3 jun</div><div class="session-type"><div class="session-type-name">Teknikdrill</div><div class="session-type-sys">ATP-PC · 75 min</div></div><div style="text-align:right"><div class="session-load">91</div><div class="session-load-label">Belastning</div></div></div>
+        <div class="session-row"><div class="session-date">2 jun</div><div class="session-type"><div class="session-type-name">Vila / Återhämtning</div><div class="session-type-sys">—</div></div><div style="text-align:right"><div class="session-load" style="color:var(--muted)">—</div><div class="session-load-label">Vila</div></div></div>
+        <div class="session-row"><div class="session-date">1 jun</div><div class="session-type"><div class="session-type-name">Race pace-simning</div><div class="session-type-sys">ATP-PC · 90 min</div></div><div style="text-align:right"><div class="session-load">95</div><div class="session-load-label">Belastning</div></div></div>
+        <div class="session-row"><div class="session-date">31 maj</div><div class="session-type"><div class="session-type-name">Lätt distans</div><div class="session-type-sys">Aerob · 100 min</div></div><div style="text-align:right"><div class="session-load" style="color:var(--muted-hi)">55</div><div class="session-load-label">Belastning</div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ Tab: Adapt Program ═══ -->
+    <div class="tab-panel" id="tab-program">
+      <div class="section-label">Aktiv plan — Adapt v3.1</div>
+      <div class="program-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div style="font-size:14px;font-weight:600">Sprint-block 4/8</div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Fas: Toppning · Vecka 4 av 8</div>
+          </div>
+          <button class="btn btn-sm btn-primary" onclick="window.location='program-builder.html'">Redigera</button>
+        </div>
+        <div class="prog-week">
+          <div class="prog-day"><div class="prog-day-label">MÅN</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+          <div class="prog-day"><div class="prog-day-label">TIS</div><div class="prog-day-type" style="color:var(--muted)">AERO</div></div>
+          <div class="prog-day"><div class="prog-day-label">ONS</div><div class="prog-day-type" style="color:var(--accent)">STYRKA</div></div>
+          <div class="prog-day"><div class="prog-day-label">TOR</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+          <div class="prog-day today"><div class="prog-day-label">FRE</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+          <div class="prog-day rest"><div class="prog-day-label">LÖR</div><div class="prog-day-type" style="color:var(--muted)">VILA</div></div>
+          <div class="prog-day rest"><div class="prog-day-label">SÖN</div><div class="prog-day-type" style="color:var(--muted)">VILA</div></div>
+        </div>
+      </div>
+      <div class="card" style="padding:16px">
+        <div class="section-label mb-12">Dagens session — Idag</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">Sprint-intervaller 8×50m</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Uppvärmning 20min → Drills 15min → Intervaller 8×50m med 90s vila → Nedvarvning 15min</div>
+        <button class="btn btn-primary" style="width:100%" onclick="window.location='session-timer.html'">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="8" r="5"/><path d="M7 5v3l2 2M4.5 1.5h5M7 1.5v2"/></svg>
+          Starta session nu
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Tab: Perform ═══ -->
+    <div class="tab-panel" id="tab-perform">
+
+      <!-- Score + Radar side by side -->
+      <div class="pf-grid">
+        <button class="pf-card" type="button">
+          <span class="pf-card-label">Athletic Score</span>
+          <div class="pf-ring-wrap">
+            <svg class="pf-ring-svg" viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
+              <circle cx="50" cy="50" r="40" stroke="#F7E928" stroke-width="7" stroke-linecap="round"
+                stroke-dasharray="251.3" stroke-dashoffset="65.3" transform="rotate(-90 50 50)"
+                style="filter:drop-shadow(0 0 9px rgba(247,233,40,0.55))"/>
+            </svg>
+            <div class="pf-ring-center">
+              <span class="pf-ring-val">74</span>
+              <span class="pf-ring-pct">%</span>
+            </div>
+          </div>
+          <div class="pf-delta">↑ +6 · Jun 2026</div>
+        </button>
+        <button class="pf-card" type="button" style="padding:14px 8px 10px">
+          <span class="pf-card-label">Radar Analys</span>
+          <svg id="pf-radar-tab" viewBox="0 0 180 165" fill="none" style="width:100%;overflow:visible;display:block"></svg>
+        </button>
+      </div>
+
+      <!-- Progression sparkline -->
+      <button class="pf-card-full" type="button">
+        <span class="pf-card-label">Progression</span>
+        <div class="pf-prog-wrap"><canvas id="pf-prog-canvas-tab"></canvas></div>
+      </button>
+
+      <!-- OH-Squat full breakdown -->
+      <div class="card" style="padding:14px 16px">
+        <div class="section-label" style="margin-bottom:8px">OH-Squat Bedömning · 3 jun 2026</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:14px">
+          <span style="font-family:var(--font-display);font-size:46px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 18px rgba(247,233,40,0.30)">71</span>
+          <span style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--muted);line-height:1;margin-bottom:4px">/100</span>
+          <span style="margin-left:auto;font-family:var(--font-mono);font-size:9px;color:var(--coach)">↑ +4 sedan senaste</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Djup</span>
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--accent)">78</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill" style="width:78%;background:var(--accent)"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Axelrörlighet</span>
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:#EBA800">64</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill" style="width:64%;background:#EBA800"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Stabilitet</span>
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--accent)">80</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill" style="width:80%;background:var(--accent)"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Torso-kontroll</span>
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:700;color:#EBA800">62</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill" style="width:62%;background:#EBA800"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Riskområden full list -->
+      <div class="card" style="padding:12px 14px">
+        <div class="section-label" style="margin-bottom:4px">Riskområden</div>
+        <div id="pf-area-rows-tab"></div>
+      </div>
+
+      <!-- Screeningens övningsprogram -->
+      <div class="card" style="padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div class="section-label" style="margin-bottom:2px">Övningsprogram · Screening</div>
+            <div style="font-size:11px;color:var(--muted)">Förskrivet 3 jun 2026 · Baserat på rörelsebedömning</div>
+          </div>
+          <a href="movement-result.html" class="app-section-link">
+            Bedömning
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+
+        <div id="ex-program-container"></div>
+
+        <!-- Group: Rörlighet (Hög prio) -->
+        <div style="margin-bottom:16px" class="ex-static-fallback">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <div style="width:3px;height:14px;border-radius:2px;background:var(--orange);flex-shrink:0"></div>
+            <span style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.10em;color:var(--orange)">Rörlighet · Hög prioritet</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:rgba(255,95,31,0.10);border-color:rgba(255,95,31,0.22)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--orange)" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="4" r="2"/><path d="M4 13c0-2.8 1.3-5 3-5s3 2.2 3 5"/><path d="M2 9c0-1.1.9-2 2-2"/><path d="M12 9c0-1.1-.9-2-2-2"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Hip Flexor Stretch</div>
+                <div class="pf-ex-desc">3 × 45 sek · Varje sida · Dagligen</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Höft</div>
+                <div class="pf-ex-sets">3×45s</div>
+              </div>
+            </div>
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:rgba(255,95,31,0.10);border-color:rgba(255,95,31,0.22)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--orange)" stroke-width="1.6" stroke-linecap="round"><path d="M2 7c2-3 8-3 10 0s-8 3-10 0"/><circle cx="7" cy="7" r="1.5"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Ankle Mobility Drill</div>
+                <div class="pf-ex-desc">2 × 20 rep · Varje sida · Dagligen</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Fotled</div>
+                <div class="pf-ex-sets">2×20</div>
+              </div>
+            </div>
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:rgba(255,95,31,0.10);border-color:rgba(255,95,31,0.22)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--orange)" stroke-width="1.6" stroke-linecap="round"><path d="M7 2v10M4 5l3-3 3 3"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Foam Roll IT-band</div>
+                <div class="pf-ex-desc">2 min · Varje sida · Dagligen</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Höftrot.</div>
+                <div class="pf-ex-sets">2 min</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group: Styrka (Medel prio) -->
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <div style="width:3px;height:14px;border-radius:2px;background:var(--accent);flex-shrink:0"></div>
+            <span style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.10em;color:var(--accent)">Stabilitet &amp; Styrka · Medel prioritet</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:var(--accent-dim);border-color:rgba(247,233,40,0.20)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"><path d="M3 11L3 7 7 3 11 7 11 11"/><path d="M5 11V8h4v3"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Dead Bug</div>
+                <div class="pf-ex-desc">3 × 10 rep · 3×/vecka</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Mage</div>
+                <div class="pf-ex-sets">3×10</div>
+              </div>
+            </div>
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:var(--accent-dim);border-color:rgba(247,233,40,0.20)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"><path d="M2 7h10M7 2v10"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Lateral Plank</div>
+                <div class="pf-ex-desc">3 × 30 sek · Varje sida · 3×/vecka</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Mage</div>
+                <div class="pf-ex-sets">3×30s</div>
+              </div>
+            </div>
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:var(--accent-dim);border-color:rgba(247,233,40,0.20)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="4" r="2"/><path d="M7 6v5M4 8l3 3 3-3"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Single-leg Glute Bridge</div>
+                <div class="pf-ex-desc">3 × 12 rep · Varje sida · 3×/vecka</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Höft</div>
+                <div class="pf-ex-sets">3×12</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group: Bibehåll -->
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <div style="width:3px;height:14px;border-radius:2px;background:var(--coach);flex-shrink:0"></div>
+            <span style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.10em;color:var(--coach)">Hållning · Bibehåll</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:var(--coach-dim);border-color:rgba(0,212,170,0.20)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--coach)" stroke-width="1.6" stroke-linecap="round"><path d="M3 5c0-2 1.5-3 4-3s4 1 4 3-1.5 3-4 3-4-1-4-3z"/><path d="M7 8v4M5 12h4"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Band Pull-Apart</div>
+                <div class="pf-ex-desc">3 × 15 rep · 2×/vecka</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Skuldra</div>
+                <div class="pf-ex-sets">3×15</div>
+              </div>
+            </div>
+            <div class="pf-ex-row">
+              <div class="pf-ex-icon" style="background:var(--coach-dim);border-color:rgba(0,212,170,0.20)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--coach)" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h10M2 7h7M2 10h8"/></svg>
+              </div>
+              <div class="pf-ex-body">
+                <div class="pf-ex-name">Chin Tuck + Thoracic Rotation</div>
+                <div class="pf-ex-desc">2 × 10 rep · 2×/vecka</div>
+              </div>
+              <div class="pf-ex-target">
+                <div class="pf-ex-area">Nacke / Bröst</div>
+                <div class="pf-ex-sets">2×10</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-perform -->
+
+    <!-- ═══ Tab: Goalsetter ═══ -->
+    <div class="tab-panel" id="tab-goalsetter">
+      <div class="section-label">Dagliga rutiner</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="routine-item"><div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="ri-label">Morgonmobility 15 min</span><span class="ri-time">06:45</span></div>
+        <div class="routine-item"><div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="ri-label">Frukost + hydrering</span><span class="ri-time">07:30</span></div>
+        <div class="routine-item"><div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="ri-label">Träningssession AM</span><span class="ri-time">09:15</span></div>
+        <div class="routine-item"><div class="ri-check"></div><span class="ri-label">Proteinkost efter session</span><span class="ri-time" style="color:var(--muted)">—</span></div>
+        <div class="routine-item"><div class="ri-check"></div><span class="ri-label">Mental visualisering 10 min</span><span class="ri-time" style="color:var(--muted)">—</span></div>
+        <div class="routine-item"><div class="ri-check"></div><span class="ri-label">Kvällsmobility + sömn 22:00</span><span class="ri-time" style="color:var(--muted)">—</span></div>
+      </div>
+      <div class="card card-accent" style="padding:14px;margin-top:6px">
+        <div class="section-label" style="color:var(--accent)">Season Mode — Aktiv</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Toppningsfas: 28 dagar kvar</div>
+        <div style="font-size:11px;color:var(--muted)">SM simning 4 jul 2026 · Göteborg Sim-arena</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Topbar (mobile) -->
+  <header class="topbar">
+    <a href="dashboard.html" class="back-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 2L4 7l5 5"/></svg></a>
+    <span class="topbar-logo">Alex Lindqvist</span>
+    <button class="icon-btn" style="border:none;background:none;width:32px;height:32px" onclick="window.location='session-timer.html'">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg>
+    </button>
+  </header>
+</div>
+
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+
+<!-- Add Exercise Modal -->
+<div class="ex-modal-overlay" id="ex-modal-overlay" onclick="if(event.target===this)closeAddModal()">
+  <div class="ex-modal" role="dialog" aria-modal="true">
+    <div class="ex-modal-title">Lägg till övning</div>
+    <div class="ex-field">
+      <label>Kategori</label>
+      <select id="ex-modal-group">
+        <option value="0">Rörlighet · Hög prioritet</option>
+        <option value="1">Stabilitet &amp; Styrka · Medel</option>
+        <option value="2">Hållning · Bibehåll</option>
+      </select>
+    </div>
+    <div class="ex-field">
+      <label>Övningsnamn *</label>
+      <input type="text" id="ex-modal-name" placeholder="t.ex. Hip Flexor Stretch" autocomplete="off" onkeydown="if(event.key==='Enter')submitAddExercise()">
+    </div>
+    <div class="ex-field">
+      <label>Beskrivning / dos</label>
+      <input type="text" id="ex-modal-desc" placeholder="t.ex. 3 × 45 sek · Varje sida · Dagligen">
+    </div>
+    <div class="ex-modal-row">
+      <div class="ex-field">
+        <label>Muskelgrupp / Område</label>
+        <input type="text" id="ex-modal-area" placeholder="t.ex. Höft, Fotled">
+      </div>
+      <div class="ex-field">
+        <label>Sets-badge</label>
+        <input type="text" id="ex-modal-sets" placeholder="t.ex. 3×10, 2 min">
+      </div>
+    </div>
+    <div class="ex-modal-actions">
+      <button class="ex-btn-cancel" onclick="closeAddModal()">Avbryt</button>
+      <button class="ex-btn-save" onclick="submitAddExercise()">Spara övning</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Energy & Stress chart ──
+const WH_ENERGY_DATA = {
+  '1D': {
+    labels: ['12 AM','3 AM','6 AM','9 AM','12 PM','3 PM','6 PM','9 PM'],
+    energy: [20,15,12,55,72,68,60,45],
+    strain: [10,8,5,35,58,62,55,40]
+  },
+  '7D': {
+    labels: ['Mån','Tis','Ons','Tor','Fre','Lör','Sön'],
+    energy: [68,72,65,78,70,60,75],
+    strain: [62,68,55,72,65,48,58]
+  },
+  '30D': {
+    labels: ['V1','V2','V3','V4'],
+    energy: [65,70,68,74],
+    strain: [58,64,60,68]
+  },
+  '90D': {
+    labels: ['Apr','Maj','Jun'],
+    energy: [62,68,74],
+    strain: [55,62,68]
+  }
+};
+let whPeriod = '1D';
+
+function setEnergyPeriod(btn, period) {
+  document.querySelectorAll('.wh-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  whPeriod = period;
+  drawEnergyChart();
+}
+
+function drawEnergyChart() {
+  const canvas = document.getElementById('wh-energy-canvas');
+  if (!canvas) return;
+  const data = WH_ENERGY_DATA[whPeriod];
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.offsetWidth - 28;
+  const h = 110;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const pL = 5, pR = 5, pT = 8, pB = 20;
+  const cw = w - pL - pR, ch = h - pT - pB;
+  const n = data.energy.length;
+
+  function xp(i) { return pL + (i / (n - 1)) * cw; }
+  function yp(v) { return pT + ch * (1 - v / 100); }
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.045)'; ctx.lineWidth = 1;
+  ['Hög','Medel','Låg'].forEach((lbl, i) => {
+    const v = [80,50,20][i];
+    const y = yp(v);
+    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(pL + cw, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.font = `${7 * dpr / dpr}px monospace`; ctx.textAlign = 'left';
+    ctx.fillText(lbl, pL, y - 2);
+  });
+
+  function drawArea(values, color, alpha) {
+    const grad = ctx.createLinearGradient(0, pT, 0, pT + ch);
+    grad.addColorStop(0, color.replace(')', `,${alpha})`).replace('rgb', 'rgba'));
+    grad.addColorStop(1, color.replace(')', ',0)').replace('rgb', 'rgba'));
+    ctx.beginPath();
+    ctx.moveTo(xp(0), pT + ch);
+    values.forEach((v, i) => ctx.lineTo(xp(i), yp(v)));
+    ctx.lineTo(xp(n - 1), pT + ch);
+    ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+    ctx.beginPath();
+    values.forEach((v, i) => i === 0 ? ctx.moveTo(xp(i), yp(v)) : ctx.lineTo(xp(i), yp(v)));
+    ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+  }
+
+  drawArea(data.strain, 'rgb(255,95,31)', 0.20);
+  drawArea(data.energy, 'rgb(0,212,170)', 0.22);
+
+  // Labels
+  ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.textAlign = 'center'; ctx.font = `${7 * dpr / dpr}px monospace`;
+  data.labels.forEach((lbl, i) => ctx.fillText(lbl, xp(i), h - 3));
+}
+
+window.addEventListener('load', () => {
+  requestAnimationFrame(() => setTimeout(drawEnergyChart, 60));
+  // Animate Today stat bars
+  requestAnimationFrame(() => setTimeout(() => {
+    document.querySelectorAll('.wh-stat-fill').forEach(bar => {
+      const target = bar.style.width;
+      bar.style.width = '0';
+      requestAnimationFrame(() => setTimeout(() => { bar.style.width = target; }, 80));
+    });
+  }, 150));
+});
+window.addEventListener('resize', drawEnergyChart);
+
+// ── Tab switching ──
+const tabs = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+tabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+function switchTabById(id) {
+  tabs.forEach(t => { t.classList.toggle('active', t.dataset.tab === id); });
+  panels.forEach(p => { p.classList.toggle('active', p.id === 'tab-' + id); });
+}
+
+// ── Perform radar data ──
+const PF_RADAR = [
+  {label:'MAGE',score:60},{label:'FOT-H',score:58},{label:'HAM-H',score:85},{label:'HFX-H',score:72},
+  {label:'HRI-H',score:60},{label:'HRU-H',score:78},{label:'BRY-H',score:86},{label:'SKU-H',score:76},
+  {label:'KNÄ-H',score:70},{label:'KNÄ-V',score:72},{label:'SKU-V',score:80},{label:'BRY-V',score:84},
+  {label:'HRU-V',score:82},{label:'HRI-V',score:74},{label:'HFX-V',score:68},{label:'HAM-V',score:80},{label:'FOT-V',score:72}
+];
+
+function pfBuildRadar(svgEl, cx, cy, r) {
+  while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+  const n = PF_RADAR.length;
+  function a(i) { return -Math.PI / 2 + (2 * Math.PI * i / n); }
+  function p(rad, i) { return { x: cx + rad * Math.cos(a(i)), y: cy + rad * Math.sin(a(i)) }; }
+  function mk(tag, attrs) { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); return e; }
+  [0.25, 0.5, 0.75, 1].forEach(pct => {
+    const pts = PF_RADAR.map((_, i) => { const pt = p(r * pct, i); return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`; }).join(' ');
+    svgEl.appendChild(mk('polygon', { points: pts, fill: 'none', stroke: `rgba(255,255,255,${pct === 1 ? '0.09' : '0.05'})`, 'stroke-width': '1' }));
+  });
+  for (let i = 0; i < n; i++) { const pt = p(r, i); svgEl.appendChild(mk('line', { x1: cx, y1: cy, x2: pt.x.toFixed(1), y2: pt.y.toFixed(1), stroke: 'rgba(255,255,255,0.07)', 'stroke-width': '1' })); }
+  const dataPts = PF_RADAR.map((d, i) => { const pt = p(r * d.score / 100, i); return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`; }).join(' ');
+  const poly = mk('polygon', { points: dataPts, fill: 'rgba(247,233,40,0.12)', stroke: '#F7E928', 'stroke-width': '1.6', 'stroke-linejoin': 'round', style: 'filter:drop-shadow(0 0 7px rgba(247,233,40,0.30));opacity:0' });
+  svgEl.appendChild(poly);
+  requestAnimationFrame(() => requestAnimationFrame(() => { poly.style.cssText += 'opacity:1;transition:opacity 0.55s 0.15s'; }));
+  PF_RADAR.forEach((d, i) => { const pt = p(r * d.score / 100, i); svgEl.appendChild(mk('circle', { cx: pt.x.toFixed(1), cy: pt.y.toFixed(1), r: '2.5', fill: '#F7E928' })); });
+}
+
+// ── Progression chart ──
+const PF_PROG = [{label:'Aug 25',v:54},{label:'Nov 25',v:61},{label:'Mar 26',v:68},{label:'Nu',v:74}];
+function pfDrawChart(id, h) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.offsetWidth || 300;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.height = h + 'px'; canvas.style.width = w + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const pL = 28, pR = 8, pT = 8, pB = 22, cw = w - pL - pR, ch = h - pT - pB;
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+  [0, 50, 100].forEach(v => {
+    const y = pT + ch * (1 - v / 100);
+    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(pL + cw, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '8px monospace'; ctx.textAlign = 'right';
+    ctx.fillText(v, pL - 4, y + 3.5);
+  });
+  const pts = PF_PROG.map((d, i) => ({ x: pL + (i / (PF_PROG.length - 1)) * cw, y: pT + ch * (1 - d.v / 100) }));
+  const gr = ctx.createLinearGradient(0, pT, 0, pT + ch);
+  gr.addColorStop(0, 'rgba(247,233,40,0.25)'); gr.addColorStop(1, 'rgba(247,233,40,0)');
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pT + ch);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length - 1].x, pT + ch); ctx.closePath();
+  ctx.fillStyle = gr; ctx.fill();
+  ctx.beginPath(); pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.strokeStyle = '#F7E928'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+  pts.forEach((p, i) => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, i === pts.length - 1 ? 4 : 2.5, 0, Math.PI * 2); ctx.fillStyle = '#F7E928'; ctx.fill();
+    if (i === pts.length - 1) { ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(247,233,40,0.28)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+  });
+  ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.font = '8px monospace'; ctx.textAlign = 'center';
+  PF_PROG.forEach((d, i) => { ctx.fillText(d.label, pL + (i / (PF_PROG.length - 1)) * cw, pT + ch + 16); });
+}
+
+// ── Area risk rows (top 4 areas, sorted by risk/low score) ──
+const PF_AREAS = [
+  { key: 'fotled',    label: 'Fotled',        H: 58, V: 72 },
+  { key: 'mage',      label: 'Nedre mage',    central: 60 },
+  { key: 'hoftflex',  label: 'Höftflexion',   H: 72, V: 68 },
+  { key: 'hoftrot_in',label: 'Höftrot. inre', H: 60, V: 74 },
+];
+function pfScoreCol(s) { return s < 65 ? '#FF4545' : s < 75 ? '#EBA800' : 'inherit'; }
+function pfAsymPct(H, V) { return Math.round(Math.abs(H - V) / ((H + V) / 2) * 100); }
+function pfRenderAreas() {
+  const el = document.getElementById('pf-area-rows');
+  if (!el) return;
+  el.innerHTML = PF_AREAS.map(a => {
+    const bilateral = a.central === undefined;
+    const avg = bilateral ? Math.round((a.H + a.V) / 2) : a.central;
+    const col = pfScoreCol(avg);
+    const asym = bilateral ? pfAsymPct(a.H, a.V) : 0;
+    const risk = asym > 10;
+    const detail = bilateral ? `
+      <div class="pf-area-detail" id="pfdet-${a.key}">
+        <div class="pf-area-detail-inner">
+          <div class="pf-side-row">
+            <span class="pf-side-lbl">Höger (H)</span>
+            <div class="prog-track" style="flex:1"><div class="prog-fill pf-sbar" data-w="${a.H}%" style="background:var(--accent)"></div></div>
+            <span class="pf-side-val" style="color:${pfScoreCol(a.H)}">${a.H}</span>
+          </div>
+          <div class="pf-side-row">
+            <span class="pf-side-lbl">Vänster (V)</span>
+            <div class="prog-track" style="flex:1"><div class="prog-fill pf-sbar" data-w="${a.V}%" style="background:var(--coach)"></div></div>
+            <span class="pf-side-val" style="color:${pfScoreCol(a.V)}">${a.V}</span>
+          </div>
+          ${risk ? `<div class="pf-risk-warn"><span style="font-size:10px;flex-shrink:0;margin-top:1px">⚠</span><span class="pf-risk-txt">Skaderisk · ${asym}% asymmetri H/V</span></div>` : ''}
+        </div>
+      </div>` : '';
+    const chevron = bilateral
+      ? `<span class="pf-area-toggle"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`
+      : '<span style="width:16px;flex-shrink:0"></span>';
+    return `<div class="pf-area-row${bilateral ? '' : ''}" ${bilateral ? `onclick="pfToggleArea('${a.key}')" id="pfarow-${a.key}"` : ''}><span class="pf-area-label">${a.label}</span><div class="pf-area-bwrap"><div class="prog-track"><div class="prog-fill pf-sbar" data-w="${avg}%"></div></div></div><span class="pf-area-val" style="color:${col}">${avg}</span>${chevron}</div>${detail}`;
+  }).join('');
+  setTimeout(pfAnimateBars, 400);
+}
+function pfToggleArea(key) {
+  const row = document.getElementById('pfarow-' + key);
+  const det = document.getElementById('pfdet-' + key);
+  if (!det || !row) return;
+  const wasOpen = det.classList.contains('open');
+  document.querySelectorAll('.pf-area-detail.open').forEach(d => { d.classList.remove('open'); d.querySelectorAll('.pf-sbar').forEach(b => b.style.width = '0'); });
+  document.querySelectorAll('.pf-area-row.open').forEach(r => r.classList.remove('open'));
+  if (!wasOpen) {
+    det.classList.add('open'); row.classList.add('open');
+    requestAnimationFrame(() => setTimeout(() => { det.querySelectorAll('.pf-sbar').forEach(b => b.style.width = b.getAttribute('data-w')); }, 70));
+  }
+}
+function pfAnimateBars() {
+  document.querySelectorAll('.pf-sbar').forEach(bar => {
+    if (bar.closest('.pf-area-detail') && !bar.closest('.pf-area-detail.open')) return;
+    bar.style.width = '0';
+    requestAnimationFrame(() => setTimeout(() => bar.style.width = bar.getAttribute('data-w'), 60));
+  });
+}
+
+// ── Render Perform tab assets (called once on first reveal) ──
+let pfTabRendered = false;
+function pfRenderTabContents() {
+  if (pfTabRendered) return;
+  pfTabRendered = true;
+  renderExProgram();
+  const radarTab = document.getElementById('pf-radar-tab');
+  if (radarTab) pfBuildRadar(radarTab, 90, 82, 56);
+  pfRenderAreasInEl('pf-area-rows-tab', 'tab');
+  requestAnimationFrame(() => setTimeout(() => pfDrawChart('pf-prog-canvas-tab', 68), 80));
+}
+
+// Render area rows into any element by id (suffix disambiguates toggle keys)
+function pfRenderAreasInEl(elId, suffix) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = PF_AREAS.map(a => {
+    const bilateral = a.central === undefined;
+    const avg = bilateral ? Math.round((a.H + a.V) / 2) : a.central;
+    const col = pfScoreCol(avg);
+    const asym = bilateral ? pfAsymPct(a.H, a.V) : 0;
+    const risk = asym > 10;
+    const key = a.key + '_' + suffix;
+    const detail = bilateral ? `
+      <div class="pf-area-detail" id="pfdet-${key}">
+        <div class="pf-area-detail-inner">
+          <div class="pf-side-row">
+            <span class="pf-side-lbl">Höger (H)</span>
+            <div class="prog-track" style="flex:1"><div class="prog-fill pf-sbar" data-w="${a.H}%" style="background:var(--accent)"></div></div>
+            <span class="pf-side-val" style="color:${pfScoreCol(a.H)}">${a.H}</span>
+          </div>
+          <div class="pf-side-row">
+            <span class="pf-side-lbl">Vänster (V)</span>
+            <div class="prog-track" style="flex:1"><div class="prog-fill pf-sbar" data-w="${a.V}%" style="background:var(--coach)"></div></div>
+            <span class="pf-side-val" style="color:${pfScoreCol(a.V)}">${a.V}</span>
+          </div>
+          ${risk ? `<div class="pf-risk-warn"><span style="font-size:10px;flex-shrink:0;margin-top:1px">⚠</span><span class="pf-risk-txt">Skaderisk · ${asym}% asymmetri H/V</span></div>` : ''}
+        </div>
+      </div>` : '';
+    const chevron = bilateral
+      ? `<span class="pf-area-toggle"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`
+      : '<span style="width:16px;flex-shrink:0"></span>';
+    return `<div class="pf-area-row" ${bilateral ? `onclick="pfToggleAreaK('${key}')" id="pfarow-${key}"` : ''}><span class="pf-area-label">${a.label}</span><div class="pf-area-bwrap"><div class="prog-track"><div class="prog-fill pf-sbar" data-w="${avg}%"></div></div></div><span class="pf-area-val" style="color:${col}">${avg}</span>${chevron}</div>${detail}`;
+  }).join('');
+  setTimeout(pfAnimateBars, 400);
+}
+function pfToggleAreaK(key) {
+  const row = document.getElementById('pfarow-' + key);
+  const det = document.getElementById('pfdet-' + key);
+  if (!det || !row) return;
+  const wasOpen = det.classList.contains('open');
+  document.querySelectorAll('.pf-area-detail.open').forEach(d => { d.classList.remove('open'); d.querySelectorAll('.pf-sbar').forEach(b => b.style.width = '0'); });
+  document.querySelectorAll('.pf-area-row.open').forEach(r => r.classList.remove('open'));
+  if (!wasOpen) {
+    det.classList.add('open'); row.classList.add('open');
+    requestAnimationFrame(() => setTimeout(() => { det.querySelectorAll('.pf-sbar').forEach(b => b.style.width = b.getAttribute('data-w')); }, 70));
+  }
+}
+
+// ── Exercise Program (Screening) ──
+const EX_KEY = 'm2m_ex_prog_alex';
+const EX_DEFAULTS = [
+  {
+    id:'rör', label:'Rörlighet', priority:'Hög prioritet',
+    color:'var(--orange)', dim:'rgba(255,95,31,0.10)', border:'rgba(255,95,31,0.22)',
+    exercises:[
+      {name:'Hip Flexor Stretch',      desc:'3 × 45 sek · Varje sida · Dagligen',       area:'Höft',          sets:'3×45s'},
+      {name:'Ankle Mobility Drill',    desc:'2 × 20 rep · Varje sida · Dagligen',        area:'Fotled',        sets:'2×20'},
+      {name:'Foam Roll IT-band',       desc:'2 min · Varje sida · Dagligen',             area:'Höftrot.',      sets:'2 min'}
+    ]
+  },
+  {
+    id:'stab', label:'Stabilitet & Styrka', priority:'Medel prioritet',
+    color:'var(--accent)', dim:'var(--accent-dim)', border:'rgba(247,233,40,0.20)',
+    exercises:[
+      {name:'Dead Bug',                desc:'3 × 10 rep · 3×/vecka',                    area:'Mage',          sets:'3×10'},
+      {name:'Lateral Plank',           desc:'3 × 30 sek · Varje sida · 3×/vecka',       area:'Mage',          sets:'3×30s'},
+      {name:'Single-leg Glute Bridge', desc:'3 × 12 rep · Varje sida · 3×/vecka',       area:'Höft',          sets:'3×12'}
+    ]
+  },
+  {
+    id:'hall', label:'Hållning', priority:'Bibehåll',
+    color:'var(--coach)', dim:'var(--coach-dim)', border:'rgba(0,212,170,0.20)',
+    exercises:[
+      {name:'Band Pull-Apart',                  desc:'3 × 15 rep · 2×/vecka',           area:'Skuldra',       sets:'3×15'},
+      {name:'Chin Tuck + Thoracic Rotation',    desc:'2 × 10 rep · 2×/vecka',           area:'Nacke / Bröst', sets:'2×10'}
+    ]
+  }
+];
+
+function exLoad() {
+  try { const s = localStorage.getItem(EX_KEY); if (s) return JSON.parse(s); } catch(e) {}
+  return JSON.parse(JSON.stringify(EX_DEFAULTS));
+}
+function exSave(prog) {
+  try { localStorage.setItem(EX_KEY, JSON.stringify(prog)); } catch(e) {}
+}
+
+let exProgram = exLoad();
+
+function renderExProgram() {
+  const container = document.getElementById('ex-program-container');
+  if (!container) return;
+  container.innerHTML = exProgram.map((g, gi) => {
+    const rows = g.exercises.map((ex, ei) => `
+      <div class="pf-ex-row">
+        <div class="pf-ex-icon" style="background:${g.dim};border-color:${g.border}">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="${g.color}" stroke-width="1.6" stroke-linecap="round"><path d="M2 12 5 8l2 2 5-7"/></svg>
+        </div>
+        <div class="pf-ex-body">
+          <div class="pf-ex-name">${ex.name}</div>
+          <div class="pf-ex-desc">${ex.desc}</div>
+        </div>
+        <div class="pf-ex-target">
+          <div class="pf-ex-area">${ex.area}</div>
+          <div class="pf-ex-sets">${ex.sets}</div>
+        </div>
+        <button class="pf-ex-remove" onclick="removeExercise(${gi},${ei})" title="Ta bort" aria-label="Ta bort övning">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 3h9M4.5 3V2h3v1"/><path d="M2 3l.75 7.5h6.5L10 3"/><path d="M4.5 5.5v3M7.5 5.5v3"/></svg>
+        </button>
+      </div>`).join('');
+    return `
+      <div style="margin-bottom:${gi < exProgram.length-1 ? '16px' : '0'}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <div style="width:3px;height:14px;border-radius:2px;background:${g.color};flex-shrink:0"></div>
+          <span style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.10em;color:${g.color}">${g.label} · ${g.priority}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${rows}
+          <button class="pf-ex-add-btn" onclick="openAddModal(${gi})" style="--add-color:${g.color}">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5.5 1v9M1 5.5h9"/></svg>
+            Lägg till övning
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function removeExercise(gi, ei) {
+  exProgram[gi].exercises.splice(ei, 1);
+  exSave(exProgram);
+  renderExProgram();
+}
+
+let _addGroup = 0;
+function openAddModal(gi) {
+  _addGroup = gi;
+  const overlay = document.getElementById('ex-modal-overlay');
+  const sel = document.getElementById('ex-modal-group');
+  if (sel) sel.value = gi;
+  ['ex-modal-name','ex-modal-desc','ex-modal-area','ex-modal-sets'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (overlay) overlay.classList.add('open');
+  setTimeout(() => { const n = document.getElementById('ex-modal-name'); if (n) n.focus(); }, 80);
+}
+function closeAddModal() {
+  const overlay = document.getElementById('ex-modal-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+function submitAddExercise() {
+  const name = (document.getElementById('ex-modal-name').value || '').trim();
+  if (!name) { document.getElementById('ex-modal-name').focus(); return; }
+  const desc  = (document.getElementById('ex-modal-desc').value  || '').trim();
+  const area  = (document.getElementById('ex-modal-area').value  || '').trim() || '—';
+  const sets  = (document.getElementById('ex-modal-sets').value  || '').trim() || '—';
+  const gi    = parseInt(document.getElementById('ex-modal-group').value, 10);
+  exProgram[gi].exercises.push({ name, desc, area, sets });
+  exSave(exProgram);
+  closeAddModal();
+  renderExProgram();
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  const radarEl = document.getElementById('pf-radar-mini');
+  if (radarEl) pfBuildRadar(radarEl, 90, 82, 56);
+  pfRenderAreas();
+  requestAnimationFrame(() => setTimeout(() => pfDrawChart('pf-prog-canvas', 68), 120));
+
+  // Hook tab clicks to init Perform tab on first open
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.tab === 'perform') pfRenderTabContents();
+    });
+  });
+});
+</script>
+</body>
+</html>

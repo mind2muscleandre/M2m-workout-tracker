@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Dashboard</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+/* ── Panel tab nav ── */
+.panel-tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(18,22,28,0.9);
+}
+.panel-tab-nav::-webkit-scrollbar { display: none; }
+.ptab {
+  flex: 1; min-width: 0;
+  height: 38px; padding: 0 6px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); cursor: pointer;
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s; white-space: nowrap;
+}
+.ptab.active { color: var(--coach); border-bottom-color: var(--coach); }
+.ptab:hover:not(.active) { color: var(--muted-hi); }
+
+/* ── Tab content areas ── */
+.ap-tab { display: none; flex-direction: column; gap: 10px; }
+.ap-tab.active { display: flex; }
+
+/* ── Athlete hero in panel ── */
+.ath-hero {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  background: var(--glass-bg-coach);
+  border: 1px solid rgba(0,212,170,0.18);
+  box-shadow: var(--glass-shadow-coach);
+  flex-shrink: 0;
+}
+.ath-avatar {
+  width: 50px; height: 50px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 19px; font-weight: 700;
+  color: #000; flex-shrink: 0;
+  border: 2px solid var(--coach);
+}
+.ath-name { font-family: var(--font-display); font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.1; }
+.ath-sport { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-top: 2px; }
+
+/* ── Goal items ── */
+.goal-item { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.goal-item:last-child { border-bottom: none; padding-bottom: 0; }
+.goal-item-tag { font-family: var(--font-mono); font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 3px; }
+.goal-item-name { font-size: 12px; font-weight: 600; margin-bottom: 5px; line-height: 1.35; }
+.goal-mini-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
+.goal-mini-fill { height: 100%; border-radius: 2px; }
+.goal-meta-row { display: flex; justify-content: space-between; align-items: flex-end; }
+.goal-pct-mini { font-family: var(--font-display); font-size: 18px; font-weight: 700; line-height: 1; }
+.goal-checkin { font-family: var(--font-mono); font-size: 7.5px; color: var(--muted); text-transform: uppercase; }
+
+/* ── Program day rows ── */
+.prog-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.prog-name { font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+.prog-week-badge { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--coach); background: var(--coach-dim); border: 1px solid rgba(0,212,170,0.18); padding: 2px 7px; border-radius: var(--r-full); }
+.prog-day-row { display: flex; gap: 8px; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.prog-day-row:last-child { border-bottom: none; }
+.prog-day-lbl { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); width: 24px; flex-shrink: 0; margin-top: 2px; }
+.prog-day-lbl.today { color: var(--coach); font-weight: 700; }
+.prog-exercises { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.prog-ex { font-size: 11px; color: var(--muted-hi); line-height: 1.3; }
+.prog-ex.today { color: var(--fg); }
+
+/* ── Macro / Nutrition ── */
+.macro-label { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+.macro-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.macro-item:last-child { border-bottom: none; }
+.macro-name { font-size: 11px; color: var(--muted-hi); width: 72px; flex-shrink: 0; }
+.macro-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.macro-bar-fill { height: 100%; border-radius: 2px; background: var(--coach); transition: width 0.6s ease; }
+.macro-bar-fill.pro { background: var(--accent); }
+.macro-bar-fill.carb { background: var(--orange); }
+.macro-bar-fill.fat { background: rgba(167,139,250,0.85); }
+.macro-nums { font-family: var(--font-mono); font-size: 9px; color: var(--muted); white-space: nowrap; width: 62px; text-align: right; flex-shrink: 0; }
+
+/* ── Chat ── */
+.chat-thread { display: flex; flex-direction: column; gap: 8px; padding-bottom: 4px; }
+.chat-bubble { max-width: 90%; padding: 8px 11px; border-radius: var(--r-md); font-size: 12px; line-height: 1.45; }
+.chat-bubble.out { align-self: flex-end; background: rgba(0,212,170,0.12); border: 1px solid rgba(0,212,170,0.18); border-bottom-right-radius: 4px; }
+.chat-bubble.in { align-self: flex-start; background: var(--glass-bg); border: 1px solid var(--glass-border); border-bottom-left-radius: 4px; }
+.chat-time { font-family: var(--font-mono); font-size: 8px; color: var(--muted); margin-top: 3px; text-align: right; }
+.chat-time.in { text-align: left; }
+.chat-compose { display: flex; gap: 7px; align-items: flex-end; padding-top: 4px; flex-shrink: 0; }
+.chat-textarea { flex: 1; padding: 9px 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--r-md); color: var(--fg); font-size: 12px; resize: none; outline: none; min-height: 38px; max-height: 90px; font-family: var(--font-body); line-height: 1.4; }
+.chat-textarea::placeholder { color: var(--muted); }
+.chat-textarea:focus { border-color: var(--coach); }
+.chat-send { width: 38px; height: 38px; border-radius: var(--r-md); background: var(--coach); color: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; border: none; transition: background 0.15s; }
+.chat-send:hover { background: oklch(80% 0.14 165); }
+.chat-send svg { width: 15px; height: 15px; }
+
+/* ── Edit button shared ── */
+.inline-edit-btn { margin-top: 10px; height: 32px; border-radius: var(--r-md); border: 1px solid var(--glass-border); background: var(--glass-bg); font-size: 11px; font-weight: 500; color: var(--muted-hi); cursor: pointer; width: 100%; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.inline-edit-btn:hover { background: var(--glass-bg-hi); color: var(--fg); }
+
+/* ── Overview panel stats ── */
+.ov-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.ov-row:last-child { border-bottom: none; }
+.ov-key { font-size: 12px; color: var(--muted-hi); }
+.ov-val { font-family: var(--font-display); font-size: 18px; font-weight: 700; line-height: 1; }
+.ov-val.c { color: var(--coach); }
+.ov-val.a { color: var(--accent); }
+.ov-val.o { color: var(--orange); }
+.overview-today-label { font-family: var(--font-mono); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.10em; color: var(--coach); margin-bottom: 8px; }
+.up-sess { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.up-sess:last-child { border-bottom: none; }
+.up-time { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--coach); width: 44px; flex-shrink: 0; }
+.up-name { font-size: 13px; font-weight: 500; }
+.up-type { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 1px; }
+.notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 8px rgba(255,95,31,0.6); flex-shrink: 0; }
+
+/* ── Athlete slide (mobile/tablet overlay) ── */
+.slide-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.58);
+  z-index: 199;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.28s;
+}
+.slide-backdrop.visible { opacity: 1; pointer-events: auto; }
+
+.athlete-slide {
+  position: fixed;
+  top: 0; right: 0;
+  height: 100dvh;
+  width: min(420px, 100%);
+  background: rgba(18,22,28,0.98);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-left: 1px solid var(--glass-border);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: -12px 0 60px rgba(0,0,0,0.55);
+}
+.athlete-slide.open { transform: translateX(0); }
+
+.slide-header {
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.slide-title {
+  font-family: var(--font-display); font-size: 16px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--coach);
+}
+.slide-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.slide-body::-webkit-scrollbar { display: none; }
+.slide-actions { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; border-top: 1px solid var(--border); }
+
+/* ── Desktop detail panel body fix ── */
+.detail-panel .panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.detail-panel .panel-body::-webkit-scrollbar { display: none; }
+.panel-body-scroll { display: flex; flex-direction: column; gap: 10px; }
+.panel-actions-sticky { flex-shrink: 0; padding-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+
+@media (min-width: 1280px) {
+  .athlete-slide { display: none !important; }
+  .slide-backdrop { display: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-mark">M2M</span>
+      <span class="logo-sub">COACH</span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Trupp</span>
+      <a href="dashboard.html" class="s-nav-item active">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="s-nav-label">Dashboard</span>
+      </a>
+      <a href="athlete-detail.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span>
+        <span class="s-nav-label">Athletprofil</span>
+      </a>
+      <span class="sidebar-section-label">Träning</span>
+      <a href="program-builder.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span>
+        <span class="s-nav-label">Adapt Program</span>
+      </a>
+      <a href="exercise-library.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span>
+        <span class="s-nav-label">Övningsbibliotek</span>
+      </a>
+      <a href="sessions-list.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span>
+        <span class="s-nav-label">Sessioner</span>
+      </a>
+      <a href="session-timer.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span>
+        <span class="s-nav-label">Session Timer</span>
+      </a>
+      <a href="progression.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span>
+        <span class="s-nav-label">Progression</span>
+      </a>
+      <span class="sidebar-section-label">Kommunikation</span>
+      <a href="messages.html" class="s-nav-item">
+        <span class="s-nav-icon" style="position:relative">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg>
+          <span style="position:absolute;top:-3px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span>
+        </span>
+        <span class="s-nav-label">Meddelanden <span class="alert-badge" style="margin-left:auto">3</span></span>
+      </a>
+      <a href="notes.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span>
+        <span class="s-nav-label">Anteckningar</span>
+      </a>
+      <span class="sidebar-section-label">Hälsa &amp; Analys</span>
+      <a href="screening-hub.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span>
+        <span class="s-nav-label">Screening</span>
+      </a>
+      <a href="reports.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span>
+        <span class="s-nav-label">Rapporter</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">PL</div>
+        <div>
+          <div class="coach-footer-name">Per Lindgren</div>
+          <div class="coach-footer-role">Head Coach</div>
+        </div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="main-content">
+    <header class="page-header">
+      <div class="flex items-center gap-12">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="search-bar" id="searchWrap" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="6" cy="6" r="4"/><path d="M10 10l3 3"/></svg>
+          <input id="searchInput" type="text" placeholder="Sök atlet…" autocomplete="off">
+        </div>
+      </div>
+      <div class="page-header-actions">
+        <button class="icon-btn" id="searchToggle" title="Sök">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
+        </button>
+        <button class="icon-btn" title="Notifikationer" style="position:relative">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7.5 2a4.5 4.5 0 014.5 4.5c0 3 1 4 1 4h-11s1-1 1-4A4.5 4.5 0 017.5 2zM5.5 10.5a2 2 0 004 0"/></svg>
+          <span style="position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--orange);border:1.5px solid var(--screen-bg);box-shadow:0 0 6px rgba(255,95,31,0.5);"></span>
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="window.location='athlete-detail.html'">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 2v9M2 6.5h9"/></svg>
+          Lägg till atlet
+        </button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="stats-strip mb-20">
+        <div class="stat-cell"><div class="stat-val coach-col">15</div><div class="stat-label">Tränar idag</div></div>
+        <div class="stat-cell"><div class="stat-val accent-col">6</div><div class="stat-label">Återhämtning</div></div>
+        <div class="stat-cell"><div class="stat-val orange-col">4</div><div class="stat-label">Varningar</div></div>
+        <div class="stat-cell"><div class="stat-val" style="color:var(--muted-hi)">24</div><div class="stat-label">Totalt</div></div>
+      </div>
+
+      <div class="filter-row mb-16" id="filterRow">
+        <button class="ftab active" data-filter="all">Alla <span style="font-family:var(--font-display);font-size:12px;font-weight:700">24</span></button>
+        <button class="ftab" data-filter="training"><span class="ftab-dot" style="background:var(--coach);box-shadow:0 0 5px rgba(0,212,170,0.5)"></span>Tränar</button>
+        <button class="ftab" data-filter="recovery"><span class="ftab-dot" style="background:var(--accent);box-shadow:0 0 5px rgba(247,233,40,0.4)"></span>Återhämtning</button>
+        <button class="ftab" data-filter="alert"><span class="ftab-dot" style="background:var(--orange);box-shadow:0 0 5px rgba(255,95,31,0.4)"></span>Varning</button>
+        <button class="ftab" data-filter="rest"><span class="ftab-dot" style="background:var(--muted)"></span>Vila</button>
+        <button class="ftab" data-filter="inactive">Inaktiv</button>
+      </div>
+
+      <div class="athlete-grid" id="athleteGrid"></div>
+    </div>
+  </main>
+
+  <!-- ── Desktop Detail Panel (3rd column, ≥1280px) ── -->
+  <aside class="detail-panel" id="desktopPanel">
+    <div class="panel-header">
+      <span class="panel-title" id="panelTitle">Dagöversikt</span>
+      <button class="icon-btn" style="width:28px;height:28px" id="panelCloseBtn" title="Stäng">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+      </button>
+    </div>
+
+    <div class="panel-tab-nav" id="desktopTabNav" style="display:none">
+      <button class="ptab active" data-tab="goals">Mål</button>
+      <button class="ptab" data-tab="program">Program</button>
+      <button class="ptab" data-tab="nutrition">Kost</button>
+      <button class="ptab" data-tab="chat">Chatt</button>
+    </div>
+
+    <div class="panel-body" id="desktopPanelBody">
+      <!-- Default overview -->
+      <div id="desktopOverview">
+        <div class="panel-section card-coach mb-12">
+          <div class="overview-today-label">Idag — Lördag 7 jun</div>
+          <div class="ov-row"><span class="ov-key">Sessioner planerade</span><span class="ov-val c">8</span></div>
+          <div class="ov-row"><span class="ov-key">Återhämtning aktiv</span><span class="ov-val a">6</span></div>
+          <div class="ov-row"><span class="ov-key">Varningar att åtgärda</span><span class="ov-val o">4</span></div>
+          <div class="ov-row"><span class="ov-key">Genomsnittlig målstatus</span><span class="ov-val c">68%</span></div>
+        </div>
+        <div class="panel-section mb-12">
+          <div class="ps-label">Kommande sessioner</div>
+          <div class="up-sess"><span class="up-time">10:00</span><div><div class="up-name">Alex Lindqvist</div><div class="up-type">ATP-PC · Pool</div></div></div>
+          <div class="up-sess"><span class="up-time">10:30</span><div><div class="up-name">Agnes Grahn</div><div class="up-type">ATP-PC · Bana</div></div></div>
+          <div class="up-sess"><span class="up-time">11:00</span><div><div class="up-name">Klara Andersson</div><div class="up-type">Glykolytisk · Sal</div></div></div>
+          <div class="up-sess"><span class="up-time">13:00</span><div><div class="up-name">Ida Arvidsson</div><div class="up-type">Aerob · Stall</div></div></div>
+        </div>
+        <div class="panel-section">
+          <div class="ps-label">Varningar att åtgärda</div>
+          <div class="up-sess"><span class="notif-dot"></span><div><div class="up-name">Marcus Karlsson</div><div class="up-type">Missade 2 sessioner</div></div></div>
+          <div class="up-sess"><span class="notif-dot"></span><div><div class="up-name">Johan Persson</div><div class="up-type">Återhämtning försenad</div></div></div>
+          <div class="up-sess"><span class="notif-dot"></span><div><div class="up-name">Anton Olsson</div><div class="up-type">Mål i riskzon</div></div></div>
+          <div class="up-sess"><span class="notif-dot"></span><div><div class="up-name">Erik Forsberg</div><div class="up-type">Check-in behövs</div></div></div>
+        </div>
+      </div>
+      <!-- Athlete content injected here -->
+      <div id="desktopAthleteContent" style="display:none; flex-direction:column; gap:10px;"></div>
+    </div>
+  </aside>
+
+  <!-- ── Mobile Topbar ── -->
+  <header class="topbar">
+    <span class="topbar-logo">M2M COACH</span>
+    <div class="topbar-actions">
+      <button class="icon-btn" style="width:36px;height:36px" id="searchToggleMobile">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"/><path d="M13 13l4 4"/></svg>
+      </button>
+    </div>
+  </header>
+
+</div><!-- /app-shell -->
+
+<!-- ── Mobile/Tablet Bottom Nav ── -->
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+
+<!-- ── Slide Backdrop (mobile/tablet) ── -->
+<div class="slide-backdrop" id="slideBackdrop"></div>
+
+<!-- ── Athlete Slide Panel (mobile/tablet) ── -->
+<aside class="athlete-slide" id="athleteSlide">
+  <div class="slide-header">
+    <span class="slide-title" id="slideTitle">Atlet</span>
+    <button class="icon-btn" style="width:32px;height:32px" id="slideCloseBtn" title="Stäng">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l9 9M11 2l-9 9"/></svg>
+    </button>
+  </div>
+  <div class="panel-tab-nav" id="slideTabNav">
+    <button class="ptab active" data-tab="goals">Mål</button>
+    <button class="ptab" data-tab="program">Program</button>
+    <button class="ptab" data-tab="nutrition">Kost</button>
+    <button class="ptab" data-tab="chat">Chatt</button>
+  </div>
+  <div class="slide-body" id="slideBody"></div>
+  <div class="slide-actions" id="slideActions"></div>
+</aside>
+
+<script>
+/* ══ DATA ══════════════════════════════════════════════════════════ */
+const ATHLETES = [
+  { id:1,  initials:"AL", name:"Alex Lindqvist",    sport:"Simning",          status:"training",  goal:"OS-kvalificering",        goalPct:78, system:"atp",   lastSession:"Idag 09:15",    alert:null,                    color:"#00D4AA" },
+  { id:2,  initials:"ES", name:"Emma Svensson",     sport:"Friidrott",        status:"recovery",  goal:"Regionsm. 100m",          goalPct:62, system:"aero",  lastSession:"Igår",           alert:null,                    color:"#5E9EFF" },
+  { id:3,  initials:"MK", name:"Marcus Karlsson",   sport:"Tyngdlyftning",    status:"alert",     goal:"Junior-SM",               goalPct:45, system:"atp",   lastSession:"3 dagar sedan",  alert:"Missade 2 sessioner",   color:"#FF9A3C" },
+  { id:4,  initials:"SJ", name:"Sofia Jansson",     sport:"Simning",          status:"training",  goal:"Svenska mästerskapen",    goalPct:85, system:"aero",  lastSession:"Idag 07:30",    alert:null,                    color:"#00D4AA" },
+  { id:5,  initials:"LH", name:"Linus Holm",        sport:"Cykling",          status:"recovery",  goal:"Tour de Suède",           goalPct:71, system:"aero",  lastSession:"Igår",           alert:null,                    color:"#5E9EFF" },
+  { id:6,  initials:"AM", name:"Astrid Magnusson",  sport:"Gymnastik",        status:"training",  goal:"Nordiska mästerskapen",   goalPct:90, system:"glyco", lastSession:"Idag 08:00",    alert:null,                    color:"#7EC8E3" },
+  { id:7,  initials:"JP", name:"Johan Persson",     sport:"Friidrott",        status:"alert",     goal:"Europeiska U20",          goalPct:38, system:"atp",   lastSession:"5 dagar sedan",  alert:"Återhämtning försenad", color:"#FF9A3C" },
+  { id:8,  initials:"VN", name:"Vera Nilsson",      sport:"Skidåkning",       status:"rest",      goal:"Off-season bas",          goalPct:55, system:"aero",  lastSession:"2 dagar sedan",  alert:null,                    color:"#A8E6CF" },
+  { id:9,  initials:"OB", name:"Oscar Berg",        sport:"Rodd",             status:"training",  goal:"VM Juniorer",             goalPct:67, system:"aero",  lastSession:"Idag 10:00",    alert:null,                    color:"#00D4AA" },
+  { id:10, initials:"HE", name:"Hanna Eriksson",    sport:"Judo",             status:"training",  goal:"SM Senior",               goalPct:82, system:"glyco", lastSession:"Idag 09:00",    alert:null,                    color:"#FF5F1F" },
+  { id:11, initials:"NW", name:"Nils Wallin",       sport:"Tennis",           status:"recovery",  goal:"ITF topp 500",            goalPct:58, system:"glyco", lastSession:"Igår",           alert:null,                    color:"#5E9EFF" },
+  { id:12, initials:"FG", name:"Frida Gustafsson",  sport:"Triathlon",        status:"training",  goal:"Ironman 70.3 Malmö",      goalPct:73, system:"aero",  lastSession:"Idag 06:45",    alert:null,                    color:"#00D4AA" },
+  { id:13, initials:"AO", name:"Anton Olsson",      sport:"Brottning",        status:"alert",     goal:"Nordiska mästerskapen",   goalPct:42, system:"atp",   lastSession:"4 dagar sedan",  alert:"Mål i riskzon",         color:"#FF5F1F" },
+  { id:14, initials:"KA", name:"Klara Andersson",   sport:"Volleyboll",       status:"training",  goal:"Div 1 Playoff",           goalPct:79, system:"glyco", lastSession:"Idag 11:00",    alert:null,                    color:"#7EC8E3" },
+  { id:15, initials:"RJ", name:"Robin Johansson",   sport:"Basket",           status:"recovery",  goal:"Ungdomsserien Final",     goalPct:65, system:"glyco", lastSession:"Igår",           alert:null,                    color:"#5E9EFF" },
+  { id:16, initials:"TL", name:"Tove Lindberg",     sport:"Handboll",         status:"training",  goal:"Allsvenskan topp 4",      goalPct:88, system:"glyco", lastSession:"Idag 08:30",    alert:null,                    color:"#00D4AA" },
+  { id:17, initials:"CK", name:"Carl Kjellberg",    sport:"Fotboll",          status:"rest",      goal:"Säsongsförberedelse",     goalPct:50, system:"aero",  lastSession:"3 dagar sedan",  alert:null,                    color:"#A8E6CF" },
+  { id:18, initials:"MB", name:"Maria Björk",       sport:"Ishockey",         status:"training",  goal:"SDHL Playoff",            goalPct:77, system:"glyco", lastSession:"Idag 07:00",    alert:null,                    color:"#7EC8E3" },
+  { id:19, initials:"PH", name:"Petter Henriksson", sport:"Skytte",           status:"inactive",  goal:"OS-kval",                 goalPct:20, system:"aero",  lastSession:"2 veckor sedan", alert:null,                    color:"#6B7280" },
+  { id:20, initials:"IA", name:"Ida Arvidsson",     sport:"Ridsport",         status:"training",  goal:"Grand Prix Falsterbo",    goalPct:93, system:"aero",  lastSession:"Idag 09:30",    alert:null,                    color:"#00D4AA" },
+  { id:21, initials:"BL", name:"Björn Larsson",     sport:"Cykling",          status:"training",  goal:"Vätternrundan rekord",    goalPct:71, system:"aero",  lastSession:"Idag 06:00",    alert:null,                    color:"#00D4AA" },
+  { id:22, initials:"SN", name:"Sara Norberg",      sport:"Längdskidåkning",  status:"recovery",  goal:"SM-cupen podium",         goalPct:68, system:"aero",  lastSession:"Igår",           alert:null,                    color:"#5E9EFF" },
+  { id:23, initials:"EF", name:"Erik Forsberg",     sport:"Badminton",        status:"alert",     goal:"EuroPara Champs",         goalPct:30, system:"glyco", lastSession:"6 dagar sedan",  alert:"Check-in behövs",       color:"#FF9A3C" },
+  { id:24, initials:"AG", name:"Agnes Grahn",       sport:"Friidrott 400m",   status:"training",  goal:"Junior-SM 400m",          goalPct:86, system:"atp",   lastSession:"Idag 10:30",    alert:null,                    color:"#F7E928" },
+];
+
+const EXTRAS = {
+  1: {
+    goals:[
+      { name:"OS-kvalificering 2026 — 100m frisim", pct:78, tag:"Primärt mål (Goalsetter)", last:"Igår" },
+      { name:"Tider under 47.8s konsekvent", pct:72, tag:"Prestationsmål", last:"3 dagar" },
+      { name:"Styrka: squat 110kg", pct:80, tag:"Stödmål", last:"Idag" }
+    ],
+    program:{ name:"Simnings-bas 8v", week:4, total:8, days:[
+      { d:"Mån", s:"atp",  xs:["Sprint pool 8×50m","Block-start ×12"], today:false },
+      { d:"Tis", s:"gym",  xs:["Lat pull 4×8","Rodd 4×10","Core 3×15"], today:false },
+      { d:"Ons", s:"aero", xs:["Distans 3000m Z2","Stretching 20min"], today:false },
+      { d:"Tor", s:"atp",  xs:["Sprint 6×75m","Teknikdrills ×20"], today:false },
+      { d:"Fre", s:"atp",  xs:["Race-sim 2×200m","Startteknik ×10"], today:false },
+      { d:"Lör", s:"atp",  xs:["Tävlingssim 100m ×3"], today:true },
+      { d:"Sön", s:"off",  xs:["Vila / Lätt simning 30min"], today:false }
+    ]},
+    macros:{ cal:[2880,3200], pro:[145,160], carb:[380,400], fat:[72,80] },
+    msgs:[
+      { dir:"out", text:"Bra jobbat igår! Hur känner du inför ATP-passet imorgon?", t:"08:30" },
+      { dir:"in",  text:"Lite trött men motiverad. Ska sova tidigt.", t:"09:45" },
+      { dir:"out", text:"Perfekt. Värm upp 15min extra, fokus på teknik.", t:"10:00" }
+    ]
+  },
+  3: {
+    goals:[
+      { name:"Junior-SM guld 73kg-klassen", pct:45, tag:"Primärt mål (Goalsetter)", last:"4 dagar" },
+      { name:"Ryck 100kg tekniskt rent", pct:52, tag:"Teknikmål", last:"En vecka" }
+    ],
+    program:{ name:"Styrka Topp 6v", week:3, total:6, days:[
+      { d:"Mån", s:"atp", xs:["Ryck 5×3 @85%","Stöt 4×2 @80%"], today:false },
+      { d:"Tis", s:"gym", xs:["Framsquat 5×3","Bänkpress 4×5"], today:false },
+      { d:"Ons", s:"aero",xs:["Löpning 25min","Rörlighet 30min"], today:false },
+      { d:"Tor", s:"atp", xs:["Ryck var. 6×2","Powerlyft 4×3"], today:false },
+      { d:"Fre", s:"atp", xs:["⚠ MISSAD SESSION"], today:false },
+      { d:"Lör", s:"atp", xs:["⚠ MISSAD SESSION"], today:false },
+      { d:"Sön", s:"off", xs:["Återhämtning"], today:true }
+    ]},
+    macros:{ cal:[2100,3800], pro:[120,180], carb:[220,480], fat:[55,90] },
+    msgs:[
+      { dir:"out", text:"Marcus — du har missat 2 pass. Allt ok? Hör av dig.", t:"Igår 14:00" },
+      { dir:"in",  text:"Ledsen, haft det jobbigt hemma. Är tillbaka måndag.", t:"Igår 18:30" },
+      { dir:"out", text:"Förstår. Skicka uppdaterad veckoplan så tittar vi.", t:"Igår 19:00" }
+    ]
+  },
+  7: {
+    goals:[
+      { name:"Europeiska U20-mästerskapen final", pct:38, tag:"Primärt mål (Goalsetter)", last:"5 dagar" },
+      { name:"400m under 47.5s", pct:42, tag:"Tidsmål", last:"En vecka" }
+    ],
+    program:{ name:"Tempo + Kraft 10v", week:6, total:10, days:[
+      { d:"Mån", s:"atp",  xs:["400m-intervaller 6×300m","Sprintar ×8"], today:false },
+      { d:"Tis", s:"gym",  xs:["Squat 5×5","Explosiv RDL 4×6"], today:false },
+      { d:"Ons", s:"aero", xs:["5km Z2","Stretching 20min"], today:false },
+      { d:"Tor", s:"atp",  xs:["Tempo 3×600m","Teknikdrills"], today:false },
+      { d:"Fre", s:"aero", xs:["Rehab + rörlighet (skadesig.)"], today:false },
+      { d:"Lör", s:"off",  xs:["Vila / Rehab"], today:true },
+      { d:"Sön", s:"off",  xs:["Promenad"], today:false }
+    ]},
+    macros:{ cal:[2900,3400], pro:[155,170], carb:[360,420], fat:[68,78] },
+    msgs:[
+      { dir:"out", text:"Johan — återhämtning försenad. Kände du skadesignal?", t:"Igår 09:00" },
+      { dir:"in",  text:"Hamstringen lite stel, inget akut.", t:"Igår 11:00" },
+      { dir:"out", text:"Pausa torsdagens sprint. Kör rörlighet istället.", t:"Igår 11:15" }
+    ]
+  },
+  13: {
+    goals:[
+      { name:"Nordiska mästerskapen 65kg", pct:42, tag:"Primärt mål (Goalsetter)", last:"4 dagar" },
+      { name:"Explosionstyrka ×1.8 kroppsvikt", pct:50, tag:"Kraftmål", last:"En vecka" }
+    ],
+    program:{ name:"Kampsport Kraft 8v", week:5, total:8, days:[
+      { d:"Mån", s:"glyco", xs:["Teknikrundor 6×3min","Wrestler snatch ×10"], today:false },
+      { d:"Tis", s:"gym",   xs:["Marklyft 5×3","Explosiv pull 4×4"], today:false },
+      { d:"Ons", s:"aero",  xs:["Löpning 30min","Rörlighet 20min"], today:false },
+      { d:"Tor", s:"glyco", xs:["Sparring 5×3min","Shotgun ×15"], today:false },
+      { d:"Fre", s:"gym",   xs:["Squat 4×5","Axelpress 3×12"], today:false },
+      { d:"Lör", s:"off",   xs:["Aktiv vila"], today:true },
+      { d:"Sön", s:"off",   xs:["Vila"], today:false }
+    ]},
+    macros:{ cal:[3100,3500], pro:[160,175], carb:[400,440], fat:[80,85] },
+    msgs:[
+      { dir:"out", text:"Anton — ditt mål är i riskzon. Behöver vi justera?", t:"Idag 07:45" },
+      { dir:"in",  text:"Ja, jag tror vi behöver prata. Kan du ringa imorgon?", t:"Idag 08:20" },
+      { dir:"out", text:"Absolut, ringer kl 09:00.", t:"Idag 08:25" }
+    ]
+  },
+  23: {
+    goals:[
+      { name:"EuroPara Championships 2026", pct:30, tag:"Primärt mål (Goalsetter)", last:"6 dagar" },
+      { name:"Sprintkapacitet +15%", pct:35, tag:"Konditionsmål", last:"2 veckor" }
+    ],
+    program:{ name:"Para-badminton 12v", week:7, total:12, days:[
+      { d:"Mån", s:"glyco", xs:["Teknisksvängar ×30","Court-sprint ×15"], today:false },
+      { d:"Tis", s:"gym",   xs:["Core-stabilitet 3×15","Schulter 4×10"], today:false },
+      { d:"Ons", s:"aero",  xs:["Cykling Z2 30min","Balans ×20"], today:false },
+      { d:"Tor", s:"glyco", xs:["Spelträning 5×8min","Smash-teknik ×25"], today:false },
+      { d:"Fre", s:"gym",   xs:["Rodd 3×12","KB-swings 3×15"], today:false },
+      { d:"Lör", s:"off",   xs:["Vila"], today:true },
+      { d:"Sön", s:"off",   xs:["Promenad"], today:false }
+    ]},
+    macros:{ cal:[2200,2800], pro:[125,140], carb:[280,340], fat:[60,70] },
+    msgs:[
+      { dir:"out", text:"Erik — dags för check-in. Hur mår du den här veckan?", t:"Idag 06:30" }
+    ]
+  }
+};
+
+function getExtras(a) {
+  if (EXTRAS[a.id]) return EXTRAS[a.id];
+  const sysDefault = { atp:"atp", glyco:"glyco", aero:"aero" };
+  return {
+    goals:[
+      { name: a.goal, pct: a.goalPct, tag:"Primärt mål (Goalsetter)", last: a.lastSession },
+      { name:"Kondition & teknisk grund", pct: Math.max(35, a.goalPct - 14), tag:"Stödmål", last:"Denna vecka" }
+    ],
+    program:{ name:"Periodiserat program", week:3, total:8, days:[
+      { d:"Mån", s:a.system, xs:["Teknikpass 60min","Intensivträning ×6"], today:false },
+      { d:"Tis", s:"gym",    xs:["Styrke 4×6","Core 3×15"], today:false },
+      { d:"Ons", s:"aero",   xs:["Distanspass Z2 45min","Stretching"], today:false },
+      { d:"Tor", s:a.system, xs:["Toppfart ×8","Teknikdrills"], today:false },
+      { d:"Fre", s:"gym",    xs:["Komplex 4×4","Plyometri ×20"], today:false },
+      { d:"Lör", s:"off",    xs:["Vila / Aktiv återhämtning"], today:true },
+      { d:"Sön", s:"off",    xs:["Vila"], today:false }
+    ]},
+    macros:{ cal:[2600,3000], pro:[140,160], carb:[330,380], fat:[70,80] },
+    msgs:[
+      { dir:"out", text:`Hej ${a.name.split(' ')[0]}! Hur går träningen den här veckan?`, t:"Igår" },
+      { dir:"in",  text:"Bra tack! Känner mig stark och fokuserad.", t:"Igår" }
+    ]
+  };
+}
+
+/* ══ STATUS MAPS ═══════════════════════════════════════════════════ */
+const STATUS_LABEL = { training:"Tränar", recovery:"Återhämtning", alert:"Varning", rest:"Vila", inactive:"Inaktiv" };
+const STATUS_CLASS = { training:"sp-training s-training", recovery:"sp-recovery s-recovery", alert:"sp-alert s-alert", rest:"sp-rest s-rest", inactive:"sp-inactive s-inactive" };
+const SYS_COLOR = { atp:"var(--accent)", glyco:"var(--orange)", aero:"var(--coach)", gym:"rgba(167,139,250,0.85)", off:"var(--muted)" };
+
+let currentFilter = "all", currentSearch = "", selectedId = null;
+
+/* ══ ATHLETE CARD RENDERING ════════════════════════════════════════ */
+function renderCard(a) {
+  const [spClass, avClass] = STATUS_CLASS[a.status].split(" ");
+  const sel = selectedId === a.id ? "selected" : "";
+  const alertClass = a.status === "alert" ? "status-alert" : "";
+  const pctClass = (a.status === "alert" || a.goalPct < 45) ? "text-orange" : a.status === "recovery" ? "text-accent" : "text-coach";
+  const barClass = a.status === "alert" ? "bar-orange" : a.status === "recovery" ? "bar-accent" : "";
+  return `<div class="ac ${alertClass} ${sel}" data-id="${a.id}" onclick="selectAthlete(${a.id})">
+    <div class="ac-avatar ${avClass}" style="background:linear-gradient(135deg,${a.color}40 0%,${a.color}18 100%)">${a.initials}</div>
+    <div class="ac-body">
+      <div class="ac-name">${a.name}</div>
+      <div class="ac-sport">${a.sport}</div>
+      <div class="ac-goal">${a.goal}</div>
+      <div class="ac-bar-wrap"><div class="ac-bar-fill ${barClass}" style="width:${a.goalPct}%"></div></div>
+    </div>
+    <div class="ac-meta">
+      <div class="ac-pct ${pctClass}">${a.goalPct}<span style="font-size:13px;font-weight:400;color:var(--muted)">%</span></div>
+      <span class="status-pill ${spClass}">${STATUS_LABEL[a.status]}</span>
+      <div class="ac-session">${a.lastSession}</div>
+    </div>
+  </div>`;
+}
+
+function renderGrid() {
+  const q = currentSearch.toLowerCase();
+  const filtered = ATHLETES.filter(a => {
+    const mf = currentFilter === "all" || a.status === currentFilter;
+    const ms = !q || a.name.toLowerCase().includes(q) || a.sport.toLowerCase().includes(q);
+    return mf && ms;
+  }).sort((a, b) => {
+    if (a.status === "alert" && b.status !== "alert") return -1;
+    if (b.status === "alert" && a.status !== "alert") return 1;
+    return b.goalPct - a.goalPct;
+  });
+  const grid = document.getElementById("athleteGrid");
+  grid.innerHTML = filtered.length
+    ? filtered.map(renderCard).join("")
+    : `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><p>Inga atleter matchar filtret</p></div>`;
+}
+
+/* ══ TAB CONTENT BUILDERS ══════════════════════════════════════════ */
+function buildGoalsHTML(a, ex) {
+  return ex.goals.map(g => {
+    const c = g.pct < 50 ? "var(--orange)" : g.pct >= 75 ? "var(--coach)" : "var(--accent)";
+    return `<div class="goal-item">
+      <div class="goal-item-tag">${g.tag}</div>
+      <div class="goal-item-name">${g.name}</div>
+      <div class="goal-mini-bar"><div class="goal-mini-fill" style="width:${g.pct}%;background:${c}"></div></div>
+      <div class="goal-meta-row">
+        <span class="goal-pct-mini" style="color:${c}">${g.pct}%</span>
+        <span class="goal-checkin">Check-in: ${g.last}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function buildProgramHTML(a, ex) {
+  const p = ex.program;
+  const rows = p.days.map(d => {
+    const col = SYS_COLOR[d.s] || "var(--muted)";
+    return `<div class="prog-day-row">
+      <div class="prog-day-lbl${d.today ? " today" : ""}">${d.d}</div>
+      <div class="prog-exercises">
+        <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${col};vertical-align:middle;margin-right:5px;margin-bottom:1px"></span>${d.xs.map(x => `<div class="prog-ex${d.today ? " today" : ""}">${x}</div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+  return `<div class="prog-header">
+    <span class="prog-name">${p.name}</span>
+    <span class="prog-week-badge">V${p.week} / ${p.total}</span>
+  </div>${rows}
+  <button class="inline-edit-btn" onclick="window.location='program-builder.html'">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 1l3 3-6 6H2v-3L8 1z"/></svg>
+    Redigera program i Adapt
+  </button>`;
+}
+
+function buildNutritionHTML(a, ex) {
+  const m = ex.macros;
+  const pct = (v, t) => Math.min(100, Math.round(v / t * 100));
+  const warn = (v, t) => (v / t) < 0.6 ? "color:var(--orange)" : "";
+  return `<div class="macro-label">Idag — Makronäringsämnen (Adapt)</div>
+  <div class="macro-item">
+    <span class="macro-name">Kalorier</span>
+    <div class="macro-bar-wrap"><div class="macro-bar-fill" style="width:${pct(m.cal[0],m.cal[1])}%"></div></div>
+    <span class="macro-nums" style="${warn(m.cal[0],m.cal[1])}">${m.cal[0]} / ${m.cal[1]}</span>
+  </div>
+  <div class="macro-item">
+    <span class="macro-name">Protein</span>
+    <div class="macro-bar-wrap"><div class="macro-bar-fill pro" style="width:${pct(m.pro[0],m.pro[1])}%"></div></div>
+    <span class="macro-nums">${m.pro[0]}g / ${m.pro[1]}g</span>
+  </div>
+  <div class="macro-item">
+    <span class="macro-name">Kolhydrater</span>
+    <div class="macro-bar-wrap"><div class="macro-bar-fill carb" style="width:${pct(m.carb[0],m.carb[1])}%"></div></div>
+    <span class="macro-nums">${m.carb[0]}g / ${m.carb[1]}g</span>
+  </div>
+  <div class="macro-item">
+    <span class="macro-name">Fett</span>
+    <div class="macro-bar-wrap"><div class="macro-bar-fill fat" style="width:${pct(m.fat[0],m.fat[1])}%"></div></div>
+    <span class="macro-nums">${m.fat[0]}g / ${m.fat[1]}g</span>
+  </div>
+  <button class="inline-edit-btn" onclick="window.location='program-builder.html'">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 1l3 3-6 6H2v-3L8 1z"/></svg>
+    Justera makromål i Adapt
+  </button>`;
+}
+
+function buildChatHTML(a, ex, containerId) {
+  const bubbles = ex.msgs.map(m => `<div>
+    <div class="chat-bubble ${m.dir}">${m.text}</div>
+    <div class="chat-time${m.dir === 'in' ? ' in' : ''}">${m.t}</div>
+  </div>`).join("");
+  return `<div class="chat-thread" id="thread_${containerId}">${bubbles}</div>
+  <div class="chat-compose">
+    <textarea class="chat-textarea" id="input_${containerId}" placeholder="Skriv till ${a.name.split(' ')[0]}…" rows="1"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
+    <button class="chat-send" onclick="sendMsg('${containerId}')">
+      <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L1 7.5l5 2 2 5 5-12.5zM6 9.5l4-4"/></svg>
+    </button>
+  </div>`;
+}
+
+function sendMsg(containerId) {
+  const inp = document.getElementById(`input_${containerId}`);
+  const thread = document.getElementById(`thread_${containerId}`);
+  if (!inp || !inp.value.trim() || !thread) return;
+  const now = new Date();
+  const t = now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0");
+  const div = document.createElement("div");
+  div.innerHTML = `<div class="chat-bubble out">${inp.value}</div><div class="chat-time">${t}</div>`;
+  thread.appendChild(div);
+  inp.value = "";
+  inp.style.height = "auto";
+  thread.scrollTop = 99999;
+}
+
+/* ══ TAB INIT ══════════════════════════════════════════════════════ */
+function initTabs(tabNavEl, contentEls) {
+  tabNavEl.querySelectorAll(".ptab").forEach(tab => {
+    tab.onclick = () => {
+      tabNavEl.querySelectorAll(".ptab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      contentEls.forEach(c => {
+        c.classList.toggle("active", c.dataset.tab === tab.dataset.tab);
+      });
+    };
+  });
+}
+
+/* ══ ATHLETE CONTENT HTML ══════════════════════════════════════════ */
+function buildAthleteTabsHTML(a, ex, containerId) {
+  const [spClass] = STATUS_CLASS[a.status].split(" ");
+  const alertBadge = a.alert
+    ? `<span style="font-family:var(--font-mono);font-size:8px;color:var(--orange);text-transform:uppercase;letter-spacing:0.05em">⚠ ${a.alert}</span>`
+    : "";
+  return `
+    <div class="ath-hero">
+      <div class="ath-avatar" style="background:linear-gradient(135deg,${a.color}50 0%,${a.color}22 100%);border-color:${a.color};box-shadow:0 0 20px ${a.color}40">${a.initials}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ath-name">${a.name}</div>
+        <div class="ath-sport">${a.sport}</div>
+        <div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="status-pill ${spClass}">${STATUS_LABEL[a.status]}</span>
+          ${alertBadge}
+        </div>
+      </div>
+    </div>
+
+    <div class="ap-tab active panel-section" data-tab="goals">
+      ${buildGoalsHTML(a, ex)}
+    </div>
+    <div class="ap-tab panel-section" data-tab="program">
+      ${buildProgramHTML(a, ex)}
+    </div>
+    <div class="ap-tab panel-section" data-tab="nutrition">
+      ${buildNutritionHTML(a, ex)}
+    </div>
+    <div class="ap-tab" data-tab="chat" style="display:none;flex-direction:column;gap:0;flex:1;min-height:0">
+      <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px">
+        ${buildChatHTML(a, ex, containerId)}
+      </div>
+    </div>
+  `;
+}
+
+/* ══ SELECT ATHLETE ════════════════════════════════════════════════ */
+function selectAthlete(id) {
+  if (selectedId === id) {
+    if (window.innerWidth < 1280) closeSlide();
+    clearDesktopPanel();
+    selectedId = null;
+    renderGrid();
+    return;
+  }
+  selectedId = id;
+  renderGrid();
+  const a = ATHLETES.find(x => x.id === id);
+  const ex = getExtras(a);
+
+  if (window.innerWidth >= 1280) {
+    showDesktopPanel(a, ex);
+  } else {
+    showSlide(a, ex);
+  }
+}
+
+/* ══ DESKTOP PANEL ═════════════════════════════════════════════════ */
+function showDesktopPanel(a, ex) {
+  const content = document.getElementById("desktopAthleteContent");
+  const overview = document.getElementById("desktopOverview");
+  const tabNav = document.getElementById("desktopTabNav");
+  const title = document.getElementById("panelTitle");
+
+  content.innerHTML = buildAthleteTabsHTML(a, ex, "desktop");
+  content.style.display = "flex";
+  overview.style.display = "none";
+  tabNav.style.display = "flex";
+  title.textContent = a.name.split(" ")[0];
+
+  // Reset tabs
+  tabNav.querySelectorAll(".ptab").forEach((t, i) => t.classList.toggle("active", i === 0));
+  initTabs(tabNav, content.querySelectorAll(".ap-tab"));
+}
+
+function clearDesktopPanel() {
+  document.getElementById("desktopAthleteContent").style.display = "none";
+  document.getElementById("desktopOverview").style.display = "block";
+  document.getElementById("desktopTabNav").style.display = "none";
+  document.getElementById("panelTitle").textContent = "Dagöversikt";
+}
+
+document.getElementById("panelCloseBtn").addEventListener("click", () => {
+  clearDesktopPanel();
+  selectedId = null;
+  renderGrid();
+});
+
+/* ══ SLIDE PANEL (mobile/tablet) ═══════════════════════════════════ */
+function showSlide(a, ex) {
+  const slide = document.getElementById("athleteSlide");
+  const body = document.getElementById("slideBody");
+  const actions = document.getElementById("slideActions");
+  const tabNav = document.getElementById("slideTabNav");
+  const title = document.getElementById("slideTitle");
+
+  body.innerHTML = buildAthleteTabsHTML(a, ex, "slide");
+  title.textContent = a.name.split(" ")[0];
+
+  // Actions bar at bottom
+  actions.innerHTML = `
+    <button class="btn btn-primary" style="width:100%" onclick="window.location='session-timer.html'">
+      <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="8.5" r="5.5"/><path d="M7.5 5.5v3l2 2M5 2h5M7.5 2v2"/></svg>
+      Starta session
+    </button>
+    <button class="btn" style="width:100%" onclick="window.location='athlete-detail.html'">
+      <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="5" r="3"/><path d="M1 14c0-3 2.7-5.5 6-5.5S13 11 13 14"/></svg>
+      Fullständig profil
+    </button>
+  `;
+
+  // Reset tabs
+  tabNav.querySelectorAll(".ptab").forEach((t, i) => t.classList.toggle("active", i === 0));
+  initTabs(tabNav, body.querySelectorAll(".ap-tab"));
+
+  // Open
+  slide.classList.add("open");
+  document.getElementById("slideBackdrop").classList.add("visible");
+  document.body.style.overflow = "hidden";
+}
+
+function closeSlide() {
+  document.getElementById("athleteSlide").classList.remove("open");
+  document.getElementById("slideBackdrop").classList.remove("visible");
+  document.body.style.overflow = "";
+  selectedId = null;
+  renderGrid();
+}
+
+document.getElementById("slideCloseBtn").addEventListener("click", closeSlide);
+document.getElementById("slideBackdrop").addEventListener("click", closeSlide);
+
+/* ══ FILTER + SEARCH ═══════════════════════════════════════════════ */
+document.getElementById("filterRow").addEventListener("click", e => {
+  const tab = e.target.closest(".ftab");
+  if (!tab) return;
+  document.querySelectorAll(".ftab").forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
+  currentFilter = tab.dataset.filter;
+  renderGrid();
+});
+
+const searchToggle = document.getElementById("searchToggle");
+const searchWrap = document.getElementById("searchWrap");
+const searchInput = document.getElementById("searchInput");
+searchToggle.addEventListener("click", () => {
+  const open = searchWrap.style.display !== "none";
+  searchWrap.style.display = open ? "none" : "flex";
+  if (!open) searchInput.focus();
+  else { currentSearch = ""; renderGrid(); }
+});
+searchInput.addEventListener("input", e => { currentSearch = e.target.value; renderGrid(); });
+document.getElementById("searchToggleMobile").addEventListener("click", () => searchToggle.click());
+
+if (window.innerWidth >= 768) searchWrap.style.display = "flex";
+
+renderGrid();
+</script>
+</body>
+</html>

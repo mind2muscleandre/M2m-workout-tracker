@@ -1,0 +1,156 @@
+
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach App</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#1A1E24;--screen-bg:#1E2228;--coach:#00D4AA;--accent:#F7E928;--orange:#FF5F1F;
+  --fg:#fff;--muted:rgba(255,255,255,0.48);--muted-hi:rgba(255,255,255,0.74);
+  --border:rgba(255,255,255,0.08);--glass-bg:rgba(48,54,62,0.56);--glass-bg-hi:rgba(60,68,78,0.64);
+  --glass-bg-coach:rgba(0,212,170,0.07);--glass-border:rgba(255,255,255,0.12);
+  --glass-shadow:0 4px 28px rgba(0,0,0,0.38),0 1px 6px rgba(0,0,0,0.22),inset 0 1.5px 0 rgba(255,255,255,0.11);
+  --glass-shadow-coach:0 4px 28px rgba(0,212,170,0.14),0 1px 6px rgba(0,0,0,0.22),inset 0 1.5px 0 rgba(255,255,255,0.12);
+  --glow-coach:0 0 28px rgba(0,212,170,0.30),0 2px 10px rgba(0,0,0,0.28);
+  --font-display:'D-DIN Condensed','D-DIN',system-ui,sans-serif;
+  --font-body:'DM Sans',-apple-system,system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);font-family:var(--font-body);color:var(--fg);-webkit-font-smoothing:antialiased;overflow-y:auto}
+a{text-decoration:none;color:inherit}
+.launcher{min-height:100dvh;padding:48px 24px 64px;display:flex;flex-direction:column;align-items:center;position:relative}
+.launcher::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 80% 8%,rgba(0,212,170,0.09) 0%,transparent 62%),radial-gradient(ellipse 55% 45% at 15% 92%,rgba(247,233,40,0.07) 0%,transparent 60%)}
+.logo{font-family:var(--font-display);font-size:52px;font-weight:700;letter-spacing:0.06em;color:var(--coach);text-shadow:var(--glow-coach);line-height:1}
+.sub{font-family:var(--font-mono);font-size:11px;letter-spacing:0.20em;color:var(--muted);text-transform:uppercase;margin-top:6px;margin-bottom:8px}
+.tagline{font-size:14px;color:var(--muted-hi);text-align:center;max-width:440px;line-height:1.5;margin-bottom:36px}
+.app-links{display:flex;gap:8px;margin-bottom:40px;flex-wrap:wrap;justify-content:center}
+.app-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;border:1px solid var(--glass-border);background:var(--glass-bg);font-family:var(--font-mono);font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted-hi)}
+.dot{width:6px;height:6px;border-radius:50%}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%;max-width:960px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}}
+.card{border-radius:20px;background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow);overflow:hidden;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column}
+.card:hover{background:var(--glass-bg-hi);transform:translateY(-3px);box-shadow:0 10px 48px rgba(0,0,0,0.46),0 2px 8px rgba(0,0,0,0.24),inset 0 1.5px 0 rgba(255,255,255,0.14)}
+.card.primary{background:var(--glass-bg-coach);border-color:rgba(0,212,170,0.22);box-shadow:var(--glass-shadow-coach);grid-column:span 2}
+@media(max-width:699px){.card.primary{grid-column:span 2}}
+.card-icon{height:88px;display:flex;align-items:center;justify-content:center}
+.card-icon.lg{height:108px}
+.card-body{padding:12px 16px 18px}
+.card-name{font-family:var(--font-display);font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:5px}
+.card-name.lg{font-size:22px;color:var(--coach)}
+.card-desc{font-size:11px;color:var(--muted);line-height:1.45}
+.tag{display:inline-block;margin-top:9px;font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.08em;padding:2px 8px;border-radius:999px;border:1px solid var(--glass-border);color:var(--muted)}
+.tag.go{color:var(--coach);border-color:rgba(0,212,170,0.30);background:rgba(0,212,170,0.08)}
+.tag.warn{color:var(--orange);border-color:rgba(255,95,31,0.28);background:rgba(255,95,31,0.08)}
+.cta{margin-top:44px;display:inline-flex;align-items:center;gap:10px;padding:0 36px;height:54px;border-radius:999px;background:var(--coach);color:#000;font-size:15px;font-weight:700;box-shadow:var(--glow-coach);transition:all 0.2s;letter-spacing:0.02em}
+.cta:hover{background:oklch(80% 0.14 165);transform:scale(1.04)}
+.cta svg{width:18px;height:18px}
+.foot{margin-top:24px;font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="launcher">
+  <div style="text-align:center;margin-bottom:28px">
+    <div class="logo">M2M COACH</div>
+    <div class="sub">Mind2Muscle · Coach Platform</div>
+    <p class="tagline">Ett gemensamt gränssnitt för coachen — samlar Adapt, Timer och Goalsetter i ett kraftfullt verktyg för trupper med 20+ atleter.</p>
+  </div>
+
+  <div class="app-links">
+    <span class="app-badge"><span class="dot" style="background:var(--accent)"></span>M2M Adapt</span>
+    <span class="app-badge"><span class="dot" style="background:var(--coach)"></span>M2M Timer</span>
+    <span class="app-badge"><span class="dot" style="background:var(--orange)"></span>M2M Goalsetter</span>
+  </div>
+
+  <div class="grid">
+    <a href="M2MCoach/screens/dashboard.html" class="card primary">
+      <div class="card-icon lg" style="background:linear-gradient(135deg,rgba(0,212,170,0.12),transparent)">
+        <svg width="52" height="52" viewBox="0 0 48 48" fill="none" stroke="var(--coach)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="18" height="18" rx="3"/><rect x="26" y="4" width="18" height="18" rx="3"/><rect x="4" y="26" width="18" height="18" rx="3"/><rect x="26" y="26" width="18" height="18" rx="3"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name lg">Dashboard</div>
+        <div class="card-desc">Hela truppen på ett ställe — 24 atleter, realtidsstatus, varningar och daglig oversikt. Välj atlet för detaljpanel.</div>
+        <span class="tag go">Starta här →</span>
+      </div>
+    </a>
+
+    <a href="M2MCoach/screens/athlete-detail.html" class="card">
+      <div class="card-icon">
+        <svg width="36" height="36" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><circle cx="13" cy="10" r="5"/><path d="M3 30c0-5.5 4.5-10 10-10"/><circle cx="25" cy="15" r="4"/><path d="M18 30c0-4 3-7 7-7s7 3 7 7"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">Athletprofil</div>
+        <div class="card-desc">Mål, sessionshistorik, Adapt-program och Goalsetter-rutiner per atlet.</div>
+        <span class="tag">Goalsetter + Adapt</span>
+      </div>
+    </a>
+
+    <a href="M2MCoach/screens/program-builder.html" class="card">
+      <div class="card-icon">
+        <svg width="36" height="36" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="20" height="28" rx="3"/><path d="M13 11h8M13 17h8M13 23h5"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">Adapt Program</div>
+        <div class="card-desc">Bygg och redigera träningsprogram med veckoschema och energisystem-mappning.</div>
+        <span class="tag">Adapt</span>
+      </div>
+    </a>
+
+    <a href="M2MCoach/screens/session-timer.html" class="card">
+      <div class="card-icon">
+        <svg width="36" height="36" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><circle cx="17" cy="19" r="12"/><path d="M17 12v7l4 4M12 3h10M17 3v4"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">Session Timer</div>
+        <div class="card-desc">Live-session med fungerande vilotimer, set-tracker och realtids-anteckningar.</div>
+        <span class="tag">Timer</span>
+      </div>
+    </a>
+
+    <a href="M2MCoach/screens/messages.html" class="card">
+      <div class="card-icon" style="position:relative">
+        <svg width="36" height="36" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h24a2 2 0 012 2v13a2 2 0 01-2 2H10l-7 5V9a2 2 0 012-2z"/></svg>
+        <span style="position:absolute;top:20px;right:10px;width:11px;height:11px;border-radius:50%;background:var(--orange);box-shadow:0 0 10px rgba(255,95,31,0.55);border:2px solid var(--screen-bg)"></span>
+      </div>
+      <div class="card-body">
+        <div class="card-name">Meddelanden</div>
+        <div class="card-desc">Direktmeddela atleter. Konversationsvy med snabbsvar och atleta-kontext.</div>
+        <span class="tag warn">3 olästa</span>
+      </div>
+    </a>
+
+    <a href="M2MCoach/screens/notes.html" class="card">
+      <div class="card-icon">
+        <svg width="36" height="36" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><path d="M7 3h15l7 7v23a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M22 3v7h7M12 15h10M12 22h7"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">Anteckningar</div>
+        <div class="card-desc">Coach-logg per atlet och trupp. Redigerbar editor med taggar och search.</div>
+        <span class="tag">Logg</span>
+      </div>
+    </a>
+
+    <a href="M2MCoach/screens/reports.html" class="card">
+      <div class="card-icon">
+        <svg width="36" height="36" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 24l7-9 5 5 7-12"/><rect x="3" y="3" width="28" height="28" rx="3"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">Rapporter</div>
+        <div class="card-desc">Vecko/månadsanalys av träningsbelastning, energisystem-fördelning och målstatus.</div>
+        <span class="tag">Analytics</span>
+      </div>
+    </a>
+  </div>
+
+  <a href="M2MCoach/screens/dashboard.html" class="cta">
+    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 3v12M3 9l6 6 6-6"/></svg>
+    Öppna Coach-appen
+  </a>
+  <div class="foot">M2M Coach · Responsiv · Desktop · Tablet · Mobil</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Skapa session</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.form-section {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg); box-shadow: var(--glass-shadow);
+  overflow: hidden; margin-bottom: 12px;
+}
+.form-section-title {
+  padding: 10px 16px; font-family: var(--font-mono);
+  font-size: 8px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.10em; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.14);
+}
+.form-field {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.form-field:last-child { border-bottom: none; }
+.field-label {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.10em; color: var(--muted); margin-bottom: 6px;
+}
+.field-input {
+  width: 100%; height: 38px; padding: 0 12px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+  border-radius: var(--r-md); color: var(--fg); font-size: 13px;
+  outline: none; transition: border-color 0.15s;
+}
+.field-input:focus { border-color: var(--coach); background: rgba(0,212,170,0.04); }
+.field-input::placeholder { color: var(--muted); }
+.field-textarea {
+  width: 100%; padding: 10px 12px; min-height: 72px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+  border-radius: var(--r-md); color: var(--fg); font-size: 13px;
+  outline: none; transition: border-color 0.15s; resize: vertical;
+  font-family: var(--font-body);
+}
+.field-textarea:focus { border-color: var(--coach); background: rgba(0,212,170,0.04); }
+.field-select {
+  width: 100%; height: 38px; padding: 0 12px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+  border-radius: var(--r-md); color: var(--fg); font-size: 13px;
+  outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.field-select:focus { border-color: var(--coach); }
+select option { background: #1e2228; color: #fff; }
+
+.field-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.athlete-picker {
+  display: flex; flex-wrap: wrap; gap: 7px;
+}
+.ath-pick {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 10px 5px 5px;
+  border-radius: var(--r-full); border: 1px solid var(--glass-border);
+  background: var(--glass-bg); cursor: pointer; transition: all 0.15s;
+}
+.ath-pick:hover { background: var(--glass-bg-hi); }
+.ath-pick.selected { background: var(--glass-bg-coach); border-color: rgba(0,212,170,0.28); }
+.ath-pick-av {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 10px; font-weight: 700; color: #000;
+}
+.ath-pick-name { font-size: 12px; font-weight: 500; }
+
+.ex-added-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.ex-added-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--r-md);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+}
+.ex-added-name { flex: 1; font-size: 13px; font-weight: 500; }
+.ex-added-cfg {
+  display: flex; gap: 6px; align-items: center;
+}
+.ex-cfg-input {
+  width: 52px; height: 28px; padding: 0 7px; text-align: center;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-sm); color: var(--fg); font-size: 12px;
+  font-family: var(--font-mono); outline: none;
+}
+.ex-cfg-input:focus { border-color: var(--coach); }
+.ex-cfg-label { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.ex-remove {
+  width: 24px; height: 24px; border-radius: var(--r-sm);
+  background: none; border: none; color: var(--danger); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1;
+  transition: background 0.12s;
+}
+.ex-remove:hover { background: rgba(255,69,69,0.12); }
+
+.add-ex-btn {
+  width: 100%; height: 36px; border-radius: var(--r-md);
+  background: var(--glass-bg); border: 1px dashed var(--border);
+  color: var(--muted); font-size: 12px; cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.add-ex-btn:hover { background: var(--glass-bg-hi); border-color: var(--border-hi); color: var(--muted-hi); }
+
+.action-bar {
+  display: flex; gap: 8px; padding: 16px 0 0; position: sticky; bottom: 0;
+}
+@media (min-width: 768px) {
+  .action-bar { position: static; padding-bottom: 0; }
+}
+.action-bar::before {
+  content: '';
+  position: absolute; left: -20px; right: -20px; bottom: -80px; top: -16px;
+  background: linear-gradient(to top, var(--screen-bg) 60%, transparent);
+  pointer-events: none; z-index: -1;
+}
+.sys-select {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.sys-opt {
+  padding: 5px 12px; border-radius: var(--r-full); cursor: pointer;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  border: 1px solid var(--border); background: var(--glass-bg);
+  color: var(--muted); transition: all 0.15s;
+}
+.sys-opt.atp.sel { background: var(--accent-dim); color: var(--accent); border-color: rgba(247,233,40,0.28); }
+.sys-opt.glyco.sel { background: var(--orange-dim); color: var(--orange); border-color: rgba(255,95,31,0.28); }
+.sys-opt.aero.sel { background: var(--coach-dim); color: var(--coach); border-color: rgba(0,212,170,0.28); }
+.sys-opt.styrka.sel { background: rgba(147,112,219,0.12); color: #9370db; border-color: rgba(147,112,219,0.28); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">M2M</div>
+      <div class="logo-sub">Coach Platform</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="s-nav-label">Dashboard</span>
+      </a>
+      <a href="athlete-detail.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span>
+        <span class="s-nav-label">Athletprofil</span>
+      </a>
+      <div class="sidebar-section-label">Träning</div>
+      <a href="program-builder.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span>
+        <span class="s-nav-label">Adapt Program</span>
+      </a>
+      <a href="exercise-library.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span>
+        <span class="s-nav-label">Övningsbibliotek</span>
+      </a>
+      <a href="sessions-list.html" class="s-nav-item active">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span>
+        <span class="s-nav-label">Sessioner</span>
+      </a>
+      <a href="session-timer.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span>
+        <span class="s-nav-label">Session Timer</span>
+      </a>
+      <a href="progression.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span>
+        <span class="s-nav-label">Progression</span>
+      </a>
+      <div class="sidebar-section-label">Kommunikation</div>
+      <a href="messages.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span>
+        <span class="s-nav-label">Meddelanden</span>
+      </a>
+      <a href="notes.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span>
+        <span class="s-nav-label">Anteckningar</span>
+      </a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span>
+        <span class="s-nav-label">Screening</span>
+      </a>
+      <a href="reports.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span>
+        <span class="s-nav-label">Rapporter</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="sessions-list.html" class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg>
+      </a>
+      <div class="topbar-logo" style="font-size:15px">Ny session</div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="page-header">
+      <a href="sessions-list.html" class="icon-btn" style="flex-shrink:0">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg>
+      </a>
+      <div class="page-title">Ny session</div>
+    </div>
+    <div class="page-body">
+
+      <!-- Grundinfo -->
+      <div class="form-section">
+        <div class="form-section-title">Grundinformation</div>
+        <div class="form-field">
+          <div class="field-label">Sessionstitel</div>
+          <input class="field-input" type="text" placeholder="t.ex. Sprint-block vecka 8 — Dag 3">
+        </div>
+        <div class="form-field field-2col">
+          <div>
+            <div class="field-label">Datum</div>
+            <input class="field-input" type="date" value="2026-06-08">
+          </div>
+          <div>
+            <div class="field-label">Starttid</div>
+            <input class="field-input" type="time" value="09:00">
+          </div>
+        </div>
+        <div class="form-field">
+          <div class="field-label">Beräknad längd</div>
+          <select class="field-select">
+            <option>30 minuter</option>
+            <option>45 minuter</option>
+            <option selected>60 minuter</option>
+            <option>75 minuter</option>
+            <option>90 minuter</option>
+            <option>120 minuter</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <div class="field-label">Energisystem</div>
+          <div class="sys-select">
+            <span class="sys-opt atp" onclick="toggleSys(this,'atp')">ATP-PC</span>
+            <span class="sys-opt glyco sel" onclick="toggleSys(this,'glyco')">Glykolytisk</span>
+            <span class="sys-opt aero" onclick="toggleSys(this,'aero')">Aerob</span>
+            <span class="sys-opt styrka" onclick="toggleSys(this,'styrka')">Styrka</span>
+          </div>
+        </div>
+        <div class="form-field">
+          <div class="field-label">Anteckningar</div>
+          <textarea class="field-textarea" placeholder="Fokusområde, coachingpunkter, varningar…"></textarea>
+        </div>
+      </div>
+
+      <!-- Välj atleter -->
+      <div class="form-section">
+        <div class="form-section-title">Atleter</div>
+        <div class="form-field">
+          <div class="field-label" style="margin-bottom:10px">Välj 1–4 atleter för sessionen</div>
+          <div class="athlete-picker" id="athPicker">
+            <div class="ath-pick selected" onclick="toggleAth(this)"><div class="ath-pick-av" style="background:linear-gradient(135deg,var(--coach),rgba(0,212,170,0.3))">AJ</div><span class="ath-pick-name">Alex J.</span></div>
+            <div class="ath-pick" onclick="toggleAth(this)"><div class="ath-pick-av" style="background:linear-gradient(135deg,#f7e928,rgba(247,233,40,0.3))">ME</div><span class="ath-pick-name">Marcus E.</span></div>
+            <div class="ath-pick" onclick="toggleAth(this)"><div class="ath-pick-av" style="background:linear-gradient(135deg,#ff5f1f,rgba(255,95,31,0.3))">JP</div><span class="ath-pick-name">Johan P.</span></div>
+            <div class="ath-pick" onclick="toggleAth(this)"><div class="ath-pick-av" style="background:linear-gradient(135deg,#8b5cf6,rgba(139,92,246,0.3))">EA</div><span class="ath-pick-name">Emma A.</span></div>
+            <div class="ath-pick" onclick="toggleAth(this)"><div class="ath-pick-av" style="background:linear-gradient(135deg,#22d3ee,rgba(34,211,238,0.3))">AL</div><span class="ath-pick-name">Anton L.</span></div>
+            <div class="ath-pick" onclick="toggleAth(this)"><div class="ath-pick-av" style="background:linear-gradient(135deg,#f43f5e,rgba(244,63,94,0.3))">SB</div><span class="ath-pick-name">Sofia B.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Övningar -->
+      <div class="form-section">
+        <div class="form-section-title">Övningar</div>
+        <div class="form-field">
+          <div class="ex-added-list" id="exAddedList">
+            <div class="ex-added-row">
+              <div class="ex-added-name">Back Squat</div>
+              <div class="ex-added-cfg">
+                <input class="ex-cfg-input" type="number" value="4" min="1" max="20">
+                <span class="ex-cfg-label">set</span>
+                <input class="ex-cfg-input" type="number" value="6" min="1" max="30">
+                <span class="ex-cfg-label">reps</span>
+                <input class="ex-cfg-input" type="number" value="90" min="10" max="600">
+                <span class="ex-cfg-label">vila</span>
+              </div>
+              <button class="ex-remove" onclick="this.closest('.ex-added-row').remove()">×</button>
+            </div>
+            <div class="ex-added-row">
+              <div class="ex-added-name">Bänkpress</div>
+              <div class="ex-added-cfg">
+                <input class="ex-cfg-input" type="number" value="3" min="1" max="20">
+                <span class="ex-cfg-label">set</span>
+                <input class="ex-cfg-input" type="number" value="8" min="1" max="30">
+                <span class="ex-cfg-label">reps</span>
+                <input class="ex-cfg-input" type="number" value="60" min="10" max="600">
+                <span class="ex-cfg-label">vila</span>
+              </div>
+              <button class="ex-remove" onclick="this.closest('.ex-added-row').remove()">×</button>
+            </div>
+          </div>
+          <button class="add-ex-btn" onclick="addExercise()">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg>
+            Lägg till övning från biblioteket
+          </button>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="action-bar">
+        <a href="sessions-list.html" class="btn" style="flex:1;justify-content:center">Avbryt</a>
+        <button class="btn" style="flex:1;justify-content:center" onclick="saveDraft()">Spara utkast</button>
+        <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="startNow()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3,2 13,7 3,12"/></svg>
+          Starta nu
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+</div>
+
+<script>
+function toggleAth(el) { el.classList.toggle('selected'); }
+
+function toggleSys(el, type) {
+  el.classList.toggle('sel');
+}
+
+function addExercise() {
+  const exercises = ['Konventionellt Marklyft','Axelpress Stående','Boxhopp','Turkisk Get-Up','Lunges med rotation','400m Sprint'];
+  const name = exercises[Math.floor(Math.random() * exercises.length)];
+  const row = document.createElement('div');
+  row.className = 'ex-added-row';
+  row.innerHTML = `
+    <div class="ex-added-name">${name}</div>
+    <div class="ex-added-cfg">
+      <input class="ex-cfg-input" type="number" value="3" min="1" max="20">
+      <span class="ex-cfg-label">set</span>
+      <input class="ex-cfg-input" type="number" value="10" min="1" max="30">
+      <span class="ex-cfg-label">reps</span>
+      <input class="ex-cfg-input" type="number" value="60" min="10" max="600">
+      <span class="ex-cfg-label">vila</span>
+    </div>
+    <button class="ex-remove" onclick="this.closest('.ex-added-row').remove()">×</button>`;
+  document.getElementById('exAddedList').appendChild(row);
+}
+
+function saveDraft() {
+  const btn = event.target;
+  btn.textContent = '✓ Sparat';
+  btn.style.color = 'var(--coach)';
+  setTimeout(() => {
+    btn.textContent = 'Spara utkast';
+    btn.style.color = '';
+  }, 2000);
+}
+
+function startNow() {
+  window.location.href = 'session-timer.html';
+}
+</script>
+</body>
+</html>

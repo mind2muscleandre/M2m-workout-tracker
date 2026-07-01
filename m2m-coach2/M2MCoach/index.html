@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach App</title>
+<link rel="stylesheet" href="styles/coach.css">
+<style>
+.launcher {
+  min-height: 100dvh;
+  overflow-y: auto;
+  padding: 40px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+.launcher::-webkit-scrollbar { display: none; }
+
+.launch-logo {
+  font-family: var(--font-display);
+  font-size: 48px; font-weight: 700;
+  letter-spacing: 0.06em; color: var(--coach);
+  text-shadow: var(--glow-coach);
+  line-height: 1;
+}
+.launch-sub {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  letter-spacing: 0.20em; color: var(--muted);
+  text-transform: uppercase; margin-top: 6px; margin-bottom: 8px;
+}
+.launch-tagline {
+  font-size: 14px; color: var(--muted-hi); text-align: center;
+  max-width: 420px; line-height: 1.5; margin-bottom: 40px;
+}
+
+/* App integration badges */
+.app-links {
+  display: flex; gap: 8px; margin-bottom: 40px; flex-wrap: wrap; justify-content: center;
+}
+.app-badge {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: var(--r-full);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-hi);
+}
+.app-badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* Screen cards grid */
+.screens-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%; max-width: 900px;
+}
+@media (min-width: 700px) {
+  .screens-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1100px) {
+  .screens-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.screen-card {
+  border-radius: var(--r-xl);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none; color: inherit;
+  display: flex; flex-direction: column;
+}
+.screen-card:hover {
+  background: var(--glass-bg-hi);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.44), 0 2px 8px rgba(0,0,0,0.24), inset 0 1.5px 0 rgba(255,255,255,0.13);
+}
+.screen-card.primary {
+  background: var(--glass-bg-coach);
+  border-color: rgba(0,212,170,0.22);
+  box-shadow: var(--glass-shadow-coach);
+  grid-column: span 2;
+}
+@media (max-width: 699px) { .screen-card.primary { grid-column: span 2; } }
+
+.sc-icon {
+  height: 80px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+}
+.sc-icon.big { height: 100px; font-size: 40px; }
+.sc-body { padding: 12px 14px 16px; }
+.sc-name {
+  font-family: var(--font-display); font-size: 16px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px;
+}
+.sc-name.primary-name { font-size: 20px; }
+.sc-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.sc-tag {
+  display: inline-block; margin-top: 8px;
+  font-family: var(--font-mono); font-size: 8px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: var(--r-full);
+  border: 1px solid var(--glass-border);
+  color: var(--muted);
+}
+.sc-tag.coach-tag { color: var(--coach); border-color: rgba(0,212,170,0.30); background: var(--coach-dim); }
+
+/* Enter CTA */
+.enter-btn {
+  margin-top: 40px;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 0 32px; height: 52px;
+  border-radius: var(--r-full);
+  background: var(--coach);
+  color: #000; font-size: 15px; font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--glow-coach);
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.enter-btn:hover { background: oklch(80% 0.14 165); transform: scale(1.03); }
+.enter-btn svg { width: 18px; height: 18px; }
+
+.footer-note {
+  margin-top: 24px;
+  font-family: var(--font-mono); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.10em;
+  color: var(--muted); text-align: center;
+}
+</style>
+</head>
+<body style="overflow-y:auto">
+<div class="launcher">
+  <!-- Logo -->
+  <div style="text-align:center;margin-bottom:24px">
+    <div class="launch-logo">M2M COACH</div>
+    <div class="launch-sub">Mind2Muscle · Coach Platform</div>
+    <p class="launch-tagline">Ett gemensamt gränssnitt för coachen — samlar Adapt, Timer och Goalsetter i ett kraftfullt verktyg.</p>
+  </div>
+
+  <!-- Integrated apps -->
+  <div class="app-links">
+    <span class="app-badge"><span class="app-badge-dot" style="background:var(--accent)"></span>M2M Adapt</span>
+    <span class="app-badge"><span class="app-badge-dot" style="background:var(--coach)"></span>M2M Timer</span>
+    <span class="app-badge"><span class="app-badge-dot" style="background:var(--orange)"></span>M2M Goalsetter</span>
+  </div>
+
+  <!-- Section label helper -->
+  <style>
+    .section-label {
+      width: 100%; max-width: 900px;
+      font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--muted); margin: 24px 0 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .section-label:first-of-type { margin-top: 0; }
+  </style>
+
+  <!-- ── CORE ──────────────────────────────── -->
+  <div class="section-label">Kärnskärmar</div>
+  <div class="screens-grid">
+
+    <a href="screens/dashboard.html" class="screen-card primary">
+      <div class="sc-icon big" style="background:linear-gradient(135deg,rgba(0,212,170,0.12) 0%,transparent 100%)">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="var(--coach)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="4" width="18" height="18" rx="3"/><rect x="26" y="4" width="18" height="18" rx="3"/>
+          <rect x="4" y="26" width="18" height="18" rx="3"/><rect x="26" y="26" width="18" height="18" rx="3"/>
+        </svg>
+      </div>
+      <div class="sc-body">
+        <div class="sc-name primary-name" style="color:var(--coach)">Dashboard</div>
+        <div class="sc-desc">Hela truppen på ett ställe. 24 atleter, realtidsstatus, varningar och daglig översikt. Klicka atlet → snabbpanel.</div>
+        <span class="sc-tag coach-tag">Starta här</span>
+      </div>
+    </a>
+
+    <a href="screens/athlete-detail.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><circle cx="13" cy="10" r="5"/><path d="M3 30c0-5.5 4.5-10 10-10"/><circle cx="25" cy="15" r="4"/><path d="M18 30c0-4 3-7 7-7s7 3 7 7"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Athletprofil</div>
+        <div class="sc-desc">Mål, sessioner, Adapt-program och Goalsetter-rutiner per atlet.</div>
+        <span class="sc-tag">Goalsetter + Adapt</span>
+      </div>
+    </a>
+
+    <a href="screens/messages.html" class="screen-card">
+      <div class="sc-icon" style="position:relative">
+        <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h24a2 2 0 012 2v13a2 2 0 01-2 2H10l-7 5V9a2 2 0 012-2z"/></svg>
+        <span style="position:absolute;top:16px;right:14px;width:10px;height:10px;border-radius:50%;background:var(--orange);box-shadow:0 0 8px rgba(255,95,31,0.5);border:2px solid var(--screen-bg)"></span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-name">Meddelanden</div>
+        <div class="sc-desc">Direktmeddela enskilda atleter. 3 olästa just nu.</div>
+        <span class="sc-tag" style="color:var(--orange);border-color:rgba(255,95,31,0.30);background:var(--orange-dim)">3 olästa</span>
+      </div>
+    </a>
+
+    <a href="screens/notes.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><path d="M7 3h15l7 7v23a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M22 3v7h7M12 15h10M12 22h7"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Anteckningar</div>
+        <div class="sc-desc">Coach-logg per atlet och trupp. Sök och filtrera bland 28 anteckningar.</div>
+        <span class="sc-tag">Logg</span>
+      </div>
+    </a>
+
+    <a href="screens/reports.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 24l7-9 5 5 7-12"/><rect x="3" y="3" width="28" height="28" rx="3"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Rapporter</div>
+        <div class="sc-desc">Vecko/månadsanalys av träningsbelastning och målframsteg.</div>
+        <span class="sc-tag">Analytics</span>
+      </div>
+    </a>
+
+    <a href="screens/profile.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><circle cx="17" cy="11" r="6"/><path d="M5 30c0-6.6 5.4-12 12-12s12 5.4 12 12"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Coach-profil</div>
+        <div class="sc-desc">Inloggad användare, inställningar, notiser och logga ut.</div>
+        <span class="sc-tag">Inställningar</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ── TRÄNING & PROGRAM ─────────────────── -->
+  <div class="section-label">Träning &amp; Program — Adapt</div>
+  <div class="screens-grid">
+
+    <a href="screens/program-builder.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="20" height="28" rx="3"/><path d="M13 11h8M13 17h8M13 23h5"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Program Builder</div>
+        <div class="sc-desc">Bygg långsiktiga träningsprogram. Veckoschema med energisystem-mappning.</div>
+        <span class="sc-tag">Adapt</span>
+      </div>
+    </a>
+
+    <a href="screens/sessions-list.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="28" height="6" rx="2"/><rect x="3" y="16" width="28" height="6" rx="2"/><rect x="3" y="26" width="18" height="6" rx="2"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Sessionslista</div>
+        <div class="sc-desc">Alla pass — aktiva, planerade och avslutade. Filtrera och öppna direkt.</div>
+        <span class="sc-tag">Timer + Adapt</span>
+      </div>
+    </a>
+
+    <a href="screens/create-session.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><circle cx="17" cy="17" r="13"/><path d="M17 11v12M11 17h12"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Skapa session</div>
+        <div class="sc-desc">Bygg ett enskilt träningspass med övningar, set och reps från biblioteket.</div>
+        <span class="sc-tag">Adapt</span>
+      </div>
+    </a>
+
+    <a href="screens/session-timer.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><circle cx="17" cy="19" r="12"/><path d="M17 12v7l4 4M12 3h10M17 3v4"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Session Timer</div>
+        <div class="sc-desc">Kör session live. Vilotimer, set-tracker och coach-anteckning i realtid.</div>
+        <span class="sc-tag">Timer</span>
+      </div>
+    </a>
+
+    <a href="screens/exercise-library.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h4M27 17h4M7 17h20"/><circle cx="7" cy="17" r="3"/><circle cx="27" cy="17" r="3"/><path d="M12 10v14M22 10v14"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Övningsbibliotek</div>
+        <div class="sc-desc">Bläddra, sök och skapa övningar. Kategorier, muskelgrupper och spårningstyp.</div>
+        <span class="sc-tag">Adapt</span>
+      </div>
+    </a>
+
+    <a href="screens/progression.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 26l8-10 6 5 8-13"/><circle cx="30" cy="8" r="2.5" fill="var(--muted-hi)" stroke="none"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Progression</div>
+        <div class="sc-desc">Följ utveckling per övning — vikt, volym, 1RM och personliga rekord.</div>
+        <span class="sc-tag">Analytics</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ── SCREENING ──────────────────────────── -->
+  <div class="section-label">Screening &amp; Rörelsebedömning</div>
+  <div class="screens-grid">
+
+    <a href="screens/screening-hub.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="17" r="13"/><path d="M12 17l4 4 7-7"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Screening Hub</div>
+        <div class="sc-desc">Välj screening-typ — bild-analys eller strukturerad rörelsebedömning.</div>
+        <span class="sc-tag">Screening</span>
+      </div>
+    </a>
+
+    <a href="screens/screening-upload.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="7" width="28" height="22" rx="3"/><path d="M17 27V12M11 18l6-6 6 6"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Bild-screening</div>
+        <div class="sc-desc">Ladda upp foton (overhead squat, mobility) för AI-analys.</div>
+        <span class="sc-tag">Screening</span>
+      </div>
+    </a>
+
+    <a href="screens/movement-client-pick.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round"><circle cx="17" cy="11" r="5.5"/><path d="M6 30c0-6 5-10 11-10s11 4 11 10"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Välj atlet</div>
+        <div class="sc-desc">Välj atlet för rörelsebedömning innan testet startar.</div>
+        <span class="sc-tag">Rörelse</span>
+      </div>
+    </a>
+
+    <a href="screens/movement-assessment.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 4v8M17 22v8M4 17h8M22 17h8"/><circle cx="17" cy="17" r="6"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Rörelsebedömning</div>
+        <div class="sc-desc">Strukturerad bedömning av hållning, rörlighet, kärna och stabilitet.</div>
+        <span class="sc-tag">Rörelse</span>
+      </div>
+    </a>
+
+    <a href="screens/movement-program-builder.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10h24M5 17h18M5 24h12"/><circle cx="28" cy="24" r="4"/><path d="M28 21v3M28 27v0"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Åtgärdsprogram</div>
+        <div class="sc-desc">Skapa åtgärdsprogram utifrån rörelsebedömningens resultat.</div>
+        <span class="sc-tag">Rörelse</span>
+      </div>
+    </a>
+
+    <a href="screens/movement-result.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 24l7-9 5 5 7-12"/><rect x="3" y="3" width="28" height="28" rx="3"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Bedömningsresultat</div>
+        <div class="sc-desc">Visa bedömningsresultat, poäng per kategori och rekommendationer.</div>
+        <span class="sc-tag">Rörelse</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ── AUTH ──────────────────────────────── -->
+  <div class="section-label">Autentisering</div>
+  <div class="screens-grid">
+
+    <a href="screens/auth-login.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="14" width="22" height="16" rx="3"/><path d="M11 14V10a6 6 0 0112 0v4"/><circle cx="17" cy="22" r="2"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Inloggning</div>
+        <div class="sc-desc">Coach-inloggning med e-post/lösenord eller SSO.</div>
+        <span class="sc-tag">Auth</span>
+      </div>
+    </a>
+
+    <a href="screens/auth-reset.html" class="screen-card">
+      <div class="sc-icon"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="var(--muted-hi)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17c0-6.6 5.4-12 12-12 3.3 0 6.3 1.3 8.5 3.5"/><path d="M29 17c0 6.6-5.4 12-12 12-3.3 0-6.3-1.3-8.5-3.5"/><path d="M26 5l3 4-4 1M8 29l-3-4 4-1"/></svg></div>
+      <div class="sc-body">
+        <div class="sc-name">Återställ lösenord</div>
+        <div class="sc-desc">Skicka återställningslänk via e-post.</div>
+        <span class="sc-tag">Auth</span>
+      </div>
+    </a>
+
+  </div>
+
+  <a href="screens/dashboard.html" class="enter-btn">
+    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 3v12M3 9l6 6 6-6"/></svg>
+    Öppna Coach-appen
+  </a>
+
+  <div class="footer-note">M2M Coach · 20 skärmar · Desktop · Tablet · Mobil</div>
+</div>
+</body>
+</html>

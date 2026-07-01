@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Screening</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.screening-hero-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
+}
+@media (max-width: 540px) {
+  .screening-hero-grid { grid-template-columns: 1fr; }
+}
+.screening-type-card {
+  border-radius: var(--r-xl); padding: 24px 20px;
+  cursor: pointer; transition: all 0.2s;
+  text-decoration: none; color: inherit;
+  display: flex; flex-direction: column; gap: 12px;
+  position: relative; overflow: hidden;
+}
+.screening-type-card::before {
+  content: ''; position: absolute; inset: 0;
+  opacity: 0; transition: opacity 0.2s;
+}
+.screening-type-card:hover::before { opacity: 1; }
+.stc-coach {
+  background: var(--glass-bg-coach);
+  border: 1px solid rgba(0,212,170,0.22);
+  box-shadow: var(--glass-shadow-coach);
+}
+.stc-coach::before { background: rgba(0,212,170,0.05); }
+.stc-accent {
+  background: var(--glass-bg-accent);
+  border: 1px solid rgba(247,233,40,0.22);
+  box-shadow: var(--glass-shadow-accent);
+}
+.stc-accent::before { background: rgba(247,233,40,0.05); }
+.stc-icon {
+  width: 48px; height: 48px; border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+}
+.stc-icon svg { width: 26px; height: 26px; }
+.stc-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.stc-desc { font-size: 12px; color: var(--muted-hi); line-height: 1.5; }
+.stc-arrow {
+  position: absolute; right: 16px; bottom: 16px;
+  color: var(--muted); transition: transform 0.2s, color 0.2s;
+}
+.screening-type-card:hover .stc-arrow { transform: translateX(4px); }
+.stc-coach:hover .stc-arrow { color: var(--coach); }
+.stc-accent:hover .stc-arrow { color: var(--accent); }
+
+.recent-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 14px; border-radius: var(--r-md);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  cursor: pointer; transition: background 0.15s; margin-bottom: 8px;
+  text-decoration: none; color: inherit;
+}
+.recent-item:hover { background: var(--glass-bg-hi); }
+.ri-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  color: #000; flex-shrink: 0;
+}
+.ri-body { flex: 1; min-width: 0; }
+.ri-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.ri-meta {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.ri-date { font-family: var(--font-mono); font-size: 9px; color: var(--muted); flex-shrink: 0; }
+.ri-score {
+  font-family: var(--font-display); font-size: 18px; font-weight: 700; flex-shrink: 0;
+}
+.score-good { color: var(--coach); }
+.score-ok { color: var(--accent); }
+.score-low { color: var(--orange); }
+
+.screening-stat-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px;
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">M2M</div>
+      <div class="logo-sub">Coach Platform</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="s-nav-label">Dashboard</span>
+      </a>
+      <a href="athlete-detail.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span>
+        <span class="s-nav-label">Athletprofil</span>
+      </a>
+      <div class="sidebar-section-label">Träning</div>
+      <a href="program-builder.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span>
+        <span class="s-nav-label">Adapt Program</span>
+      </a>
+      <a href="exercise-library.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span>
+        <span class="s-nav-label">Övningsbibliotek</span>
+      </a>
+      <a href="sessions-list.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span>
+        <span class="s-nav-label">Sessioner</span>
+      </a>
+      <a href="session-timer.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span>
+        <span class="s-nav-label">Session Timer</span>
+      </a>
+      <a href="progression.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span>
+        <span class="s-nav-label">Progression</span>
+      </a>
+      <div class="sidebar-section-label">Kommunikation</div>
+      <a href="messages.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span>
+        <span class="s-nav-label">Meddelanden</span>
+      </a>
+      <a href="notes.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span>
+        <span class="s-nav-label">Anteckningar</span>
+      </a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item active">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span>
+        <span class="s-nav-label">Screening</span>
+      </a>
+      <a href="reports.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span>
+        <span class="s-nav-label">Rapporter</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-logo">Screening</div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">Screening</div>
+    </div>
+    <div class="page-body">
+
+      <!-- Stats -->
+      <div class="screening-stat-strip">
+        <div class="kpi-card" style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:12px 14px;text-align:center">
+          <div style="font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--coach);line-height:1">18</div>
+          <div style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-top:4px">Bedömda</div>
+        </div>
+        <div class="kpi-card" style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:12px 14px;text-align:center">
+          <div style="font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--accent);line-height:1">6</div>
+          <div style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-top:4px">Ej bedömda</div>
+        </div>
+        <div class="kpi-card" style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:12px 14px;text-align:center">
+          <div style="font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--orange);line-height:1">3</div>
+          <div style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-top:4px">Åtgärdsbehov</div>
+        </div>
+      </div>
+
+      <!-- Screening types -->
+      <div class="screening-hero-grid">
+        <a href="movement-client-pick.html" class="screening-type-card stc-coach">
+          <div class="stc-icon" style="background:rgba(0,212,170,0.12)">
+            <svg viewBox="0 0 26 26" fill="none" stroke="var(--coach)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="13" cy="8" r="4"/><path d="M5 22c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+              <path d="M19 2l2 2-6 6M21 4l-2-2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stc-title">Rörelse-bedömning</div>
+            <div class="stc-desc">Strukturerad bedömning av hållning, rörlighet, kärna och stabilitet. Genererar åtgärdsprogram automatiskt.</div>
+          </div>
+          <svg class="stc-arrow" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h10M10 5l4 4-4 4"/></svg>
+        </a>
+        <a href="screening-upload.html" class="screening-type-card stc-accent">
+          <div class="stc-icon" style="background:rgba(247,233,40,0.10)">
+            <svg viewBox="0 0 26 26" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="20" height="16" rx="2"/>
+              <circle cx="10" cy="12" r="2.5"/>
+              <path d="M3 19l5-5 3 3 4-4 6 6"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stc-title">Bild-screening</div>
+            <div class="stc-desc">Ladda upp bilder för AI-analys av hållning, symmetri och rörelsemönster. Resultat inom 60 sekunder.</div>
+          </div>
+          <svg class="stc-arrow" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h10M10 5l4 4-4 4"/></svg>
+        </a>
+      </div>
+
+      <!-- Senaste screeningar -->
+      <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:var(--muted);margin-bottom:10px">Senaste screeningar</div>
+
+      <a href="movement-result.html" class="recent-item">
+        <div class="ri-avatar" style="background:linear-gradient(135deg,var(--coach),rgba(0,212,170,0.3))">AJ</div>
+        <div class="ri-body">
+          <div class="ri-name">Alex Johansson</div>
+          <div class="ri-meta"><span>Rörelsebedömning</span><span>·</span><span>2026-06-04</span></div>
+        </div>
+        <div class="ri-score score-good">4.2/5</div>
+      </a>
+      <a href="movement-result.html" class="recent-item">
+        <div class="ri-avatar" style="background:linear-gradient(135deg,#f7e928,rgba(247,233,40,0.3))">ME</div>
+        <div class="ri-body">
+          <div class="ri-name">Marcus Eriksson</div>
+          <div class="ri-meta"><span>Bildscreening</span><span>·</span><span>2026-05-30</span></div>
+        </div>
+        <div class="ri-score score-ok">3.8/5</div>
+      </a>
+      <a href="movement-result.html" class="recent-item">
+        <div class="ri-avatar" style="background:linear-gradient(135deg,#ff5f1f,rgba(255,95,31,0.3))">JP</div>
+        <div class="ri-body">
+          <div class="ri-name">Johan Persson</div>
+          <div class="ri-meta"><span>Rörelsebedömning</span><span>·</span><span>2026-05-28</span></div>
+        </div>
+        <div class="ri-score score-low">2.9/5</div>
+      </a>
+      <a href="movement-result.html" class="recent-item">
+        <div class="ri-avatar" style="background:linear-gradient(135deg,#8b5cf6,rgba(139,92,246,0.3))">EA</div>
+        <div class="ri-body">
+          <div class="ri-name">Emma Andersson</div>
+          <div class="ri-meta"><span>Rörelsebedömning</span><span>·</span><span>2026-05-22</span></div>
+        </div>
+        <div class="ri-score score-good">4.6/5</div>
+      </a>
+      <a href="movement-result.html" class="recent-item">
+        <div class="ri-avatar" style="background:linear-gradient(135deg,#22d3ee,rgba(34,211,238,0.3))">AL</div>
+        <div class="ri-body">
+          <div class="ri-name">Anton Lindqvist</div>
+          <div class="ri-meta"><span>Bildscreening</span><span>·</span><span>2026-05-19</span></div>
+        </div>
+        <div class="ri-score score-ok">3.5/5</div>
+      </a>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="bn-item">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
+      <span class="bn-label">Hem</span>
+    </a>
+    <a href="sessions-list.html" class="bn-item">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg>
+      <span class="bn-label">Sessioner</span>
+    </a>
+    <a href="messages.html" class="bn-item">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg>
+      <span class="bn-label">Chatt</span>
+    </a>
+    <a href="screening-hub.html" class="bn-item active">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg>
+      <span class="bn-label">Screening</span>
+    </a>
+    <a href="profile.html" class="bn-item">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="7" r="3.5"/><path d="M3 18c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>
+      <span class="bn-label">Profil</span>
+    </a>
+  </nav>
+</div>
+</body>
+</html>

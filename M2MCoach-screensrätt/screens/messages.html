@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Meddelanden</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.msg-shell { display: flex; flex: 1; overflow: hidden; height: 100%; }
+
+/* Thread list */
+.thread-list {
+  width: 280px; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+@media (max-width: 760px) {
+  .thread-list { width: 100%; border-right: none; }
+  .msg-view { display: none; }
+  .thread-list.hidden { display: none; }
+  .msg-view.open { display: flex; width: 100%; }
+}
+@media (min-width: 761px) and (max-width: 1000px) {
+  .thread-list { width: 220px; }
+}
+
+.thread-search {
+  padding: 12px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.thread-scroll { flex: 1; overflow-y: auto; }
+.thread-scroll::-webkit-scrollbar { display: none; }
+
+.thread-item {
+  display: flex; gap: 10px; padding: 12px 14px;
+  cursor: pointer; transition: background 0.15s; position: relative;
+}
+.thread-item:hover { background: rgba(255,255,255,0.03); }
+.thread-item.active { background: var(--glass-bg-coach); }
+.thread-item.active::before {
+  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
+  width: 3px; background: var(--coach); border-radius: 0 2px 2px 0;
+}
+.thread-item.unread .thread-name { color: var(--fg); font-weight: 600; }
+.thread-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  color: #000; flex-shrink: 0;
+}
+.thread-body { flex: 1; min-width: 0; }
+.thread-name { font-size: 13px; font-weight: 500; }
+.thread-preview { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.thread-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.thread-time { font-family: var(--font-mono); font-size: 8px; color: var(--muted); }
+.unread-badge {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--coach); color: #000;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 8px rgba(0,212,170,0.40);
+}
+
+/* Message view */
+.msg-view {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.msg-view-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: 56px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mv-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  color: #000;
+}
+.mv-name { font-size: 14px; font-weight: 600; }
+.mv-status { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.mv-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.messages-scroll { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.messages-scroll::-webkit-scrollbar { display: none; }
+
+.msg-bubble {
+  max-width: 72%; border-radius: 14px;
+  padding: 10px 13px; font-size: 13px; line-height: 1.45;
+}
+.msg-in {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  align-self: flex-start; border-bottom-left-radius: 4px;
+}
+.msg-out {
+  background: var(--glass-bg-coach);
+  border: 1px solid rgba(0,212,170,0.22);
+  align-self: flex-end; border-bottom-right-radius: 4px;
+}
+.msg-time { font-family: var(--font-mono); font-size: 8px; color: var(--muted); margin-top: 3px; }
+.msg-name { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.msg-input-row {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.msg-input {
+  flex: 1; min-height: 38px; max-height: 120px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-md); padding: 9px 12px;
+  font-family: var(--font-body); font-size: 13px; color: var(--fg);
+  outline: none; resize: none; overflow-y: auto; line-height: 1.4;
+}
+.msg-input::placeholder { color: var(--muted); }
+.msg-input:focus { border-color: rgba(0,212,170,0.35); }
+.send-btn {
+  width: 38px; height: 38px; border-radius: var(--r-md);
+  background: var(--coach); border: none;
+  display: flex; align-items: center; justify-content: center;
+  color: #000; cursor: pointer; flex-shrink: 0;
+  box-shadow: var(--glow-coach); transition: background 0.15s;
+}
+.send-btn:hover { background: oklch(80% 0.14 165); }
+
+/* Quick replies */
+.quick-replies {
+  display: flex; gap: 6px; padding: 8px 16px 0; flex-wrap: wrap;
+}
+.qr { border-radius: var(--r-full); padding: 4px 11px; font-size: 11px; background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--muted-hi); cursor: pointer; white-space: nowrap; }
+.qr:hover { background: var(--glass-bg-hi); color: var(--fg); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-mark">M2M</span><span class="logo-sub">COACH</span></div>
+    <nav class="sidebar-nav">
+          <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Trupp</span>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <span class="sidebar-section-label">Träning</span>
+      <a href="program-builder.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span><span class="s-nav-label">Adapt Program</span></a>
+      <a href="exercise-library.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span><span class="s-nav-label">Övningsbibliotek</span></a>
+      <a href="sessions-list.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span><span class="s-nav-label">Sessioner</span></a>
+      <a href="session-timer.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span><span class="s-nav-label">Session Timer</span></a>
+      <a href="progression.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span><span class="s-nav-label">Progression</span></a>
+      <span class="sidebar-section-label">Kommunikation</span>
+      <a href="messages.html" class="s-nav-item active"><span class="s-nav-icon" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:-3px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--orange)"></span></span><span class="s-nav-label">Meddelanden <span class="alert-badge" style="margin-left:auto">3</span></span></a>
+      <a href="notes.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span><span class="s-nav-label">Anteckningar</span></a>
+      <span class="sidebar-section-label">Hälsa &amp; Analys</span>
+      <a href="screening-hub.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">PL</div>
+        <div><div class="coach-footer-name">Per Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="page-header">
+      <h1 class="page-title">Meddelanden</h1>
+      <div class="page-header-actions">
+        <button class="btn btn-primary btn-sm">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 2v9M2 6.5h9"/></svg>
+          Nytt meddelande
+        </button>
+      </div>
+    </header>
+
+    <div class="msg-shell">
+      <!-- Thread list -->
+      <div class="thread-list">
+        <div class="thread-search">
+          <div class="search-bar" style="max-width:100%">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="5.5" cy="5.5" r="4"/><path d="M9.5 9.5l2.5 2.5"/></svg>
+            <input type="text" placeholder="Sök konversation…" style="font-size:12px">
+          </div>
+        </div>
+        <div class="thread-scroll">
+          <div class="thread-item active unread" onclick="selectThread('AL','Alex Lindqvist','#00D4AA')">
+            <div class="thread-avatar" style="background:linear-gradient(135deg,rgba(0,212,170,0.5),rgba(0,212,170,0.2))">AL</div>
+            <div class="thread-body">
+              <div class="thread-name">Alex Lindqvist</div>
+              <div class="thread-preview">Hur långa vilopauser idag?</div>
+            </div>
+            <div class="thread-meta">
+              <span class="thread-time">09:47</span>
+              <span class="unread-badge">2</span>
+            </div>
+          </div>
+          <div class="thread-item unread" onclick="selectThread('MK','Marcus Karlsson','#FF9A3C')">
+            <div class="thread-avatar" style="background:linear-gradient(135deg,rgba(255,95,31,0.5),rgba(255,95,31,0.2))">MK</div>
+            <div class="thread-body">
+              <div class="thread-name">Marcus Karlsson</div>
+              <div class="thread-preview">Ursäkta att jag missade igår…</div>
+            </div>
+            <div class="thread-meta">
+              <span class="thread-time">Igår</span>
+              <span class="unread-badge">1</span>
+            </div>
+          </div>
+          <div class="thread-item" onclick="selectThread('SJ','Sofia Jansson','#00D4AA')">
+            <div class="thread-avatar" style="background:linear-gradient(135deg,rgba(0,212,170,0.45),rgba(0,212,170,0.18))">SJ</div>
+            <div class="thread-body">
+              <div class="thread-name">Sofia Jansson</div>
+              <div class="thread-preview">Programmet ser bra ut 👍</div>
+            </div>
+            <div class="thread-meta"><span class="thread-time">Igår</span></div>
+          </div>
+          <div class="thread-item" onclick="selectThread('TL','Tove Lindberg','#7EC8E3')">
+            <div class="thread-avatar" style="background:linear-gradient(135deg,rgba(126,200,227,0.5),rgba(126,200,227,0.2))">TL</div>
+            <div class="thread-body">
+              <div class="thread-name">Tove Lindberg</div>
+              <div class="thread-preview">Kan vi skjuta upp freda?</div>
+            </div>
+            <div class="thread-meta"><span class="thread-time">4 jun</span></div>
+          </div>
+          <div class="thread-item" onclick="selectThread('AG','Agnes Grahn','#F7E928')">
+            <div class="thread-avatar" style="background:linear-gradient(135deg,rgba(247,233,40,0.5),rgba(247,233,40,0.2))">AG</div>
+            <div class="thread-body">
+              <div class="thread-name">Agnes Grahn</div>
+              <div class="thread-preview">PB idag! 54.2s 🔥</div>
+            </div>
+            <div class="thread-meta"><span class="thread-time">4 jun</span></div>
+          </div>
+          <div class="thread-item" onclick="selectThread('IA','Ida Arvidsson','#A8E6CF')">
+            <div class="thread-avatar" style="background:linear-gradient(135deg,rgba(168,230,207,0.5),rgba(168,230,207,0.2))">IA</div>
+            <div class="thread-body">
+              <div class="thread-name">Ida Arvidsson</div>
+              <div class="thread-preview">Hästen har lite stelhet, kör vi?</div>
+            </div>
+            <div class="thread-meta"><span class="thread-time">3 jun</span></div>
+          </div>
+          <div class="thread-item" onclick="selectThread('EF','Erik Forsberg','#FF9A3C')">
+            <div class="thread-avatar" style="background:linear-gradient(135deg,rgba(255,154,60,0.5),rgba(255,154,60,0.2))">EF</div>
+            <div class="thread-body">
+              <div class="thread-name">Erik Forsberg</div>
+              <div class="thread-preview">Har haft det jobbigt senast</div>
+            </div>
+            <div class="thread-meta"><span class="thread-time">2 jun</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message view -->
+      <div class="msg-view">
+        <div class="msg-view-header">
+          <div class="mv-avatar" style="background:linear-gradient(135deg,rgba(0,212,170,0.5),rgba(0,212,170,0.2))">AL</div>
+          <div>
+            <div class="mv-name">Alex Lindqvist</div>
+            <div class="mv-status" id="mvStatus">Tränar · Simning · 78% mål</div>
+          </div>
+          <div class="mv-actions">
+            <button class="icon-btn" title="Visa profil" onclick="window.location='athlete-detail.html'">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="5" r="3"/><path d="M1 14c0-3 2.7-5.5 6-5.5S13 11 13 14"/></svg>
+            </button>
+            <button class="icon-btn" title="Starta session" onclick="window.location='session-timer.html'">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7.5" cy="9" r="5"/><path d="M7.5 6v3l2 2M5 2h5M7.5 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick replies -->
+        <div class="quick-replies">
+          <span class="qr" onclick="insertQuick('Bra jobbat idag!')">Bra jobbat idag!</span>
+          <span class="qr" onclick="insertQuick('Vila 90 sekunder per set.')">Vila 90s/set</span>
+          <span class="qr" onclick="insertQuick('Kom ihåg att äta och dricka efter session.')">Återhämtning</span>
+          <span class="qr" onclick="insertQuick('Jag kollar in din plan imorgon.')">Kollar imorgon</span>
+        </div>
+
+        <div class="messages-scroll" id="msgScroll">
+          <div style="text-align:center;font-family:var(--font-mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;padding:8px 0">Fredag 6 juni</div>
+
+          <div>
+            <div class="msg-name">Alex Lindqvist</div>
+            <div class="msg-bubble msg-in">Hej coach! Vilka vilopauser kör vi på intervallerna idag?</div>
+            <div class="msg-time">09:43</div>
+          </div>
+          <div>
+            <div class="msg-bubble msg-out">90 sekunder per set. Fokusera på full återhämtning så att varje 50m är maximal ansträngning.</div>
+            <div class="msg-time" style="text-align:right">09:45</div>
+          </div>
+          <div>
+            <div class="msg-name">Alex Lindqvist</div>
+            <div class="msg-bubble msg-in">Perfekt. Känner mig pigg idag faktiskt 💪</div>
+            <div class="msg-time">09:47</div>
+          </div>
+          <div>
+            <div class="msg-name">Alex Lindqvist</div>
+            <div class="msg-bubble msg-in">Kan vi lägga in ett extra set om det känns bra?</div>
+            <div class="msg-time">09:47</div>
+          </div>
+        </div>
+
+        <div class="msg-input-row">
+          <textarea class="msg-input" id="msgInput" placeholder="Skriv ett meddelande…" rows="1" onkeydown="handleKey(event)"></textarea>
+          <button class="send-btn" onclick="sendMsg()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2L2 7l5 2 2 5 5-12z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <header class="topbar">
+    <a href="dashboard.html" style="color:var(--muted)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 4L6 9l5 5"/></svg></a>
+    <span class="topbar-logo">Meddelanden</span>
+    <div style="width:32px"></div>
+  </header>
+</div>
+
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+
+<script>
+function sendMsg() {
+  const inp = document.getElementById("msgInput");
+  const text = inp.value.trim();
+  if (!text) return;
+  const scroll = document.getElementById("msgScroll");
+  const div = document.createElement("div");
+  div.innerHTML = `<div class="msg-bubble msg-out">${text.replace(/</g,"&lt;")}</div><div class="msg-time" style="text-align:right">${new Date().toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</div>`;
+  scroll.appendChild(div);
+  inp.value = "";
+  scroll.scrollTop = scroll.scrollHeight;
+}
+function handleKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+}
+function insertQuick(text) {
+  document.getElementById("msgInput").value = text;
+  document.getElementById("msgInput").focus();
+}
+function selectThread(initials, name, color) {
+  document.querySelectorAll(".thread-item").forEach(t => t.classList.remove("active"));
+  event.currentTarget.classList.add("active");
+  document.getElementById("mvStatus").textContent = name + " · Tränar";
+}
+</script>
+</body>
+</html>

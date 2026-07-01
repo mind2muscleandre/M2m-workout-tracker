@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Bedömningsresultat</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.step-indicator { display:flex; align-items:center; gap:0; margin-bottom:20px; }
+.step { display:flex; align-items:center; gap:6px; }
+.step-num { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; font-weight:700; background:var(--glass-bg); border:1px solid var(--border); color:var(--muted); }
+.step-num.done { background:rgba(0,212,170,0.2); border-color:rgba(0,212,170,0.4); color:var(--coach); }
+.step-num.active { background:var(--coach); border-color:var(--coach); color:#000; }
+.step-label { font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); }
+.step-label.active { color:var(--coach); }
+.step-sep { flex:1; height:1px; background:var(--border); min-width:12px; }
+
+.result-hero {
+  display: flex; align-items: center; gap: 20px;
+  padding: 20px; border-radius: var(--r-xl);
+  background: var(--glass-bg-coach); border: 1px solid rgba(0,212,170,0.2);
+  box-shadow: var(--glass-shadow-coach); margin-bottom: 16px;
+}
+.result-score-ring {
+  width: 80px; height: 80px; flex-shrink: 0; position: relative;
+}
+.result-score-ring svg { width: 80px; height: 80px; }
+.result-score-val {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--coach); line-height: 1;
+}
+.result-hero-info { flex: 1; }
+.result-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.result-date { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+.result-summary { font-size: 12px; color: var(--muted-hi); margin-top: 8px; line-height: 1.5; }
+
+.radar-card {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl); padding: 20px; margin-bottom: 12px;
+  box-shadow: var(--glass-shadow);
+}
+.radar-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.radar-wrap { display: flex; justify-content: center; }
+
+.score-breakdown { display: flex; flex-direction: column; gap: 10px; }
+.sb-row { display: flex; align-items: center; gap: 12px; }
+.sb-label { font-size: 12px; font-weight: 500; width: 120px; flex-shrink: 0; }
+.sb-bar-wrap { flex: 1; height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.sb-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+.sb-val { font-family: var(--font-display); font-size: 16px; font-weight: 700; width: 28px; text-align: right; flex-shrink: 0; }
+
+.rec-card {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 8px;
+}
+.rec-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.rec-icon { font-size: 16px; }
+.rec-title { font-size: 13px; font-weight: 600; }
+.rec-priority {
+  margin-left: auto; font-family: var(--font-mono); font-size: 8px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 2px 7px; border-radius: var(--r-full);
+}
+.rp-high { background: rgba(255,95,31,0.12); color: var(--orange); border: 1px solid rgba(255,95,31,0.22); }
+.rp-med { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(247,233,40,0.20); }
+.rp-low { background: var(--coach-dim); color: var(--coach); border: 1px solid rgba(0,212,170,0.20); }
+.rec-text { font-size: 12px; color: var(--muted-hi); line-height: 1.5; }
+
+.compare-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: var(--r-md);
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.comp-label { font-size: 12px; font-weight: 500; flex: 1; }
+.comp-vals { display: flex; align-items: center; gap: 8px; }
+.comp-prev { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.comp-arrow { color: var(--muted); }
+.comp-curr { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.comp-diff { font-family: var(--font-mono); font-size: 10px; }
+.diff-up { color: var(--coach); }
+.diff-down { color: var(--danger); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <nav class="sidebar">
+    <div class="sidebar-logo"><div class="logo-mark">M2M</div><div class="logo-sub">Coach Platform</div></div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="screening-hub.html" class="icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="topbar-logo" style="font-size:15px">Resultat</div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <a href="screening-hub.html" class="icon-btn" style="flex-shrink:0"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="page-title">Bedömningsresultat</div>
+    </div>
+    <div class="page-body">
+
+      <div class="step-indicator">
+        <div class="step"><div class="step-num done">✓</div><div class="step-label">Atlet</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num done">✓</div><div class="step-label">Bedömning</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num done">✓</div><div class="step-label">Program</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num active">4</div><div class="step-label active">Resultat</div></div>
+      </div>
+
+      <!-- Result hero -->
+      <div class="result-hero">
+        <div class="result-score-ring">
+          <svg viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="33" fill="none" stroke="rgba(0,212,170,0.12)" stroke-width="7"/>
+            <!-- 2.9/5 = 58% → circumference 207.3, offset = 207.3*(1-0.58)=87 -->
+            <circle cx="40" cy="40" r="33" fill="none" stroke="var(--coach)" stroke-width="7"
+              stroke-dasharray="207.3" stroke-dashoffset="87" stroke-linecap="round"
+              transform="rotate(-90 40 40)"/>
+          </svg>
+          <div class="result-score-val">2.9</div>
+        </div>
+        <div class="result-hero-info">
+          <div class="result-name">Johan Persson</div>
+          <div class="result-date">Rörelsebedömning · 2026-06-08</div>
+          <div class="result-summary">Rörlighet och kärnstabilitet kräver riktade insatser. Hållning och koordination är starka. 5 åtgärdsövningar tillagda i program.</div>
+        </div>
+      </div>
+
+      <!-- Radar chart -->
+      <div class="radar-card">
+        <div class="radar-title">Poängfördelning</div>
+        <div class="radar-wrap">
+          <svg width="220" height="200" viewBox="0 0 220 200">
+            <!-- Background web -->
+            <g opacity="0.15" stroke="rgba(255,255,255,0.4)" stroke-width="0.5" fill="none">
+              <polygon points="110,30 170,75 148,140 72,140 50,75" />
+              <polygon points="110,50 154,80 137,128 83,128 66,80" />
+              <polygon points="110,70 138,87 127,116 93,116 82,87" />
+            </g>
+            <!-- Axis lines -->
+            <g stroke="rgba(255,255,255,0.12)" stroke-width="0.5">
+              <line x1="110" y1="30" x2="110" y2="170"/>
+              <line x1="170" y1="75" x2="50" y2="125"/>
+              <line x1="148" y1="140" x2="72" y2="60"/>
+              <line x1="72" y1="140" x2="148" y2="60"/>
+              <line x1="50" y1="75" x2="170" y2="125"/>
+            </g>
+            <!-- Data polygon: Hållning=3.5, Rörlighet=2.7, Kärna=3.0, Koordination=4.0 -->
+            <!-- Simplified 4-axis radar -->
+            <defs>
+              <radialGradient id="rg" cx="50%" cy="50%">
+                <stop offset="0%" stop-color="rgba(0,212,170,0.35)"/>
+                <stop offset="100%" stop-color="rgba(0,212,170,0.08)"/>
+              </radialGradient>
+            </defs>
+            <!-- 4 axes: top=hållning(3.5/5=70%), right=koordination(4/5=80%), bottom=kärna(3/5=60%), left=rörlighet(2.7/5=54%) -->
+            <polygon
+              points="110,50 152,92 110,134 66,96"
+              fill="url(#rg)" stroke="var(--coach)" stroke-width="2" stroke-linejoin="round"/>
+            <!-- Axis labels -->
+            <text x="110" y="22" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.7)" font-family="monospace">Hållning</text>
+            <text x="180" y="90" text-anchor="start" font-size="11" fill="rgba(255,255,255,0.7)" font-family="monospace">Koord.</text>
+            <text x="110" y="160" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.7)" font-family="monospace">Kärna</text>
+            <text x="40" y="90" text-anchor="end" font-size="11" fill="rgba(255,255,255,0.7)" font-family="monospace">Rörl.</text>
+            <!-- Score dots -->
+            <circle cx="110" cy="50" r="4" fill="var(--coach)"/>
+            <circle cx="152" cy="92" r="4" fill="var(--coach)"/>
+            <circle cx="110" cy="134" r="4" fill="var(--accent)"/>
+            <circle cx="66" cy="96" r="4" fill="var(--orange)"/>
+          </svg>
+        </div>
+
+        <!-- Bar breakdown -->
+        <div class="score-breakdown" style="margin-top:12px">
+          <div class="sb-row">
+            <div class="sb-label">Hållning</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" style="width:70%;background:var(--coach)"></div></div>
+            <div class="sb-val" style="color:var(--coach)">3.5</div>
+          </div>
+          <div class="sb-row">
+            <div class="sb-label">Rörlighet</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" style="width:54%;background:var(--orange)"></div></div>
+            <div class="sb-val" style="color:var(--orange)">2.7</div>
+          </div>
+          <div class="sb-row">
+            <div class="sb-label">Kärna</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" style="width:60%;background:var(--accent)"></div></div>
+            <div class="sb-val" style="color:var(--accent)">3.0</div>
+          </div>
+          <div class="sb-row">
+            <div class="sb-label">Koordination</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" style="width:80%;background:var(--coach)"></div></div>
+            <div class="sb-val" style="color:var(--coach)">4.0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rekommendationer -->
+      <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:var(--muted);margin-bottom:10px">Prioriterade åtgärder</div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">🤸</div>
+          <div class="rec-title">Förbättra höft- och ankelrörlighet</div>
+          <div class="rec-priority rp-high">Hög prioritet</div>
+        </div>
+        <div class="rec-text">Hip Flexor Stretch + Foam Roll IT-band dagligen. Förväntat förbättringsresultat +0.8p inom 6 veckor med konsekvent träning.</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">💪</div>
+          <div class="rec-title">Stärk anti-extensions-kontroll</div>
+          <div class="rec-priority rp-med">Medel prioritet</div>
+        </div>
+        <div class="rec-text">Dead Bug och Lateral Plank 3×/vecka. Fokus på att hålla neutralt bäcken under rörelse — direkt kopplat till löpsteg-effektivitet.</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">🧍</div>
+          <div class="rec-title">Behåll stark hållningsrutin</div>
+          <div class="rec-priority rp-low">Bibehåll</div>
+        </div>
+        <div class="rec-text">Skulder och lumbalkurva i gott skick. Fortsätt med befintliga hållningsövningar.</div>
+      </div>
+
+      <!-- Jämförelse med förra -->
+      <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.10em;color:var(--muted);margin:16px 0 10px">Jämförelse med föregående bedömning</div>
+      <div class="compare-row">
+        <div class="comp-label">Total poäng</div>
+        <div class="comp-vals">
+          <span class="comp-prev">2.6</span>
+          <svg class="comp-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h8M8 4l3 3-3 3"/></svg>
+          <span class="comp-curr" style="color:var(--coach)">2.9</span>
+          <span class="comp-diff diff-up">+0.3</span>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="comp-label">Rörlighet</div>
+        <div class="comp-vals">
+          <span class="comp-prev">2.2</span>
+          <svg class="comp-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h8M8 4l3 3-3 3"/></svg>
+          <span class="comp-curr" style="color:var(--accent)">2.7</span>
+          <span class="comp-diff diff-up">+0.5</span>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="comp-label">Kärna</div>
+        <div class="comp-vals">
+          <span class="comp-prev">3.2</span>
+          <svg class="comp-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h8M8 4l3 3-3 3"/></svg>
+          <span class="comp-curr" style="color:var(--orange)">3.0</span>
+          <span class="comp-diff diff-down">−0.2</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:8px;margin-top:16px;padding-bottom:8px">
+        <button class="btn" style="flex:1;justify-content:center" onclick="alert('Exportera PDF')">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v2h10v-2M7 2v7M4 6l3 3 3-3"/></svg>
+          Exportera
+        </button>
+        <button class="btn" style="flex:1;justify-content:center" onclick="alert('Skicka till atleten')">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h10l-5 5z"/><path d="M7 9v4"/></svg>
+          Skicka
+        </button>
+        <a href="athlete-detail.html" class="btn btn-primary" style="flex:1.5;justify-content:center">
+          Öppna profil →
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+</div>
+</body>
+</html>

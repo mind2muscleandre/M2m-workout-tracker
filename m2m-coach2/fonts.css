@@ -1,0 +1,36 @@
+@font-face {
+  font-family: 'D-DIN';
+  src: url('../assets/fonts/D-DIN.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'D-DIN';
+  src: url('../assets/fonts/D-DIN-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'D-DIN Condensed';
+  src: url('../assets/fonts/D-DINCondensed.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'D-DIN Condensed';
+  src: url('../assets/fonts/D-DINCondensed-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'D-DIN Exp';
+  src: url('../assets/fonts/D-DINExp.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'D-DIN Exp';
+  src: url('../assets/fonts/D-DINExp-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}

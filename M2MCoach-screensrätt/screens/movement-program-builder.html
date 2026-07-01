@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Åtgärdsprogram</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.step-indicator { display:flex; align-items:center; gap:0; margin-bottom:20px; }
+.step { display:flex; align-items:center; gap:6px; }
+.step-num { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; font-weight:700; background:var(--glass-bg); border:1px solid var(--border); color:var(--muted); }
+.step-num.done { background:rgba(0,212,170,0.2); border-color:rgba(0,212,170,0.4); color:var(--coach); }
+.step-num.active { background:var(--coach); border-color:var(--coach); color:#000; }
+.step-label { font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); }
+.step-label.active { color:var(--coach); }
+.step-sep { flex:1; height:1px; background:var(--border); min-width:12px; }
+
+.weakness-alert {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--r-lg);
+  background: rgba(255,95,31,0.07); border: 1px solid rgba(255,95,31,0.22);
+  margin-bottom: 16px;
+}
+.wa-icon { font-size: 20px; flex-shrink: 0; }
+.wa-body { flex: 1; }
+.wa-title { font-size: 12px; font-weight: 600; color: var(--orange); }
+.wa-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.ex-suggestion-card {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg); padding: 14px; margin-bottom: 8px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.ex-sug-check {
+  width: 22px; height: 22px; border-radius: var(--r-sm); flex-shrink: 0;
+  border: 1.5px solid var(--coach); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--coach); margin-top: 1px;
+  transition: all 0.15s;
+}
+.ex-sug-check.unchecked { background: transparent; }
+.ex-sug-check svg { width: 12px; height: 12px; }
+.ex-sug-body { flex: 1; min-width: 0; }
+.ex-sug-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.ex-sug-why { font-size: 11px; color: var(--muted-hi); line-height: 1.45; margin-bottom: 6px; }
+.ex-sug-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.ex-sug-tag { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 7px; border-radius: var(--r-full); background: var(--glass-bg-hi); border: 1px solid var(--border); color: var(--muted); }
+
+.section-divider {
+  display: flex; align-items: center; gap: 10px; margin: 16px 0 10px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.10em; color: var(--muted);
+}
+.section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.freq-select {
+  height: 36px; width: 100%; padding: 0 12px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-md); color: var(--fg); font-size: 13px; outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  padding-right: 32px;
+}
+select option { background: #1e2228; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <nav class="sidebar">
+    <div class="sidebar-logo"><div class="logo-mark">M2M</div><div class="logo-sub">Coach Platform</div></div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="movement-assessment.html" class="icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="topbar-logo" style="font-size:15px">Åtgärdsprogram</div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <a href="movement-assessment.html" class="icon-btn" style="flex-shrink:0"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="page-title">Åtgärdsprogram</div>
+      <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--coach);flex-shrink:0">Johan Persson</div>
+    </div>
+    <div class="page-body">
+
+      <div class="step-indicator">
+        <div class="step"><div class="step-num done">✓</div><div class="step-label">Atlet</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num done">✓</div><div class="step-label">Bedömning</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num active">3</div><div class="step-label active">Program</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num">4</div><div class="step-label">Resultat</div></div>
+      </div>
+
+      <!-- Svaghetsvarnare -->
+      <div class="weakness-alert">
+        <div class="wa-icon">⚠️</div>
+        <div class="wa-body">
+          <div class="wa-title">2 prioriterade åtgärdsområden identifierade</div>
+          <div class="wa-sub">Rörlighet (2.7/5) och Kärna (3.0/5) kräver riktade insatser.</div>
+        </div>
+      </div>
+
+      <!-- Rörlighetsövningar -->
+      <div class="section-divider">Rörlighet — prioritet hög</div>
+
+      <div class="ex-suggestion-card">
+        <div class="ex-sug-check" id="chk1" onclick="toggleCheck('chk1')">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>
+        </div>
+        <div class="ex-sug-body">
+          <div class="ex-sug-name">Hip Flexor Stretch</div>
+          <div class="ex-sug-why">Låg dorsalflexion och höftrörlighet begränsar löpstegets längd. Daglig stretch på 45–60s per sida minskar skaderisken vid sprint.</div>
+          <div class="ex-sug-meta"><span class="ex-sug-tag">3×/dag</span><span class="ex-sug-tag">60s</span><span class="ex-sug-tag">Rörlighet</span></div>
+        </div>
+      </div>
+
+      <div class="ex-suggestion-card">
+        <div class="ex-sug-check" id="chk2" onclick="toggleCheck('chk2')">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>
+        </div>
+        <div class="ex-sug-body">
+          <div class="ex-sug-name">Foam Roll IT-band</div>
+          <div class="ex-sug-why">IT-band-stramhet bidrar till lateral knäinstabilitet observerad i sidoplan. 5 min post-träning reducerar symptom.</div>
+          <div class="ex-sug-meta"><span class="ex-sug-tag">Post-träning</span><span class="ex-sug-tag">5 min</span><span class="ex-sug-tag">Återhämtning</span></div>
+        </div>
+      </div>
+
+      <div class="ex-suggestion-card">
+        <div class="ex-sug-check unchecked" id="chk3" onclick="toggleCheck('chk3')">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>
+        </div>
+        <div class="ex-sug-body">
+          <div class="ex-sug-name">90/90 Höftstretch</div>
+          <div class="ex-sug-why">Kombinerar inre och yttre höftrotation. Effektiv komplement till Hip Flexor Stretch för löpare.</div>
+          <div class="ex-sug-meta"><span class="ex-sug-tag">2×/dag</span><span class="ex-sug-tag">60s/sida</span><span class="ex-sug-tag">Rörlighet</span></div>
+        </div>
+      </div>
+
+      <!-- Kärnövningar -->
+      <div class="section-divider">Kärna & Stabilitet — prioritet medel</div>
+
+      <div class="ex-suggestion-card">
+        <div class="ex-sug-check" id="chk4" onclick="toggleCheck('chk4')">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>
+        </div>
+        <div class="ex-sug-body">
+          <div class="ex-sug-name">Dead Bug</div>
+          <div class="ex-sug-why">Tränar anti-extensions-kontroll — direkt kopplad till svankryggsproblematik observerad i hållningsbedömningen.</div>
+          <div class="ex-sug-meta"><span class="ex-sug-tag">3×10 reps</span><span class="ex-sug-tag">45s vila</span><span class="ex-sug-tag">Kärna</span></div>
+        </div>
+      </div>
+
+      <div class="ex-suggestion-card">
+        <div class="ex-sug-check" id="chk5" onclick="toggleCheck('chk5')">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>
+        </div>
+        <div class="ex-sug-body">
+          <div class="ex-sug-name">Lateral Plank med lyft</div>
+          <div class="ex-sug-why">Riktar sig mot den laterala instabilitet som syntes tydligast i enbenslandningstestet. 3×10s håll per sida.</div>
+          <div class="ex-sug-meta"><span class="ex-sug-tag">3×10s</span><span class="ex-sug-tag">30s vila</span><span class="ex-sug-tag">Kärna</span></div>
+        </div>
+      </div>
+
+      <!-- Frekvens -->
+      <div style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:12px">
+        <div style="font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.10em;color:var(--muted);margin-bottom:8px">Programfrekvens</div>
+        <select class="freq-select">
+          <option>Dagligen (rekommenderat)</option>
+          <option>5 dagar/vecka</option>
+          <option>3 dagar/vecka</option>
+          <option>Anpassat schema</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;padding-top:8px">
+        <a href="movement-assessment.html" class="btn" style="flex:1;justify-content:center">Tillbaka</a>
+        <button class="btn btn-primary" style="flex:2;justify-content:center" onclick="window.location.href='movement-result.html'">
+          Spara &amp; se resultat →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+</div>
+
+<script>
+function toggleCheck(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('unchecked');
+}
+</script>
+</body>
+</html>

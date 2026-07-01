@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Välj atlet för bedömning</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.step-indicator {
+  display: flex; align-items: center; gap: 0; margin-bottom: 20px;
+}
+.step { display: flex; align-items: center; gap: 6px; }
+.step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  background: var(--glass-bg); border: 1px solid var(--border); color: var(--muted);
+}
+.step-num.active { background: var(--coach); border-color: var(--coach); color: #000; }
+.step-num.done { background: rgba(0,212,170,0.2); border-color: rgba(0,212,170,0.4); color: var(--coach); }
+.step-label { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.step-label.active { color: var(--coach); }
+.step-sep { flex: 1; height: 1px; background: var(--border); min-width: 12px; }
+
+.athlete-list { display: flex; flex-direction: column; gap: 8px; }
+.ath-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: var(--r-lg);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit;
+}
+.ath-item:hover { background: var(--glass-bg-hi); }
+.ath-item.selected { background: var(--glass-bg-coach); border-color: rgba(0,212,170,0.3); }
+.ath-av {
+  width: 46px; height: 46px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 17px; font-weight: 700;
+  color: #000; flex-shrink: 0;
+}
+.ath-info { flex: 1; min-width: 0; }
+.ath-name { font-size: 14px; font-weight: 600; }
+.ath-sport { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 2px; }
+.ath-last { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.ath-badge {
+  font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 3px 8px; border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+.ab-overdue { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,95,31,0.22); }
+.ab-ok { background: var(--coach-dim); color: var(--coach); border: 1px solid rgba(0,212,170,0.22); }
+.ab-new { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--border); }
+
+.continue-bar {
+  position: sticky; bottom: 0; padding: 16px 0 0;
+}
+.continue-bar::before {
+  content: '';
+  position: absolute; inset: -1px; bottom: -80px;
+  background: linear-gradient(to top, var(--screen-bg) 60%, transparent);
+  z-index: -1;
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo"><div class="logo-mark">M2M</div><div class="logo-sub">Coach Platform</div></div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <div class="sidebar-section-label">Träning</div>
+      <a href="program-builder.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span><span class="s-nav-label">Adapt Program</span></a>
+      <a href="exercise-library.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span><span class="s-nav-label">Övningsbibliotek</span></a>
+      <a href="sessions-list.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span><span class="s-nav-label">Sessioner</span></a>
+      <a href="session-timer.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span><span class="s-nav-label">Session Timer</span></a>
+      <a href="progression.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span><span class="s-nav-label">Progression</span></a>
+      <div class="sidebar-section-label">Kommunikation</div>
+      <a href="messages.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span><span class="s-nav-label">Meddelanden</span></a>
+      <a href="notes.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span><span class="s-nav-label">Anteckningar</span></a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="screening-hub.html" class="icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="topbar-logo" style="font-size:15px">Välj atlet</div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="page-header">
+      <a href="screening-hub.html" class="icon-btn" style="flex-shrink:0"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="page-title">Välj atlet</div>
+    </div>
+    <div class="page-body">
+
+      <!-- Step indicator -->
+      <div class="step-indicator">
+        <div class="step">
+          <div class="step-num active">1</div>
+          <div class="step-label active">Välj atlet</div>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-label">Bedömning</div>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-label">Program</div>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-label">Resultat</div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-bar" style="max-width:100%;margin-bottom:14px">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4"/><path d="M10 10l2.5 2.5"/></svg>
+        <input type="text" placeholder="Sök atlet…" oninput="filterAthletes(this.value)">
+      </div>
+
+      <!-- Athletes -->
+      <div class="athlete-list" id="athList">
+        <div class="ath-item" onclick="selectAth(this)" data-name="Johan Persson">
+          <div class="ath-av" style="background:linear-gradient(135deg,#ff5f1f,rgba(255,95,31,0.3))">JP</div>
+          <div class="ath-info">
+            <div class="ath-name">Johan Persson</div>
+            <div class="ath-sport">Löpning · Friidrotts-SM</div>
+            <div class="ath-last">Senaste bedömning: 14 veckor sedan</div>
+          </div>
+          <div class="ath-badge ab-overdue">Överskri-den</div>
+        </div>
+        <div class="ath-item" onclick="selectAth(this)" data-name="Anton Lindqvist">
+          <div class="ath-av" style="background:linear-gradient(135deg,#22d3ee,rgba(34,211,238,0.3))">AL</div>
+          <div class="ath-info">
+            <div class="ath-name">Anton Lindqvist</div>
+            <div class="ath-sport">Cykling · Ironman 70.3</div>
+            <div class="ath-last">Senaste bedömning: 8 veckor sedan</div>
+          </div>
+          <div class="ath-badge ab-overdue">Överskri-den</div>
+        </div>
+        <div class="ath-item" onclick="selectAth(this)" data-name="Alex Johansson">
+          <div class="ath-av" style="background:linear-gradient(135deg,var(--coach),rgba(0,212,170,0.3))">AJ</div>
+          <div class="ath-info">
+            <div class="ath-name">Alex Johansson</div>
+            <div class="ath-sport">Triathlon · Ironman 70.3</div>
+            <div class="ath-last">Senaste bedömning: 2026-06-04</div>
+          </div>
+          <div class="ath-badge ab-ok">Aktuell</div>
+        </div>
+        <div class="ath-item" onclick="selectAth(this)" data-name="Marcus Eriksson">
+          <div class="ath-av" style="background:linear-gradient(135deg,#f7e928,rgba(247,233,40,0.3))">ME</div>
+          <div class="ath-info">
+            <div class="ath-name">Marcus Eriksson</div>
+            <div class="ath-sport">Simning · Sprint-VM kval</div>
+            <div class="ath-last">Senaste bedömning: 2026-05-30</div>
+          </div>
+          <div class="ath-badge ab-ok">Aktuell</div>
+        </div>
+        <div class="ath-item" onclick="selectAth(this)" data-name="Emma Andersson">
+          <div class="ath-av" style="background:linear-gradient(135deg,#8b5cf6,rgba(139,92,246,0.3))">EA</div>
+          <div class="ath-info">
+            <div class="ath-name">Emma Andersson</div>
+            <div class="ath-sport">Simning · OS-kval</div>
+            <div class="ath-last">Aldrig bedömd</div>
+          </div>
+          <div class="ath-badge ab-new">Ny</div>
+        </div>
+        <div class="ath-item" onclick="selectAth(this)" data-name="Sofia Bergström">
+          <div class="ath-av" style="background:linear-gradient(135deg,#f43f5e,rgba(244,63,94,0.3))">SB</div>
+          <div class="ath-info">
+            <div class="ath-name">Sofia Bergström</div>
+            <div class="ath-sport">Löpning · Maraton SM</div>
+            <div class="ath-last">Aldrig bedömd</div>
+          </div>
+          <div class="ath-badge ab-new">Ny</div>
+        </div>
+      </div>
+
+      <div class="continue-bar">
+        <button class="btn btn-primary" id="continueBtn" style="width:100%;height:48px;font-size:14px;justify-content:center;opacity:0.4;pointer-events:none" onclick="window.location.href='movement-assessment.html'">
+          Fortsätt →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+</div>
+
+<script>
+function selectAth(el) {
+  document.querySelectorAll('.ath-item').forEach(a => a.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn = document.getElementById('continueBtn');
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+}
+
+function filterAthletes(q) {
+  document.querySelectorAll('.ath-item').forEach(item => {
+    const name = item.getAttribute('data-name').toLowerCase();
+    item.style.display = name.includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

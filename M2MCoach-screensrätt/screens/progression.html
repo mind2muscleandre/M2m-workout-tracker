@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Progression</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.prog-controls {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;
+}
+.prog-select {
+  height: 36px; padding: 0 12px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-md); color: var(--fg); font-size: 12px;
+  outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 28px; cursor: pointer;
+}
+.prog-select:focus { border-color: var(--coach); }
+select option { background: #1e2228; }
+
+.chart-card {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl); padding: 20px;
+  box-shadow: var(--glass-shadow); margin-bottom: 12px;
+}
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.chart-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: 0.02em; }
+.chart-subtitle { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 2px; }
+.chart-area { width: 100%; position: relative; }
+.chart-svg { width: 100%; overflow: visible; }
+
+.pr-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;
+}
+.pr-card {
+  padding: 12px 14px; border-radius: var(--r-lg);
+  background: var(--glass-bg-coach); border: 1px solid rgba(0,212,170,0.18);
+  box-shadow: var(--glass-shadow-coach); text-align: center;
+}
+.pr-val {
+  font-family: var(--font-display); font-size: 26px; font-weight: 700;
+  line-height: 1; color: var(--coach);
+}
+.pr-unit { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-left: 2px; }
+.pr-lbl {
+  font-family: var(--font-mono); font-size: 8px; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--muted); margin-top: 4px;
+}
+.pr-date { font-family: var(--font-mono); font-size: 8px; color: var(--muted); margin-top: 2px; }
+
+.history-table {
+  width: 100%; border-collapse: collapse;
+}
+.ht-header {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+  padding: 8px 12px;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.ht-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  font-size: 13px; align-items: center;
+  transition: background 0.12s; cursor: pointer;
+}
+.ht-row:last-child { border-bottom: none; }
+.ht-row:hover { background: rgba(255,255,255,0.03); }
+.ht-row.pr-row { background: var(--glass-bg-coach); }
+.ht-date { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.ht-val { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.ht-diff {
+  font-family: var(--font-mono); font-size: 11px;
+  display: flex; align-items: center; gap: 4px;
+}
+.diff-up { color: var(--coach); }
+.diff-down { color: var(--danger); }
+.diff-same { color: var(--muted); }
+
+.pr-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono); font-size: 7px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 2px 6px; border-radius: var(--r-full);
+  background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(247,233,40,0.22);
+}
+
+.range-chips { display: flex; gap: 6px; }
+.range-chip {
+  height: 26px; padding: 0 10px; border-radius: var(--r-full);
+  border: 1px solid var(--border); background: var(--glass-bg);
+  font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+  cursor: pointer; transition: all 0.15s;
+}
+.range-chip.active { background: var(--coach-dim); border-color: var(--coach-hi); color: var(--coach); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">M2M</div>
+      <div class="logo-sub">Coach Platform</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="s-nav-label">Dashboard</span>
+      </a>
+      <a href="athlete-detail.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span>
+        <span class="s-nav-label">Athletprofil</span>
+      </a>
+      <div class="sidebar-section-label">Träning</div>
+      <a href="program-builder.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span>
+        <span class="s-nav-label">Adapt Program</span>
+      </a>
+      <a href="exercise-library.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span>
+        <span class="s-nav-label">Övningsbibliotek</span>
+      </a>
+      <a href="sessions-list.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span>
+        <span class="s-nav-label">Sessioner</span>
+      </a>
+      <a href="session-timer.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span>
+        <span class="s-nav-label">Session Timer</span>
+      </a>
+      <a href="progression.html" class="s-nav-item active">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span>
+        <span class="s-nav-label">Progression</span>
+      </a>
+      <div class="sidebar-section-label">Kommunikation</div>
+      <a href="messages.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span>
+        <span class="s-nav-label">Meddelanden</span>
+      </a>
+      <a href="notes.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span>
+        <span class="s-nav-label">Anteckningar</span>
+      </a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span>
+        <span class="s-nav-label">Screening</span>
+      </a>
+      <a href="reports.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span>
+        <span class="s-nav-label">Rapporter</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-logo">Progression</div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">Progression</div>
+    </div>
+    <div class="page-body">
+      <!-- Controls -->
+      <div class="prog-controls">
+        <select class="prog-select" id="athSel" onchange="updateChart()">
+          <option>Alex Johansson</option>
+          <option>Marcus Eriksson</option>
+          <option>Johan Persson</option>
+          <option>Emma Andersson</option>
+          <option>Anton Lindqvist</option>
+        </select>
+        <select class="prog-select" id="exSel" onchange="updateChart()">
+          <option>Back Squat — kg</option>
+          <option>Marklyft — kg</option>
+          <option>Bänkpress — kg</option>
+          <option>400m Sprint — tid</option>
+          <option>2km Rodd — tid</option>
+        </select>
+        <div class="range-chips">
+          <button class="range-chip" onclick="setRange(this,'4v')">4V</button>
+          <button class="range-chip active" onclick="setRange(this,'12v')">12V</button>
+          <button class="range-chip" onclick="setRange(this,'6m')">6M</button>
+          <button class="range-chip" onclick="setRange(this,'1y')">1Å</button>
+        </div>
+      </div>
+
+      <!-- PR Strip -->
+      <div class="pr-strip">
+        <div class="pr-card">
+          <div class="pr-val">142<span class="pr-unit">kg</span></div>
+          <div class="pr-lbl">Personbästa</div>
+          <div class="pr-date">2026-05-14</div>
+        </div>
+        <div class="pr-card" style="background:var(--glass-bg);border-color:var(--glass-border);box-shadow:var(--glass-shadow)">
+          <div class="pr-val" style="color:var(--accent)">138<span class="pr-unit" style="color:var(--muted)">kg</span></div>
+          <div class="pr-lbl">Senaste</div>
+          <div class="pr-date">2026-06-06</div>
+        </div>
+        <div class="pr-card" style="background:var(--glass-bg);border-color:var(--glass-border);box-shadow:var(--glass-shadow)">
+          <div class="pr-val" style="color:var(--coach)">+14<span class="pr-unit" style="color:var(--muted)">kg</span></div>
+          <div class="pr-lbl">+12 veckor</div>
+          <div class="pr-date">från start</div>
+        </div>
+      </div>
+
+      <!-- Line chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title" id="chartTitle">Back Squat — Alex Johansson</div>
+            <div class="chart-subtitle" id="chartSub">12 veckor · Vikt i kg</div>
+          </div>
+        </div>
+        <div class="chart-area">
+          <svg class="chart-svg" height="180" id="chartSvg" viewBox="0 0 600 180" preserveAspectRatio="none">
+            <!-- Grid -->
+            <line x1="0" y1="36" x2="600" y2="36" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <line x1="0" y1="72" x2="600" y2="72" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <line x1="0" y1="108" x2="600" y2="108" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <line x1="0" y1="144" x2="600" y2="144" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <!-- Y labels -->
+            <text x="2" y="33" font-size="11" fill="rgba(255,255,255,0.32)" font-family="monospace">145</text>
+            <text x="2" y="69" font-size="11" fill="rgba(255,255,255,0.32)" font-family="monospace">135</text>
+            <text x="2" y="105" font-size="11" fill="rgba(255,255,255,0.32)" font-family="monospace">130</text>
+            <text x="2" y="141" font-size="11" fill="rgba(255,255,255,0.32)" font-family="monospace">125</text>
+            <!-- Area fill -->
+            <defs>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="rgba(0,212,170,0.22)"/>
+                <stop offset="100%" stop-color="rgba(0,212,170,0)"/>
+              </linearGradient>
+            </defs>
+            <path id="areaPath" fill="url(#areaGrad)"/>
+            <!-- Line -->
+            <path id="linePath" fill="none" stroke="var(--coach)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Data points -->
+            <g id="dotsGroup"></g>
+          </svg>
+        </div>
+        <!-- X-axis labels -->
+        <div style="display:flex;justify-content:space-between;margin-top:6px;padding:0 2px">
+          <span id="xLabels" style="display:flex;width:100%;justify-content:space-between;font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em"></span>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title" style="font-size:15px">Historik</div>
+        </div>
+        <div class="ht-header">
+          <span>Datum</span><span>Vikt</span><span>Förändring</span><span></span>
+        </div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+</div>
+
+<script>
+const DATA = {
+  'Back Squat — kg': [124,126,128,128,130,132,134,136,138,136,140,142,138],
+  'Marklyft — kg':   [150,152,154,156,158,158,160,162,164,166,168,170,168],
+  'Bänkpress — kg':  [90,92,92,94,94,96,96,98,98,100,100,102,100],
+  '400m Sprint — tid':[62,61.8,61.5,61,60.8,60.5,60.2,60,59.8,59.5,59.2,59,59.1],
+  '2km Rodd — tid':  [420,418,415,412,410,408,406,404,402,400,398,396,397],
+};
+const WEEKS = ['11M','18M','25M','1A','8A','15A','22A','29A','6M','13M','20M','27M','3J'];
+
+function setRange(el, r) {
+  document.querySelectorAll('.range-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  updateChart();
+}
+
+function updateChart() {
+  const exKey = document.getElementById('exSel').value;
+  const ath = document.getElementById('athSel').value.split(' ')[0];
+  document.getElementById('chartTitle').textContent = exKey.split(' — ')[0] + ' — ' + document.getElementById('athSel').value;
+  const raw = DATA[exKey] || DATA['Back Squat — kg'];
+  const unit = exKey.includes('tid') ? 's' : 'kg';
+  document.getElementById('chartSub').textContent = '12 veckor · ' + (unit === 's' ? 'Tid i sekunder' : 'Vikt i kg');
+  renderChart(raw, unit);
+}
+
+function renderChart(data, unit) {
+  const W = 600, H = 180, PAD = 28;
+  const vals = data;
+  const minV = Math.min(...vals) * 0.96;
+  const maxV = Math.max(...vals) * 1.02;
+  const pts = vals.map((v, i) => ({
+    x: PAD + (i / (vals.length - 1)) * (W - PAD * 2),
+    y: H - 16 - ((v - minV) / (maxV - minV)) * (H - 32)
+  }));
+  const lineD = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
+  const areaD = lineD + ` L${pts[pts.length-1].x},${H} L${pts[0].x},${H} Z`;
+  document.getElementById('linePath').setAttribute('d', lineD);
+  document.getElementById('areaPath').setAttribute('d', areaD);
+
+  const maxIdx = vals.indexOf(Math.max(...vals));
+  document.getElementById('dotsGroup').innerHTML = pts.map((p, i) => {
+    const isPR = i === maxIdx;
+    return `<circle cx="${p.x}" cy="${p.y}" r="${isPR ? 6 : 3.5}"
+      fill="${isPR ? 'var(--accent)' : 'var(--coach)'}"
+      stroke="${isPR ? '#000' : 'var(--screen-bg)'}"
+      stroke-width="${isPR ? 1.5 : 1.5}"/>`;
+  }).join('');
+
+  const labels = document.getElementById('xLabels');
+  labels.innerHTML = '';
+  [0, 3, 6, 9, 12].forEach(i => {
+    const sp = document.createElement('span');
+    sp.textContent = WEEKS[i] || '';
+    labels.appendChild(sp);
+  });
+
+  // History
+  const hist = document.getElementById('historyList');
+  hist.innerHTML = [...vals].reverse().map((v, i) => {
+    const idx = vals.length - 1 - i;
+    const prev = idx > 0 ? vals[idx - 1] : null;
+    const diff = prev !== null ? (v - prev).toFixed(1) : null;
+    const isPR = idx === maxIdx;
+    const diffHtml = diff === null ? '<span class="ht-diff diff-same">—</span>'
+      : parseFloat(diff) > 0 ? `<span class="ht-diff diff-up">↑ +${diff}${unit}</span>`
+      : parseFloat(diff) < 0 ? `<span class="ht-diff diff-down">↓ ${diff}${unit}</span>`
+      : `<span class="ht-diff diff-same">—</span>`;
+    return `<div class="ht-row ${isPR ? 'pr-row' : ''}">
+      <span class="ht-date">${WEEKS[idx]}</span>
+      <span class="ht-val">${v}<span style="font-size:10px;color:var(--muted);font-family:var(--font-mono)">${unit}</span></span>
+      ${diffHtml}
+      <span>${isPR ? '<span class="pr-badge">⭐ PR</span>' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function setRange(el, r) {
+  document.querySelectorAll('.range-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+updateChart();
+</script>
+</body>
+</html>

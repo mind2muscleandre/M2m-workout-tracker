@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Athletprofil</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted); cursor: pointer;
+  transition: color 0.15s; text-decoration: none;
+}
+.back-btn:hover { color: var(--fg); }
+
+/* Hero section */
+.athlete-hero {
+  padding: 20px;
+  display: flex; align-items: center; gap: 18px;
+  background: var(--glass-bg-coach);
+  border-bottom: 1px solid rgba(0,212,170,0.12);
+  flex-shrink: 0;
+}
+.hero-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 26px; font-weight: 700;
+  color: #000; flex-shrink: 0;
+  border: 2px solid var(--coach);
+  box-shadow: var(--glow-coach);
+  background: linear-gradient(135deg, rgba(0,212,170,0.50) 0%, rgba(0,212,170,0.18) 100%);
+}
+.hero-name { font-family: var(--font-display); font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; }
+.hero-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.hero-sport { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+/* Tab navigation */
+.tab-nav {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: 0 20px; height: 44px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.tab-btn.active { color: var(--coach); border-bottom-color: var(--coach); }
+
+/* Tab panels */
+.tab-panel { display: none; flex: 1; padding: 20px; overflow-y: auto; gap: 14px; flex-direction: column; }
+.tab-panel::-webkit-scrollbar { display: none; }
+.tab-panel.active { display: flex; }
+
+/* Goal card */
+.goal-card {
+  padding: 16px;
+  border-radius: var(--r-lg);
+}
+.goal-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.goal-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.goal-bar-row { display: flex; align-items: center; gap: 10px; }
+.goal-bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.goal-fill { height: 100%; border-radius: 4px; background: var(--coach); }
+.goal-pct-big { font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1; color: var(--coach); }
+
+/* Breakdown factors */
+.factors-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 900px) { .factors-grid { grid-template-columns: repeat(4, 1fr); } }
+.factor-card {
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+.factor-name { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+.factor-val { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.factor-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.factor-fill { height: 100%; border-radius: 2px; }
+
+/* Session log */
+.session-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  cursor: pointer; transition: background 0.15s;
+}
+.session-row:hover { background: var(--glass-bg-hi); }
+.session-date { font-family: var(--font-mono); font-size: 10px; color: var(--muted); width: 64px; flex-shrink: 0; }
+.session-type { flex: 1; }
+.session-type-name { font-size: 13px; font-weight: 500; }
+.session-type-sys { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.session-load { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--coach); }
+.session-load-label { font-family: var(--font-mono); font-size: 8px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+/* Adapt program section */
+.program-card {
+  padding: 16px;
+  border-radius: var(--r-lg);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+.prog-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+.prog-day {
+  border-radius: var(--r-sm);
+  padding: 6px 4px;
+  text-align: center;
+  background: var(--glass-bg-hi);
+  border: 1px solid var(--border);
+}
+.prog-day-label { font-family: var(--font-mono); font-size: 7px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.prog-day-type { font-size: 10px; font-weight: 600; margin-top: 4px; }
+.prog-day.rest { opacity: 0.4; }
+.prog-day.today { border-color: var(--coach); background: var(--coach-dim); }
+
+/* Routine checklist */
+.routine-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+.ri-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--glass-border-hi);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ri-check.done { background: var(--coach); border-color: var(--coach); }
+.ri-check.done svg { display: block; }
+.ri-check svg { display: none; width: 11px; height: 11px; stroke: #000; stroke-width: 2.5; }
+.ri-label { font-size: 13px; flex: 1; }
+.ri-time { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-mark">M2M</span><span class="logo-sub">COACH</span></div>
+    <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Trupp</span>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <span class="sidebar-section-label">Träning</span>
+      <a href="program-builder.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span><span class="s-nav-label">Adapt Program</span></a>
+      <a href="exercise-library.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span><span class="s-nav-label">Övningsbibliotek</span></a>
+      <a href="sessions-list.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span><span class="s-nav-label">Sessioner</span></a>
+      <a href="session-timer.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span><span class="s-nav-label">Session Timer</span></a>
+      <a href="progression.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span><span class="s-nav-label">Progression</span></a>
+      <span class="sidebar-section-label">Kommunikation</span>
+      <a href="messages.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span><span class="s-nav-label">Meddelanden</span></a>
+      <a href="notes.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span><span class="s-nav-label">Anteckningar</span></a>
+      <span class="sidebar-section-label">Hälsa &amp; Analys</span>
+      <a href="screening-hub.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">PL</div>
+        <div><div class="coach-footer-name">Per Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <!-- Hero -->
+    <div class="athlete-hero">
+      <a href="dashboard.html" class="back-btn" style="position:absolute;top:14px;left:16px">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 2L4 7l5 5"/></svg>
+        Tillbaka
+      </a>
+      <div style="width:100%;display:flex;align-items:center;gap:18px;margin-top:20px">
+        <div class="hero-avatar">AL</div>
+        <div style="flex:1;min-width:0">
+          <div class="hero-name">Alex Lindqvist</div>
+          <div class="hero-meta">
+            <span class="hero-sport">Simning · Sprint</span>
+            <span class="status-pill sp-training">Tränar</span>
+            <span class="sys-pill sys-atp">ATP-PC</span>
+          </div>
+        </div>
+        <div class="flex gap-8" style="flex-shrink:0">
+          <button class="btn btn-sm" onclick="window.location='messages.html'">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2V3a1 1 0 011-1z"/></svg>
+            Meddelande
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="window.location='session-timer.html'">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6.5" cy="8" r="4.5"/><path d="M6.5 5.5v2.5l1.5 1.5M4.5 1.5h4M6.5 1.5v2"/></svg>
+            Session
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="overview">Översikt</button>
+      <button class="tab-btn" data-tab="sessions">Sessioner</button>
+      <button class="tab-btn" data-tab="program">Adapt Program</button>
+      <button class="tab-btn" data-tab="goalsetter">Goalsetter</button>
+    </div>
+
+    <!-- Tab: Overview -->
+    <div class="tab-panel active" id="tab-overview">
+      <!-- Goal card -->
+      <div class="goal-card card card-coach">
+        <div class="section-label">Primärt mål</div>
+        <div class="goal-title">OS-Kvalificering — Paris 2028</div>
+        <div class="goal-sub">100m Fjärilsim · Måltid: 52.8s · Nuvarande PB: 54.1s</div>
+        <div class="goal-bar-row">
+          <div class="goal-bar-track"><div class="goal-fill" style="width:78%"></div></div>
+          <div class="goal-pct-big">78%</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px">
+          <span style="font-size:11px;color:var(--muted)">Startad: Jan 2026</span>
+          <span style="font-size:11px;color:var(--muted)">Deadline: Maj 2028</span>
+        </div>
+      </div>
+
+      <!-- Key factors breakdown -->
+      <div>
+        <div class="section-label mb-12">Nyckelfaktorer</div>
+        <div class="factors-grid">
+          <div class="factor-card">
+            <div class="factor-name">Teknik</div>
+            <div class="factor-val" style="color:var(--coach)">82%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:82%;background:var(--coach)"></div></div>
+          </div>
+          <div class="factor-card">
+            <div class="factor-name">Kondition</div>
+            <div class="factor-val" style="color:var(--accent)">74%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:74%;background:var(--accent)"></div></div>
+          </div>
+          <div class="factor-card">
+            <div class="factor-name">Styrka</div>
+            <div class="factor-val" style="color:var(--coach)">68%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:68%;background:var(--coach)"></div></div>
+          </div>
+          <div class="factor-card">
+            <div class="factor-name">Mental träning</div>
+            <div class="factor-val" style="color:var(--orange)">55%</div>
+            <div class="factor-bar"><div class="factor-fill" style="width:55%;background:var(--orange)"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="card" style="padding:16px">
+        <div class="section-label mb-12">Veckostatistik</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--border)">
+          <div style="padding:12px;text-align:center;border-right:1px solid var(--border)">
+            <div style="font-family:var(--font-display);font-size:26px;font-weight:700;color:var(--coach)">6</div>
+            <div class="stat-label">Sessioner</div>
+          </div>
+          <div style="padding:12px;text-align:center;border-right:1px solid var(--border)">
+            <div style="font-family:var(--font-display);font-size:26px;font-weight:700">14.2</div>
+            <div class="stat-label">Timmar i vatten</div>
+          </div>
+          <div style="padding:12px;text-align:center">
+            <div style="font-family:var(--font-display);font-size:26px;font-weight:700;color:var(--accent)">92%</div>
+            <div class="stat-label">Närvaro</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Sessions -->
+    <div class="tab-panel" id="tab-sessions">
+      <div class="section-label">Senaste 7 sessioner</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="session-row">
+          <div class="session-date">Idag</div>
+          <div class="session-type"><div class="session-type-name">Sprint-intervaller · Pool</div><div class="session-type-sys">ATP-PC · 90 min</div></div>
+          <div style="text-align:right"><div class="session-load">87</div><div class="session-load-label">Belastning</div></div>
+        </div>
+        <div class="session-row">
+          <div class="session-date">Igår</div>
+          <div class="session-type"><div class="session-type-name">Aerob grundkondition</div><div class="session-type-sys">Aerob · 120 min</div></div>
+          <div style="text-align:right"><div class="session-load" style="color:var(--muted-hi)">62</div><div class="session-load-label">Belastning</div></div>
+        </div>
+        <div class="session-row">
+          <div class="session-date">4 jun</div>
+          <div class="session-type"><div class="session-type-name">Styrketräning</div><div class="session-type-sys">Glykolytisk · 60 min</div></div>
+          <div style="text-align:right"><div class="session-load" style="color:var(--accent)">74</div><div class="session-load-label">Belastning</div></div>
+        </div>
+        <div class="session-row">
+          <div class="session-date">3 jun</div>
+          <div class="session-type"><div class="session-type-name">Teknikdrill</div><div class="session-type-sys">ATP-PC · 75 min</div></div>
+          <div style="text-align:right"><div class="session-load">91</div><div class="session-load-label">Belastning</div></div>
+        </div>
+        <div class="session-row">
+          <div class="session-date">2 jun</div>
+          <div class="session-type"><div class="session-type-name">Vila / Återhämtning</div><div class="session-type-sys">—</div></div>
+          <div style="text-align:right"><div class="session-load" style="color:var(--muted)">—</div><div class="session-load-label">Vila</div></div>
+        </div>
+        <div class="session-row">
+          <div class="session-date">1 jun</div>
+          <div class="session-type"><div class="session-type-name">Race pace-simning</div><div class="session-type-sys">ATP-PC · 90 min</div></div>
+          <div style="text-align:right"><div class="session-load">95</div><div class="session-load-label">Belastning</div></div>
+        </div>
+        <div class="session-row">
+          <div class="session-date">31 maj</div>
+          <div class="session-type"><div class="session-type-name">Lätt distans</div><div class="session-type-sys">Aerob · 100 min</div></div>
+          <div style="text-align:right"><div class="session-load" style="color:var(--muted-hi)">55</div><div class="session-load-label">Belastning</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Adapt Program -->
+    <div class="tab-panel" id="tab-program">
+      <div class="section-label">Aktiv plan — Adapt v3.1</div>
+      <div class="program-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div style="font-size:14px;font-weight:600">Sprint-block 4/8</div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Fas: Toppning · Vecka 4 av 8</div>
+          </div>
+          <button class="btn btn-sm btn-primary" onclick="window.location='program-builder.html'">Redigera</button>
+        </div>
+        <div class="prog-week">
+          <div class="prog-day"><div class="prog-day-label">MÅN</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+          <div class="prog-day"><div class="prog-day-label">TIS</div><div class="prog-day-type" style="color:var(--muted)">AERO</div></div>
+          <div class="prog-day"><div class="prog-day-label">ONS</div><div class="prog-day-type" style="color:var(--accent)">STYRKA</div></div>
+          <div class="prog-day"><div class="prog-day-label">TOR</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+          <div class="prog-day today"><div class="prog-day-label">FRE</div><div class="prog-day-type" style="color:var(--coach)">ATP</div></div>
+          <div class="prog-day rest"><div class="prog-day-label">LÖR</div><div class="prog-day-type" style="color:var(--muted)">VILA</div></div>
+          <div class="prog-day rest"><div class="prog-day-label">SÖN</div><div class="prog-day-type" style="color:var(--muted)">VILA</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:16px">
+        <div class="section-label mb-12">Dagens session — Idag</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">Sprint-intervaller 8×50m</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Uppvärmning 20min → Drills 15min → Intervaller 8×50m med 90s vila → Nedvarvning 15min</div>
+        <button class="btn btn-primary" style="width:100%" onclick="window.location='session-timer.html'">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="8" r="5"/><path d="M7 5v3l2 2M4.5 1.5h5M7 1.5v2"/></svg>
+          Starta session nu
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab: Goalsetter -->
+    <div class="tab-panel" id="tab-goalsetter">
+      <div class="section-label">Dagliga rutiner</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="routine-item">
+          <div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="ri-label">Morgonmobility 15 min</span>
+          <span class="ri-time">06:45</span>
+        </div>
+        <div class="routine-item">
+          <div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="ri-label">Frukost + hydrering</span>
+          <span class="ri-time">07:30</span>
+        </div>
+        <div class="routine-item">
+          <div class="ri-check done"><svg viewBox="0 0 11 11" fill="none" stroke="currentColor"><path d="M2 5.5l2.5 2.5L9 3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="ri-label">Träningssession AM</span>
+          <span class="ri-time">09:15</span>
+        </div>
+        <div class="routine-item">
+          <div class="ri-check"></div>
+          <span class="ri-label">Proteinkost efter session</span>
+          <span class="ri-time" style="color:var(--muted)">—</span>
+        </div>
+        <div class="routine-item">
+          <div class="ri-check"></div>
+          <span class="ri-label">Mental visualisering 10 min</span>
+          <span class="ri-time" style="color:var(--muted)">—</span>
+        </div>
+        <div class="routine-item">
+          <div class="ri-check"></div>
+          <span class="ri-label">Kvällsmobility + sömn 22:00</span>
+          <span class="ri-time" style="color:var(--muted)">—</span>
+        </div>
+      </div>
+
+      <div class="card card-accent" style="padding:14px;margin-top:6px">
+        <div class="section-label" style="color:var(--accent)">Season Mode — Aktiv</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Toppningsfas: 28 dagar kvar</div>
+        <div style="font-size:11px;color:var(--muted)">SM simning 4 jul 2026 · Göteborg Sim-arena</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Topbar (mobile) -->
+  <header class="topbar">
+    <a href="dashboard.html" class="back-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 2L4 7l5 5"/></svg></a>
+    <span class="topbar-logo">Alex Lindqvist</span>
+    <button class="icon-btn" style="border:none;background:none;width:32px;height:32px" onclick="window.location='session-timer.html'">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg>
+    </button>
+  </header>
+</div>
+
+<nav class="bottom-nav" id="mobileBottomNav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="session-timer.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Session</span></a>
+  <a href="messages.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+
+<script>
+const tabs = document.querySelectorAll(".tab-btn");
+const panels = document.querySelectorAll(".tab-panel");
+tabs.forEach(btn => {
+  btn.addEventListener("click", () => {
+    tabs.forEach(t => t.classList.remove("active"));
+    panels.forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+</script>
+</body>
+</html>

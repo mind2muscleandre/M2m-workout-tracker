@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Rörelsebedömning</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.step-indicator {
+  display: flex; align-items: center; gap: 0; margin-bottom: 20px;
+}
+.step { display: flex; align-items: center; gap: 6px; }
+.step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  background: var(--glass-bg); border: 1px solid var(--border); color: var(--muted);
+}
+.step-num.done { background: rgba(0,212,170,0.2); border-color: rgba(0,212,170,0.4); color: var(--coach); }
+.step-num.active { background: var(--coach); border-color: var(--coach); color: #000; }
+.step-label { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.step-label.active { color: var(--coach); }
+.step-sep { flex: 1; height: 1px; background: var(--border); min-width: 12px; }
+
+.section-card {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg); overflow: hidden; margin-bottom: 12px;
+}
+.sc-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; cursor: pointer;
+  border-bottom: 1px solid transparent; transition: background 0.15s;
+}
+.sc-header:hover { background: rgba(255,255,255,0.03); }
+.sc-header.open { border-bottom-color: var(--border); }
+.sc-icon {
+  width: 32px; height: 32px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  font-size: 16px;
+}
+.sc-title { flex: 1; font-size: 14px; font-weight: 600; }
+.sc-score {
+  font-family: var(--font-display); font-size: 20px; font-weight: 700;
+  flex-shrink: 0; min-width: 32px; text-align: right;
+}
+.sc-chevron {
+  color: var(--muted); transition: transform 0.2s; flex-shrink: 0;
+}
+.sc-chevron.open { transform: rotate(90deg); }
+.sc-body { padding: 14px 16px; display: none; }
+.sc-body.open { display: block; }
+
+.criteria-item { margin-bottom: 16px; }
+.ci-label { font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+.score-buttons { display: flex; gap: 5px; }
+.score-btn {
+  flex: 1; height: 36px; border-radius: var(--r-md);
+  background: var(--glass-bg); border: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  color: var(--muted); cursor: pointer; transition: all 0.15s;
+}
+.score-btn:hover { background: var(--glass-bg-hi); }
+.score-btn.sel-1, .score-btn.sel-2 { background: rgba(255,69,69,0.12); border-color: rgba(255,69,69,0.3); color: var(--danger); }
+.score-btn.sel-3 { background: var(--accent-dim); border-color: rgba(247,233,40,0.3); color: var(--accent); }
+.score-btn.sel-4, .score-btn.sel-5 { background: var(--coach-dim); border-color: rgba(0,212,170,0.3); color: var(--coach); }
+
+.ci-note {
+  width: 100%; padding: 8px 10px; margin-top: 6px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: var(--r-md); color: var(--muted-hi); font-size: 12px;
+  outline: none; font-family: var(--font-body); resize: vertical; min-height: 56px;
+}
+.ci-note:focus { border-color: var(--coach); background: rgba(0,212,170,0.04); }
+.ci-note::placeholder { color: var(--muted); }
+
+.score-labels {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 8px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted); margin-bottom: 4px;
+}
+
+.submit-bar {
+  display: flex; gap: 8px; padding: 16px 0 0;
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar (condensed for space — full nav same as other screens) -->
+  <nav class="sidebar">
+    <div class="sidebar-logo"><div class="logo-mark">M2M</div><div class="logo-sub">Coach Platform</div></div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="movement-client-pick.html" class="icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="topbar-logo" style="font-size:15px">Bedömning</div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="page-header">
+      <a href="movement-client-pick.html" class="icon-btn" style="flex-shrink:0"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></a>
+      <div class="page-title">Rörelsebedömning</div>
+      <div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--coach);flex-shrink:0">Johan Persson</div>
+    </div>
+    <div class="page-body">
+
+      <div class="step-indicator">
+        <div class="step"><div class="step-num done">✓</div><div class="step-label">Atlet</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num active">2</div><div class="step-label active">Bedömning</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num">3</div><div class="step-label">Program</div></div>
+        <div class="step-sep"></div>
+        <div class="step"><div class="step-num">4</div><div class="step-label">Resultat</div></div>
+      </div>
+
+      <!-- Section: Hållning -->
+      <div class="section-card" id="sec-posture">
+        <div class="sc-header open" onclick="toggleSection('posture')">
+          <div class="sc-icon" style="background:rgba(0,212,170,0.12)">🧍</div>
+          <div class="sc-title">Hållning</div>
+          <div class="sc-score" id="score-posture" style="color:var(--coach)">3.5</div>
+          <svg class="sc-chevron open" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="sc-body open" id="body-posture">
+          <div class="criteria-item">
+            <div class="ci-label">Huvudposition / framåtlutning</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons" data-sec="posture" data-ci="head">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn sel-3" onclick="setScore(this,3)">3</button>
+              <button class="score-btn" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <div class="criteria-item">
+            <div class="ci-label">Skulderposition / symmetri</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons" data-sec="posture" data-ci="shoulder">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn" onclick="setScore(this,3)">3</button>
+              <button class="score-btn sel-4" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <div class="criteria-item">
+            <div class="ci-label">Lumbarkurva / svankrygg</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons" data-sec="posture" data-ci="lumbar">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn" onclick="setScore(this,3)">3</button>
+              <button class="score-btn sel-4" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <textarea class="ci-note" placeholder="Observationer om hållning…"></textarea>
+        </div>
+      </div>
+
+      <!-- Section: Rörlighet -->
+      <div class="section-card" id="sec-mobility">
+        <div class="sc-header" onclick="toggleSection('mobility')">
+          <div class="sc-icon" style="background:rgba(247,233,40,0.10)">🤸</div>
+          <div class="sc-title">Rörlighet</div>
+          <div class="sc-score" id="score-mobility" style="color:var(--accent)">2.7</div>
+          <svg class="sc-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="sc-body" id="body-mobility">
+          <div class="criteria-item">
+            <div class="ci-label">Höftrörlighet (flexion / extension)</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn sel-2" onclick="setScore(this,2)">2</button>
+              <button class="score-btn" onclick="setScore(this,3)">3</button>
+              <button class="score-btn" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <div class="criteria-item">
+            <div class="ci-label">Axelrörlighet (inre / yttre rotation)</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn sel-3" onclick="setScore(this,3)">3</button>
+              <button class="score-btn" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <div class="criteria-item">
+            <div class="ci-label">Ankelrörlighet / dorsalflexion</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn sel-2" onclick="setScore(this,2)">2</button>
+              <button class="score-btn" onclick="setScore(this,3)">3</button>
+              <button class="score-btn" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <textarea class="ci-note" placeholder="Observationer om rörlighet…"></textarea>
+        </div>
+      </div>
+
+      <!-- Section: Kärna -->
+      <div class="section-card" id="sec-core">
+        <div class="sc-header" onclick="toggleSection('core')">
+          <div class="sc-icon" style="background:rgba(255,95,31,0.10)">💪</div>
+          <div class="sc-title">Kärna & Stabilitet</div>
+          <div class="sc-score" id="score-core" style="color:var(--orange)">3.0</div>
+          <svg class="sc-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="sc-body" id="body-core">
+          <div class="criteria-item">
+            <div class="ci-label">Plankan — håll- och aktiveringsförmåga</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn sel-3" onclick="setScore(this,3)">3</button>
+              <button class="score-btn" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <div class="criteria-item">
+            <div class="ci-label">Enbenslandning / lateral stabilitet</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn" onclick="setScore(this,3)">3</button>
+              <button class="score-btn sel-3" onclick="setScore(this,3)">3</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <textarea class="ci-note" placeholder="Observationer om kärna och stabilitet…"></textarea>
+        </div>
+      </div>
+
+      <!-- Section: Mental -->
+      <div class="section-card" id="sec-mental">
+        <div class="sc-header" onclick="toggleSection('mental')">
+          <div class="sc-icon" style="background:rgba(139,92,246,0.10)">🧠</div>
+          <div class="sc-title">Koordination & Mental</div>
+          <div class="sc-score" id="score-mental" style="color:#8b5cf6">4.0</div>
+          <svg class="sc-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="sc-body" id="body-mental">
+          <div class="criteria-item">
+            <div class="ci-label">Rörelseprecision under trötthet</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn" onclick="setScore(this,3)">3</button>
+              <button class="score-btn sel-4" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <div class="criteria-item">
+            <div class="ci-label">Reaktion och spatialt medvetande</div>
+            <div class="score-labels"><span>Kritisk (1)</span><span>Utmärkt (5)</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" onclick="setScore(this,1)">1</button>
+              <button class="score-btn" onclick="setScore(this,2)">2</button>
+              <button class="score-btn" onclick="setScore(this,3)">3</button>
+              <button class="score-btn sel-4" onclick="setScore(this,4)">4</button>
+              <button class="score-btn" onclick="setScore(this,5)">5</button>
+            </div>
+          </div>
+          <textarea class="ci-note" placeholder="Observationer…"></textarea>
+        </div>
+      </div>
+
+      <div class="submit-bar">
+        <a href="movement-client-pick.html" class="btn" style="flex:1;justify-content:center">Tillbaka</a>
+        <button class="btn btn-primary" style="flex:2;justify-content:center" onclick="window.location.href='movement-program-builder.html'">
+          Fortsätt till program →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+    <a href="sessions-list.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg><span class="bn-label">Sessioner</span></a>
+    <a href="messages.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span class="bn-label">Chatt</span></a>
+    <a href="screening-hub.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg><span class="bn-label">Screening</span></a>
+    <a href="profile.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="7" r="3.5"/><path d="M3 18c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg><span class="bn-label">Profil</span></a>
+  </nav>
+</div>
+
+<script>
+function toggleSection(id) {
+  const header = document.querySelector(`#sec-${id} .sc-header`);
+  const body = document.getElementById(`body-${id}`);
+  const chevron = header.querySelector('.sc-chevron');
+  header.classList.toggle('open');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function setScore(btn, val) {
+  const group = btn.parentElement;
+  group.querySelectorAll('.score-btn').forEach(b => {
+    b.className = 'score-btn';
+  });
+  btn.className = `score-btn sel-${val}`;
+}
+</script>
+</body>
+</html>

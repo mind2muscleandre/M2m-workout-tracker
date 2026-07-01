@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Session Timer</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+/* ── Timer-specific styles ── */
+.timer-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  padding-bottom: 80px;
+}
+@media (min-width: 900px) {
+  .timer-layout {
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+    padding-bottom: 20px;
+  }
+  .timer-layout .col-right { overflow-y: auto; }
+  .timer-layout .col-right::-webkit-scrollbar { display: none; }
+}
+.timer-layout::-webkit-scrollbar { display: none; }
+
+/* Big timer display */
+.timer-ring-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 20px 0;
+}
+.timer-ring-svg { width: min(260px, 70vw); height: min(260px, 70vw); }
+.timer-ring-track { fill: none; stroke: var(--border); stroke-width: 8; }
+.timer-ring-fill {
+  fill: none; stroke: var(--coach); stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 720;
+  stroke-dashoffset: 180;
+  transform-origin: center; transform: rotate(-90deg);
+  transition: stroke-dashoffset 1s linear, stroke 0.3s;
+}
+.timer-ring-fill.rest-mode { stroke: var(--accent); }
+.timer-display {
+  position: absolute;
+  display: flex; flex-direction: column; align-items: center;
+}
+.timer-time {
+  font-family: var(--font-display); font-size: clamp(44px, 10vw, 72px);
+  font-weight: 700; line-height: 1; letter-spacing: 0.02em;
+  color: var(--fg);
+}
+.timer-mode-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted);
+  margin-top: 4px;
+}
+.timer-phase {
+  font-family: var(--font-mono); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.10em;
+  color: var(--coach); margin-top: 8px;
+}
+
+/* Controls */
+.timer-controls { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 16px; }
+.ctrl-btn {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted-hi); cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: var(--glass-shadow);
+}
+.ctrl-btn:hover { background: var(--glass-bg-hi); color: var(--fg); }
+.ctrl-btn.primary {
+  width: 72px; height: 72px;
+  background: var(--coach);
+  border-color: var(--coach);
+  color: #000;
+  box-shadow: var(--glow-coach);
+}
+.ctrl-btn.primary:hover { background: oklch(80% 0.14 165); }
+.ctrl-btn.primary.running { background: var(--danger); border-color: var(--danger); box-shadow: var(--glow-alert); }
+.ctrl-btn.primary svg { width: 24px; height: 24px; }
+.ctrl-btn svg { width: 20px; height: 20px; }
+
+/* Set tracker */
+.set-dots { display: flex; gap: 6px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+.set-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  transition: all 0.2s;
+}
+.set-dot.done { background: var(--coach); border-color: var(--coach); box-shadow: 0 0 6px rgba(0,212,170,0.50); }
+.set-dot.current { border-color: var(--coach); box-shadow: 0 0 8px rgba(0,212,170,0.40); }
+
+/* Exercise queue */
+.ex-queue { display: flex; flex-direction: column; gap: 6px; }
+.eq-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  transition: all 0.15s;
+}
+.eq-item.active-ex {
+  background: var(--glass-bg-coach);
+  border-color: rgba(0,212,170,0.28);
+  box-shadow: var(--glass-shadow-coach);
+}
+.eq-item.done-ex { opacity: 0.40; }
+.eq-num { font-family: var(--font-mono); font-size: 10px; color: var(--muted); width: 18px; }
+.eq-name { flex: 1; font-size: 13px; font-weight: 500; }
+.eq-detail { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.eq-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--glass-border-hi);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--coach); flex-shrink: 0;
+}
+.eq-check.done { background: var(--coach); border-color: var(--coach); color: #000; }
+.eq-check svg { width: 10px; height: 10px; }
+
+/* Session info strip */
+.sess-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-radius: var(--r-lg); overflow: hidden;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+}
+.ss-cell {
+  padding: 10px 8px; text-align: center;
+  border-right: 1px solid var(--border);
+}
+.ss-cell:last-child { border-right: none; }
+.ss-val { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1; color: var(--coach); }
+.ss-lbl { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-mark">M2M</span><span class="logo-sub">COACH</span></div>
+    <nav class="sidebar-nav">
+          <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Trupp</span>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <span class="sidebar-section-label">Träning</span>
+      <a href="program-builder.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span><span class="s-nav-label">Adapt Program</span></a>
+      <a href="exercise-library.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span><span class="s-nav-label">Övningsbibliotek</span></a>
+      <a href="sessions-list.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span><span class="s-nav-label">Sessioner</span></a>
+      <a href="session-timer.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span><span class="s-nav-label">Session Timer</span></a>
+      <a href="progression.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span><span class="s-nav-label">Progression</span></a>
+      <span class="sidebar-section-label">Kommunikation</span>
+      <a href="messages.html" class="s-nav-item"><span class="s-nav-icon" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:-3px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--orange)"></span></span><span class="s-nav-label">Meddelanden <span class="alert-badge" style="margin-left:auto">3</span></span></a>
+      <a href="notes.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span><span class="s-nav-label">Anteckningar</span></a>
+      <span class="sidebar-section-label">Hälsa &amp; Analys</span>
+      <a href="screening-hub.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">PL</div>
+        <div><div class="coach-footer-name">Per Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Session Timer</h1>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px">Alex Lindqvist · Sprint-intervaller 8×50m · ATP-PC</div>
+      </div>
+      <div class="page-header-actions">
+        <span class="sys-pill sys-atp">ATP-PC</span>
+        <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(255,69,69,0.30);background:rgba(255,69,69,0.07)" id="endBtn" onclick="endSession()">Avsluta</button>
+      </div>
+    </header>
+
+    <div class="timer-layout">
+      <!-- LEFT/TOP: Timer -->
+      <div class="col-left" style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Session stats strip -->
+        <div class="sess-strip">
+          <div class="ss-cell"><div class="ss-val" id="elapsedDisp">00:00</div><div class="ss-lbl">Förfluten tid</div></div>
+          <div class="ss-cell"><div class="ss-val" id="setsDisp">0/8</div><div class="ss-lbl">Set</div></div>
+          <div class="ss-cell"><div class="ss-val" id="repDisp">3</div><div class="ss-lbl">Nuv. övning</div></div>
+          <div class="ss-cell"><div class="ss-val" id="restCountDisp">0</div><div class="ss-lbl">Vilor kvar</div></div>
+        </div>
+
+        <!-- Timer ring -->
+        <div class="card" style="padding:20px">
+          <div class="timer-ring-wrap" style="position:relative">
+            <svg class="timer-ring-svg" viewBox="0 0 240 240">
+              <circle class="timer-ring-track" cx="120" cy="120" r="104"/>
+              <circle class="timer-ring-fill" id="timerRing" cx="120" cy="120" r="104"/>
+            </svg>
+            <div class="timer-display">
+              <div class="timer-time" id="timerDisplay">01:30</div>
+              <div class="timer-mode-label" id="modeLabel">VILOTIMER</div>
+              <div class="timer-phase" id="phaseLabel">Set 3 av 8 · Nästa: 50m Sprint</div>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="timer-controls">
+            <button class="ctrl-btn" title="Föregående" onclick="prevSet()">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 5v10M13 5l-6 5 6 5"/></svg>
+            </button>
+            <button class="ctrl-btn primary" id="mainBtn" onclick="toggleTimer()">
+              <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+            </button>
+            <button class="ctrl-btn" title="Nästa set" onclick="nextSet()">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M13 5v10M7 5l6 5-6 5"/></svg>
+            </button>
+          </div>
+
+          <!-- Set dots -->
+          <div class="set-dots" id="setDots"></div>
+        </div>
+
+        <!-- Quick timer presets -->
+        <div class="card" style="padding:14px">
+          <div class="section-label mb-12">Vilotid snabbval</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="ftab" onclick="setRestTime(30)">30s</button>
+            <button class="ftab active" onclick="setRestTime(90)">90s</button>
+            <button class="ftab" onclick="setRestTime(120)">2 min</button>
+            <button class="ftab" onclick="setRestTime(180)">3 min</button>
+            <button class="ftab" onclick="setRestTime(300)">5 min</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Exercise queue -->
+      <div class="col-right" style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="padding:16px">
+          <div class="section-label mb-12">Övningsordning</div>
+          <div class="ex-queue">
+            <div class="eq-item done-ex">
+              <span class="eq-num">1</span>
+              <div class="eq-name">Uppvärmning 400m</div>
+              <span class="eq-detail">1 × lugn</span>
+              <div class="eq-check done"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 5l2.5 2.5L8.5 2.5"/></svg></div>
+            </div>
+            <div class="eq-item done-ex">
+              <span class="eq-num">2</span>
+              <div class="eq-name">Teknikdrill arm</div>
+              <span class="eq-detail">4 × 25m</span>
+              <div class="eq-check done"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 5l2.5 2.5L8.5 2.5"/></svg></div>
+            </div>
+            <div class="eq-item active-ex">
+              <span class="eq-num" style="color:var(--coach)">3</span>
+              <div class="eq-name">Sprint-intervall</div>
+              <span class="eq-detail" style="color:var(--coach)">3/8 × 50m</span>
+              <div class="eq-check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 2v6M2 5h6"/></svg></div>
+            </div>
+            <div class="eq-item">
+              <span class="eq-num">4</span>
+              <div class="eq-name">Kick-drill</div>
+              <span class="eq-detail">4 × 50m</span>
+              <div class="eq-check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 2v6M2 5h6"/></svg></div>
+            </div>
+            <div class="eq-item">
+              <span class="eq-num">5</span>
+              <div class="eq-name">Nedvarvning 300m</div>
+              <span class="eq-detail">1 × lugn</span>
+              <div class="eq-check"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 2v6M2 5h6"/></svg></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coach note -->
+        <div class="card" style="padding:14px">
+          <div class="section-label mb-8">Coach-anteckning</div>
+          <textarea style="width:100%;background:none;border:none;outline:none;font-family:var(--font-body);font-size:13px;color:var(--fg);resize:none;line-height:1.5;min-height:80px" placeholder="Notera teknik, prestanda, känsla…"></textarea>
+        </div>
+
+        <!-- Goalsetter sync -->
+        <div class="card card-coach" style="padding:12px;display:flex;align-items:center;gap:12px">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--coach)" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><path d="M7 10l2 2 4-4"/></svg>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600">Goalsetter synkroniserar</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:1px">Session räknas mot "ATP-PC"-faktorn i Alexs mål</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Topbar (mobile) -->
+  <header class="topbar">
+    <a href="dashboard.html" class="flex items-center" style="color:var(--muted)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 4L6 9l5 5"/></svg></a>
+    <span class="topbar-logo">Timer</span>
+    <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(255,69,69,0.30);background:rgba(255,69,69,0.07)" onclick="endSession()">Avsluta</button>
+  </header>
+</div>
+
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+
+<script>
+const TOTAL_SETS = 8;
+let currentSet = 2; // 0-indexed, so 3 done = index 2
+let restDuration = 90;
+let remaining = 90;
+let running = false;
+let interval = null;
+let elapsedSec = 0;
+let elapsedInterval = null;
+
+const ring = document.getElementById("timerRing");
+const disp = document.getElementById("timerDisplay");
+const modeLabel = document.getElementById("modeLabel");
+const phaseLabel = document.getElementById("phaseLabel");
+const mainBtn = document.getElementById("mainBtn");
+const playIcon = document.getElementById("playIcon");
+const pauseIcon = document.getElementById("pauseIcon");
+const circumference = 2 * Math.PI * 104; // 653.12
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60), sec = s % 60;
+  return `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+}
+
+function updateRing() {
+  const pct = remaining / restDuration;
+  const offset = circumference * (1 - pct);
+  ring.style.strokeDasharray = circumference;
+  ring.style.strokeDashoffset = offset;
+  disp.textContent = fmtTime(remaining);
+}
+
+function renderDots() {
+  const container = document.getElementById("setDots");
+  container.innerHTML = "";
+  for (let i = 0; i < TOTAL_SETS; i++) {
+    const d = document.createElement("div");
+    d.className = "set-dot" + (i < currentSet ? " done" : i === currentSet ? " current" : "");
+    container.appendChild(d);
+  }
+  document.getElementById("setsDisp").textContent = `${currentSet}/${TOTAL_SETS}`;
+  document.getElementById("restCountDisp").textContent = Math.max(0, TOTAL_SETS - currentSet - 1);
+}
+
+function toggleTimer() {
+  running = !running;
+  if (running) {
+    playIcon.style.display = "none";
+    pauseIcon.style.display = "block";
+    mainBtn.classList.add("running");
+    interval = setInterval(() => {
+      if (remaining <= 0) {
+        clearInterval(interval);
+        running = false;
+        playIcon.style.display = "block";
+        pauseIcon.style.display = "none";
+        mainBtn.classList.remove("running");
+        currentSet = Math.min(currentSet + 1, TOTAL_SETS);
+        remaining = restDuration;
+        renderDots();
+        updateRing();
+        phaseLabel.textContent = `Set ${currentSet + 1} av ${TOTAL_SETS} · Nästa: 50m Sprint`;
+      } else {
+        remaining--;
+        updateRing();
+      }
+    }, 1000);
+  } else {
+    clearInterval(interval);
+    playIcon.style.display = "block";
+    pauseIcon.style.display = "none";
+    mainBtn.classList.remove("running");
+  }
+}
+
+function nextSet() {
+  clearInterval(interval); running = false;
+  playIcon.style.display = "block"; pauseIcon.style.display = "none";
+  mainBtn.classList.remove("running");
+  currentSet = Math.min(currentSet + 1, TOTAL_SETS);
+  remaining = restDuration;
+  renderDots(); updateRing();
+  phaseLabel.textContent = `Set ${currentSet + 1} av ${TOTAL_SETS} · Nästa: 50m Sprint`;
+}
+
+function prevSet() {
+  clearInterval(interval); running = false;
+  playIcon.style.display = "block"; pauseIcon.style.display = "none";
+  mainBtn.classList.remove("running");
+  currentSet = Math.max(currentSet - 1, 0);
+  remaining = restDuration;
+  renderDots(); updateRing();
+  phaseLabel.textContent = `Set ${currentSet + 1} av ${TOTAL_SETS} · Nästa: 50m Sprint`;
+}
+
+function setRestTime(s) {
+  clearInterval(interval); running = false;
+  playIcon.style.display = "block"; pauseIcon.style.display = "none";
+  mainBtn.classList.remove("running");
+  restDuration = s; remaining = s;
+  document.querySelectorAll(".ftab").forEach(t => t.classList.remove("active"));
+  event.target.classList.add("active");
+  updateRing();
+}
+
+function endSession() {
+  clearInterval(interval);
+  window.location = "athlete-detail.html";
+}
+
+// Elapsed timer
+elapsedInterval = setInterval(() => {
+  elapsedSec++;
+  document.getElementById("elapsedDisp").textContent = fmtTime(elapsedSec);
+}, 1000);
+
+ring.style.strokeDasharray = circumference;
+renderDots();
+updateRing();
+</script>
+</body>
+</html>

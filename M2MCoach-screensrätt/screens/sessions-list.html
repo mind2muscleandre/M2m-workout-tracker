@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Sessioner</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+.session-card {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 14px 16px; border-radius: var(--r-lg);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  cursor: pointer; transition: background 0.15s; margin-bottom: 8px;
+  text-decoration: none; color: inherit;
+}
+.session-card:hover { background: var(--glass-bg-hi); }
+.session-card.active-session {
+  background: var(--glass-bg-coach);
+  border-color: rgba(0,212,170,0.22);
+  box-shadow: var(--glass-shadow-coach);
+}
+
+.sc-status-bar {
+  width: 3px; border-radius: 2px; align-self: stretch; flex-shrink: 0;
+}
+.ssb-active { background: var(--coach); box-shadow: var(--glow-coach); }
+.ssb-planned { background: var(--accent); }
+.ssb-done { background: var(--border-hi); }
+.ssb-cancelled { background: var(--danger); }
+
+.sc-body { flex: 1; min-width: 0; }
+.sc-title { font-size: 14px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+.sc-athlete {
+  font-family: var(--font-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--coach); margin-bottom: 7px;
+}
+.sc-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.sc-meta-item {
+  display: flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+}
+.sc-meta-item svg { width: 11px; height: 11px; }
+
+.sc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.sc-date {
+  font-family: var(--font-mono); font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.sc-actions { display: flex; gap: 6px; }
+.sc-action-btn {
+  height: 28px; padding: 0 10px; border-radius: var(--r-md);
+  font-size: 11px; font-weight: 500;
+  background: var(--glass-bg-hi); border: 1px solid var(--glass-border);
+  cursor: pointer; transition: background 0.15s; color: var(--muted-hi);
+  display: flex; align-items: center; gap: 5px;
+}
+.sc-action-btn:hover { background: var(--glass-bg); }
+.sc-action-btn.primary { background: var(--coach); border-color: var(--coach); color: #000; font-weight: 600; }
+.sc-action-btn.primary:hover { background: oklch(80% 0.14 165); }
+.sc-action-btn svg { width: 11px; height: 11px; }
+
+.day-group { margin-bottom: 20px; }
+.day-header {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.10em; color: var(--muted);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.day-header::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.live-indicator {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--coach); padding: 2px 8px; border-radius: var(--r-full);
+  background: var(--coach-dim); border: 1px solid rgba(0,212,170,0.22);
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--coach);
+  animation: livepulse 1.4s ease-in-out infinite;
+}
+@keyframes livepulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.load-bar {
+  height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+  width: 48px; flex-shrink: 0; margin-top: 4px;
+}
+.load-fill { height: 100%; border-radius: 2px; }
+.load-hi { background: var(--coach); }
+.load-med { background: var(--accent); }
+.load-lo { background: var(--border-hi); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">M2M</div>
+      <div class="logo-sub">Coach Platform</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Trupp</div>
+      <a href="dashboard.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="s-nav-label">Dashboard</span>
+      </a>
+      <a href="athlete-detail.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span>
+        <span class="s-nav-label">Athletprofil</span>
+      </a>
+      <div class="sidebar-section-label">Träning</div>
+      <a href="program-builder.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span>
+        <span class="s-nav-label">Adapt Program</span>
+      </a>
+      <a href="exercise-library.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span>
+        <span class="s-nav-label">Övningsbibliotek</span>
+      </a>
+      <a href="sessions-list.html" class="s-nav-item active">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span>
+        <span class="s-nav-label">Sessioner</span>
+      </a>
+      <a href="session-timer.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span>
+        <span class="s-nav-label">Session Timer</span>
+      </a>
+      <a href="progression.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span>
+        <span class="s-nav-label">Progression</span>
+      </a>
+      <div class="sidebar-section-label">Kommunikation</div>
+      <a href="messages.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span>
+        <span class="s-nav-label">Meddelanden</span>
+      </a>
+      <a href="notes.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span>
+        <span class="s-nav-label">Anteckningar</span>
+      </a>
+      <div class="sidebar-section-label">Hälsa & Analys</div>
+      <a href="screening-hub.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span>
+        <span class="s-nav-label">Screening</span>
+      </a>
+      <a href="reports.html" class="s-nav-item">
+        <span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span>
+        <span class="s-nav-label">Rapporter</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">EL</div>
+        <div><div class="coach-footer-name">Erik Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-logo">Sessioner</div>
+    <div class="topbar-actions">
+      <a href="create-session.html" class="btn btn-primary btn-sm">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 2v9M2 6.5h9"/></svg>
+        Ny
+      </a>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title">Sessioner</div>
+      <div class="search-bar" style="flex:1;max-width:260px">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4"/><path d="M10 10l2.5 2.5"/></svg>
+        <input type="text" placeholder="Sök atlet eller session…">
+      </div>
+      <div class="page-header-actions">
+        <a href="create-session.html" class="btn btn-primary btn-sm">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 2v9M2 6.5h9"/></svg>
+          Ny session
+        </a>
+      </div>
+    </div>
+    <div class="page-body">
+      <!-- Filter -->
+      <div class="filter-row" style="margin-bottom:20px">
+        <button class="ftab active"><span class="ftab-dot" style="background:var(--muted)"></span>Alla</button>
+        <button class="ftab"><span class="ftab-dot" style="background:var(--coach)"></span>Aktiva nu</button>
+        <button class="ftab"><span class="ftab-dot" style="background:var(--accent)"></span>Planerade</button>
+        <button class="ftab"><span class="ftab-dot" style="background:var(--muted)"></span>Avslutade</button>
+      </div>
+
+      <!-- Aktiva nu -->
+      <div class="day-group">
+        <div class="day-header">Pågår just nu <span class="live-indicator"><span class="live-dot"></span>2 aktiva</span></div>
+        <div class="session-card active-session" onclick="window.location.href='session-timer.html'">
+          <div class="sc-status-bar ssb-active"></div>
+          <div class="sc-body">
+            <div class="sc-title">Sprint-block vecka 8 — Glykolytiskt</div>
+            <div class="sc-athlete">Marcus Eriksson · Simning</div>
+            <div class="sc-meta-row">
+              <div class="sc-meta-item"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><path d="M6 4v2.5l1.5 1.5"/></svg>32:14</div>
+              <div class="sc-meta-item"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 9l2-3 2 2 3-4 2 1.5"/></svg>Set 5/8</div>
+              <span class="sys-pill sys-glyco">Glykolytisk</span>
+            </div>
+          </div>
+          <div class="sc-right">
+            <span class="live-indicator"><span class="live-dot"></span>Live</span>
+            <button class="sc-action-btn primary" onclick="event.stopPropagation();window.location.href='session-timer.html'">
+              <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5.5" cy="5.5" r="4.5"/><path d="M5.5 3.5v2.5l1.5 1.5"/></svg>
+              Öppna
+            </button>
+          </div>
+        </div>
+        <div class="session-card active-session" onclick="window.location.href='session-timer.html'">
+          <div class="sc-status-bar ssb-active"></div>
+          <div class="sc-body">
+            <div class="sc-title">Styrkepass A — Squat + DL</div>
+            <div class="sc-athlete">Alex Johansson · Triathlon</div>
+            <div class="sc-meta-row">
+              <div class="sc-meta-item"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><path d="M6 4v2.5l1.5 1.5"/></svg>18:52</div>
+              <div class="sc-meta-item">Set 3/6</div>
+              <span class="sys-pill sys-atp">ATP-PC</span>
+            </div>
+          </div>
+          <div class="sc-right">
+            <span class="live-indicator"><span class="live-dot"></span>Live</span>
+            <button class="sc-action-btn primary" onclick="event.stopPropagation();window.location.href='session-timer.html'">
+              <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5.5" cy="5.5" r="4.5"/><path d="M5.5 3.5v2.5l1.5 1.5"/></svg>
+              Öppna
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Idag — planerade -->
+      <div class="day-group">
+        <div class="day-header">Idag — planerade</div>
+
+        <div class="session-card" onclick="window.location.href='session-timer.html'">
+          <div class="sc-status-bar ssb-planned"></div>
+          <div class="sc-body">
+            <div class="sc-title">Aerob grundträning — 2×3km</div>
+            <div class="sc-athlete">Johan Persson · Löpning</div>
+            <div class="sc-meta-row">
+              <div class="sc-meta-item">14:00</div>
+              <div class="sc-meta-item">~55 min</div>
+              <span class="sys-pill sys-aero">Aerob</span>
+            </div>
+          </div>
+          <div class="sc-right">
+            <span class="status-pill sp-recovery">Planerad</span>
+            <div class="sc-actions">
+              <button class="sc-action-btn" onclick="event.stopPropagation();alert('Redigera session')">Redigera</button>
+              <button class="sc-action-btn primary" onclick="event.stopPropagation();window.location.href='session-timer.html'">Starta</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" onclick="window.location.href='session-timer.html'">
+          <div class="sc-status-bar ssb-planned"></div>
+          <div class="sc-body">
+            <div class="sc-title">Intervall 6×400m</div>
+            <div class="sc-athlete">Emma Andersson · Simning</div>
+            <div class="sc-meta-row">
+              <div class="sc-meta-item">16:30</div>
+              <div class="sc-meta-item">~40 min</div>
+              <span class="sys-pill sys-glyco">Glykolytisk</span>
+            </div>
+          </div>
+          <div class="sc-right">
+            <span class="status-pill sp-recovery">Planerad</span>
+            <div class="sc-actions">
+              <button class="sc-action-btn" onclick="event.stopPropagation();alert('Redigera session')">Redigera</button>
+              <button class="sc-action-btn primary" onclick="event.stopPropagation();window.location.href='session-timer.html'">Starta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Igår -->
+      <div class="day-group">
+        <div class="day-header">Igår — slutförda</div>
+
+        <div class="session-card" onclick="alert('Sessionsdetalj')">
+          <div class="sc-status-bar ssb-done"></div>
+          <div class="sc-body">
+            <div class="sc-title">Sprint-block vecka 8 — Dag 2</div>
+            <div class="sc-athlete">Marcus Eriksson · Simning</div>
+            <div class="sc-meta-row">
+              <div class="sc-meta-item"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.5"/><path d="M6 4v2.5l1.5 1.5"/></svg>52:18</div>
+              <div class="sc-meta-item">8/8 set</div>
+              <span class="sys-pill sys-glyco">Glykolytisk</span>
+            </div>
+          </div>
+          <div class="sc-right">
+            <span class="status-pill sp-training">Avslutad</span>
+            <div class="sc-actions">
+              <button class="sc-action-btn" onclick="event.stopPropagation();alert('Visa sessionlogg')">Logg</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" onclick="alert('Sessionsdetalj')">
+          <div class="sc-status-bar ssb-done"></div>
+          <div class="sc-body">
+            <div class="sc-title">Styrkepass B — Press + Pull</div>
+            <div class="sc-athlete">Anton Lindqvist · Cykling</div>
+            <div class="sc-meta-row">
+              <div class="sc-meta-item">48:35</div>
+              <div class="sc-meta-item">6/6 set</div>
+              <span class="sys-pill sys-atp">ATP-PC</span>
+            </div>
+          </div>
+          <div class="sc-right">
+            <span class="status-pill sp-training">Avslutad</span>
+            <div class="sc-actions">
+              <button class="sc-action-btn" onclick="event.stopPropagation();alert('Visa sessionlogg')">Logg</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" onclick="alert('Sessionsdetalj')">
+          <div class="sc-status-bar ssb-done"></div>
+          <div class="sc-body">
+            <div class="sc-title">Aerob bas — 45min</div>
+            <div class="sc-athlete">Sofia Bergström · Löpning</div>
+            <div class="sc-meta-row">
+              <div class="sc-meta-item">45:00</div>
+              <div class="sc-meta-item">8.2 km</div>
+              <span class="sys-pill sys-aero">Aerob</span>
+            </div>
+          </div>
+          <div class="sc-right">
+            <span class="status-pill sp-training">Avslutad</span>
+            <div class="sc-actions">
+              <button class="sc-action-btn" onclick="event.stopPropagation();alert('Visa sessionlogg')">Logg</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="9" r="2.5"/><path d="M11 18c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="sessions-list.html" class="bn-item active"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Sessioner</span></a>
+  <a href="messages.html" class="bn-item" style="position:relative"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span style="position:absolute;top:5px;right:24px;width:7px;height:7px;border-radius:50%;background:var(--orange,#ff5f1f);box-shadow:0 0 8px rgba(255,95,31,0.6);"></span><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+</div>
+
+<script>
+document.querySelectorAll('.ftab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

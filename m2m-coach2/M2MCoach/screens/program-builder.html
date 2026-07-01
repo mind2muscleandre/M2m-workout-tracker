@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>M2M Coach — Program Builder</title>
+<link rel="stylesheet" href="../styles/coach.css">
+<style>
+/* Two-column builder layout on desktop */
+.builder-shell {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+.builder-left {
+  width: 280px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .builder-left { width: 220px; }
+}
+@media (max-width: 700px) {
+  .builder-shell { flex-direction: column; }
+  .builder-left { width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 180px; }
+}
+.builder-right {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.builder-right::-webkit-scrollbar { display: none; }
+
+.builder-left-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.10em; color: var(--muted);
+  flex-shrink: 0;
+}
+.prog-list { flex: 1; overflow-y: auto; padding: 8px; }
+.prog-list::-webkit-scrollbar { display: none; }
+
+.prog-item {
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 4px;
+}
+.prog-item:hover { background: var(--glass-bg); }
+.prog-item.active { background: var(--glass-bg-coach); border: 1px solid rgba(0,212,170,0.20); }
+.prog-item-name { font-size: 13px; font-weight: 500; }
+.prog-item-sub { font-family: var(--font-mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.prog-item-badge { float: right; }
+
+/* Week grid */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .week-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.day-card {
+  border-radius: var(--r-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.day-card:hover { background: var(--glass-bg-hi); }
+.day-card.selected { border-color: var(--coach); background: var(--glass-bg-coach); }
+.day-card.rest-day { opacity: 0.45; }
+.day-header {
+  padding: 8px 8px 4px;
+  font-family: var(--font-mono); font-size: 8px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); border-bottom: 1px solid var(--border);
+}
+.day-header.today-hdr { color: var(--coach); }
+.day-body { padding: 8px; }
+.day-type {
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  line-height: 1; margin-bottom: 4px;
+}
+.day-sets {
+  font-size: 10px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.day-sys-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block; margin-right: 3px;
+}
+
+/* Exercise table */
+.ex-table { width: 100%; border-collapse: collapse; }
+.ex-table th {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted);
+  text-align: left; padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ex-table td {
+  padding: 10px 10px; font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.ex-table tr:last-child td { border-bottom: none; }
+.ex-table tr:hover td { background: rgba(255,255,255,0.02); }
+.ex-num { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.ex-name { font-weight: 500; }
+.ex-sets { font-family: var(--font-mono); font-size: 12px; color: var(--muted-hi); }
+.ex-load { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--coach); }
+
+/* Energy legend */
+.sys-legend { display: flex; gap: 10px; flex-wrap: wrap; }
+.sys-legend-item { display: flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-mark">M2M</span><span class="logo-sub">COACH</span></div>
+    <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Trupp</span>
+      <a href="dashboard.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span><span class="s-nav-label">Dashboard</span></a>
+      <a href="athlete-detail.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/><circle cx="15" cy="10" r="2.5"/><path d="M11 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg></span><span class="s-nav-label">Athletprofil</span></a>
+      <span class="sidebar-section-label">Träning</span>
+      <a href="program-builder.html" class="s-nav-item active"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4M8 15h2"/></svg></span><span class="s-nav-label">Adapt Program</span></a>
+      <a href="exercise-library.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10h3m10 0h3M5 10a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 114 0 2 2 0 01-4 0z"/></svg></span><span class="s-nav-label">Övningsbibliotek</span></a>
+      <a href="sessions-list.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 10h8M4 14h10"/></svg></span><span class="s-nav-label">Sessioner</span></a>
+      <a href="session-timer.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6"/></svg></span><span class="s-nav-label">Session Timer</span></a>
+      <a href="progression.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-5 3 3 4-6 3 2"/></svg></span><span class="s-nav-label">Progression</span></a>
+      <span class="sidebar-section-label">Kommunikation</span>
+      <a href="messages.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg></span><span class="s-nav-label">Meddelanden</span></a>
+      <a href="notes.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h9l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M13 2v4h4M7 9h6M7 13h4"/></svg></span><span class="s-nav-label">Anteckningar</span></a>
+      <span class="sidebar-section-label">Hälsa &amp; Analys</span>
+      <a href="screening-hub.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg></span><span class="s-nav-label">Screening</span></a>
+      <a href="reports.html" class="s-nav-item"><span class="s-nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9l4-4 3 3 5-6"/></svg></span><span class="s-nav-label">Rapporter</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="profile.html" class="coach-footer-inner" style="text-decoration:none;color:inherit">
+        <div class="coach-avatar-sm">PL</div>
+        <div><div class="coach-footer-name">Per Lindgren</div><div class="coach-footer-role">Head Coach</div></div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <header class="page-header">
+      <h1 class="page-title">Adapt — Program</h1>
+      <div class="page-header-actions">
+        <div class="sys-legend">
+          <span class="sys-legend-item"><span class="day-sys-dot" style="background:var(--accent)"></span>ATP-PC</span>
+          <span class="sys-legend-item"><span class="day-sys-dot" style="background:var(--orange)"></span>Glykolytisk</span>
+          <span class="sys-legend-item"><span class="day-sys-dot" style="background:var(--coach)"></span>Aerob</span>
+        </div>
+        <button class="btn btn-primary btn-sm">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 2v9M2 6.5h9"/></svg>
+          Nytt program
+        </button>
+      </div>
+    </header>
+
+    <div class="builder-shell">
+      <!-- Left: program list -->
+      <div class="builder-left">
+        <div class="builder-left-header">Atlet · Program</div>
+        <div class="prog-list">
+          <div class="prog-item active">
+            <div class="prog-item-name">Alex Lindqvist</div>
+            <div class="prog-item-sub">Sprint-block 4/8</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-atp">ATP-PC</span></span>
+          </div>
+          <div class="prog-item">
+            <div class="prog-item-name">Emma Svensson</div>
+            <div class="prog-item-sub">Aerob bas fas 2</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-aero">Aerob</span></span>
+          </div>
+          <div class="prog-item">
+            <div class="prog-item-name">Hanna Eriksson</div>
+            <div class="prog-item-sub">Tävlingsprep</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-glyco">Glyko</span></span>
+          </div>
+          <div class="prog-item">
+            <div class="prog-item-name">Frida Gustafsson</div>
+            <div class="prog-item-sub">Ironman-block 6/12</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-aero">Aerob</span></span>
+          </div>
+          <div class="prog-item">
+            <div class="prog-item-name">Tove Lindberg</div>
+            <div class="prog-item-sub">Säsong aktiv</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-glyco">Glyko</span></span>
+          </div>
+          <div class="prog-item">
+            <div class="prog-item-name">Ida Arvidsson</div>
+            <div class="prog-item-sub">Grand Prix prep</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-aero">Aerob</span></span>
+          </div>
+          <div class="prog-item">
+            <div class="prog-item-name">Oscar Berg</div>
+            <div class="prog-item-sub">VM-prep</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-aero">Aerob</span></span>
+          </div>
+          <div class="prog-item">
+            <div class="prog-item-name">Agnes Grahn</div>
+            <div class="prog-item-sub">Junior-SM 400m</div>
+            <span class="prog-item-badge"><span class="sys-pill sys-atp">ATP-PC</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: program detail -->
+      <div class="builder-right">
+        <!-- Program header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-family:var(--font-display);font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em">Sprint-block · Alex Lindqvist</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+              <span class="sys-pill sys-atp">ATP-PC</span>
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Fas: Toppning · V4 av 8</span>
+            </div>
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-sm">Kopiera</button>
+            <button class="btn btn-sm btn-primary">Spara</button>
+          </div>
+        </div>
+
+        <!-- Week view -->
+        <div class="card" style="padding:16px">
+          <div class="section-label mb-12">Vecka 4 — 2–8 juni</div>
+          <div class="week-grid">
+            <div class="day-card" onclick="selectDay(this, 'mon')">
+              <div class="day-header">MÅN</div>
+              <div class="day-body"><div class="day-type" style="color:var(--accent)">ATP<span class="day-sys-dot" style="background:var(--accent);margin-left:4px"></span></div><div class="day-sets">8×50m Sprint</div></div>
+            </div>
+            <div class="day-card" onclick="selectDay(this, 'tue')">
+              <div class="day-header">TIS</div>
+              <div class="day-body"><div class="day-type" style="color:var(--coach)">AERO<span class="day-sys-dot" style="background:var(--coach);margin-left:4px"></span></div><div class="day-sets">3000m lätt</div></div>
+            </div>
+            <div class="day-card" onclick="selectDay(this, 'wed')">
+              <div class="day-header">ONS</div>
+              <div class="day-body"><div class="day-type" style="color:var(--orange)">STYRKA<span class="day-sys-dot" style="background:var(--orange);margin-left:4px"></span></div><div class="day-sets">Core + drag</div></div>
+            </div>
+            <div class="day-card" onclick="selectDay(this, 'thu')">
+              <div class="day-header">TOR</div>
+              <div class="day-body"><div class="day-type" style="color:var(--accent)">ATP<span class="day-sys-dot" style="background:var(--accent);margin-left:4px"></span></div><div class="day-sets">Race pace</div></div>
+            </div>
+            <div class="day-card selected" onclick="selectDay(this, 'fri')">
+              <div class="day-header today-hdr">FRE ✦</div>
+              <div class="day-body"><div class="day-type" style="color:var(--accent)">ATP<span class="day-sys-dot" style="background:var(--accent);margin-left:4px"></span></div><div class="day-sets">Intervaller</div></div>
+            </div>
+            <div class="day-card rest-day">
+              <div class="day-header">LÖR</div>
+              <div class="day-body"><div class="day-type" style="color:var(--muted)">VILA</div><div class="day-sets">—</div></div>
+            </div>
+            <div class="day-card rest-day">
+              <div class="day-header">SÖN</div>
+              <div class="day-body"><div class="day-type" style="color:var(--muted)">VILA</div><div class="day-sets">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Day detail -->
+        <div class="card" style="padding:16px" id="dayDetail">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <div style="font-size:14px;font-weight:600">Fredag — Sprint-intervaller 8×50m</div>
+              <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">
+                ATP-PC · Uppskattad tid: 90 min · Vila: 90s
+              </div>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="window.location='session-timer.html'">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="7" r="4"/><path d="M6 4.5v2.5l1.5 1.5M4 1.5h4M6 1.5v2"/></svg>
+              Starta
+            </button>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="ex-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Övning</th><th>Set × Rep</th><th>Intervall</th><th>Vila</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="ex-num">1</td><td><span class="ex-name">Uppvärmning distans</span></td><td class="ex-sets">1 × 400m</td><td class="ex-load" style="font-size:13px;color:var(--muted-hi)">Lugn</td><td class="ex-sets">—</td></tr>
+                <tr><td class="ex-num">2</td><td><span class="ex-name">Teknikdrill arm</span></td><td class="ex-sets">4 × 25m</td><td class="ex-load" style="font-size:13px;color:var(--muted-hi)">Fokus</td><td class="ex-sets">30s</td></tr>
+                <tr><td class="ex-num">3</td><td><span class="ex-name">Sprint-intervall</span></td><td class="ex-sets">8 × 50m</td><td class="ex-load">Max</td><td class="ex-sets">90s</td></tr>
+                <tr><td class="ex-num">4</td><td><span class="ex-name">Kick-drill</span></td><td class="ex-sets">4 × 50m</td><td class="ex-load" style="font-size:13px;color:var(--muted-hi)">Medel</td><td class="ex-sets">45s</td></tr>
+                <tr><td class="ex-num">5</td><td><span class="ex-name">Nedvarvning</span></td><td class="ex-sets">1 × 300m</td><td class="ex-load" style="font-size:13px;color:var(--muted-hi)">Lugn</td><td class="ex-sets">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Timer integration notice -->
+        <div class="card card-coach" style="padding:14px;display:flex;align-items:center;gap:14px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--coach)" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg>
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:2px">M2M Timer kopplad</div>
+            <div style="font-size:11px;color:var(--muted)">Vilotider och intervaller skickas automatiskt till Timer-appen när session startas.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="flex-shrink:0;margin-left:auto" onclick="window.location='session-timer.html'">Starta session</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Topbar (mobile) -->
+  <header class="topbar">
+    <a href="dashboard.html" class="flex items-center gap-8 text-muted" style="font-size:13px">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 2L4 7l5 5"/></svg>
+    </a>
+    <span class="topbar-logo">Program Builder</span>
+    <button class="btn btn-primary btn-sm">Spara</button>
+  </header>
+</div>
+
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg><span class="bn-label">Hem</span></a>
+  <a href="athlete-detail.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6"/></svg><span class="bn-label">Atleter</span></a>
+  <a href="session-timer.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="11" r="7"/><path d="M10 7v4l2.5 2.5M7 2h6M10 2v2"/></svg><span class="bn-label">Session</span></a>
+  <a href="messages.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H6l-4 3V5a1 1 0 011-1z"/></svg><span class="bn-label">Meddelanden</span></a>
+  <a href="reports.html" class="bn-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l4-5 3 3 4-7"/><rect x="2" y="2" width="16" height="16" rx="2"/></svg><span class="bn-label">Rapporter</span></a>
+</nav>
+
+<script>
+function selectDay(el, day) {
+  document.querySelectorAll(".day-card").forEach(c => c.classList.remove("selected"));
+  el.classList.add("selected");
+}
+</script>
+</body>
+</html>
