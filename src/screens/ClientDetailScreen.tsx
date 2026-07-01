@@ -972,6 +972,18 @@ export default function ClientDetailScreen({ route, navigation }: Props) {
             </View>
           ) : (
             <View style={styles.infoFields}>
+              {/* Email */}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoIcon}>{'\u2709\uFE0F'}</Text>
+                {client.email ? (
+                  <Text style={styles.infoValue}>{client.email}</Text>
+                ) : (
+                  <TouchableOpacity onPress={handleStartEdit}>
+                    <Text style={styles.infoValueEmpty}>L\u00E4gg till e-post...</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               {/* Phone */}
               {client.phone && (
                 <View style={styles.infoRow}>
@@ -1551,6 +1563,11 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 15,
     color: colors.text,
+    flex: 1,
+  },
+  infoValueEmpty: {
+    fontSize: 15,
+    color: colors.textSecondary,
     flex: 1,
   },
   notesContainer: {
