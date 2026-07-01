@@ -78,6 +78,7 @@ import { supabase } from '../lib/supabase';
 import { fetchUserProfile, fetchUserProfileByEmail } from '../services/platformAthlete';
 import type { PlatformUserProfile } from '../types/platform';
 import { formatDate } from '../utils/helpers';
+import { inviteAthlete } from '../services/inviteAthlete';
 import { fetchCorrectiveMobilityExercises } from '../services/exerciseBankService';
 import { buildProgramSuggestion } from '../lib/movementAssessment/programSuggestion';
 import type { MovementAssessmentRow } from '../types/platform';
@@ -375,6 +376,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [userProfile, setUserProfile] = useState<PlatformUserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
 
   const client = resolvedClient ?? clients.find((c) => c.id === clientId) ?? null;
   const isAssignedToMe = isClientAssignedToCurrentUser(client, authUser?.id);
@@ -506,6 +508,42 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
       setIsLoadingProfile(false);
     }
   }, [client, aggregate, userProfile]);
+
+  const handleInvite = useCallback(async () => {
+    if (!client) return;
+    const email = client.email?.trim();
+    if (!email) {
+      showAlert('E-post saknas', 'Lägg till en e-postadress på atleten innan du skapar ett konto.');
+      return;
+    }
+    setIsInviting(true);
+    try {
+      const result = await inviteAthlete({
+        client_id: client.id,
+        email,
+        name: client.name,
+        sport: client.sport,
+        age: client.age,
+      });
+      // Refresh profile in modal
+      setIsLoadingProfile(true);
+      const profile = await fetchUserProfile(result.user_id).catch(() => null);
+      setUserProfile(profile);
+      setIsLoadingProfile(false);
+      showAlert(
+        result.already_linked ? 'Redan kopplad' : result.invited ? 'Inbjudan skickad!' : 'Konto kopplat',
+        result.already_linked
+          ? 'Atleten är redan kopplad till ett konto.'
+          : result.invited
+          ? `En inbjudan har skickats till ${email}. Atleten aktiverar sitt konto via länken i mailet.`
+          : `Atleten hittades via e-post och är nu kopplad.`
+      );
+    } catch (err) {
+      showAlert('Fel', err instanceof Error ? err.message : 'Kunde inte skapa konto');
+    } finally {
+      setIsInviting(false);
+    }
+  }, [client, showAlert]);
 
   const handleAutoGenerate = useCallback(
     async (assessment: MovementAssessmentRow) => {
@@ -882,8 +920,27 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
           <View style={athleteInfoStyles.center}>
             <Text style={athleteInfoStyles.emptyIcon}>{'👤'}</Text>
             <Text style={athleteInfoStyles.emptyText}>
-              Ingen användarprofil hittades.{'\n'}Kontrollera att atleten har ett konto och är kopplad via e-post eller user_id.
+              Atleten saknar ett M2M-konto.{'\n'}Skapa ett konto så kan atleten logga in i appen.
             </Text>
+            {client?.email ? (
+              <TouchableOpacity
+                style={athleteInfoStyles.inviteBtn}
+                onPress={handleInvite}
+                disabled={isInviting}
+              >
+                {isInviting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={athleteInfoStyles.inviteBtnTxt}>Skapa konto & skicka inbjudan</Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={athleteInfoStyles.noEmailWarning}>
+                <Text style={athleteInfoStyles.noEmailTxt}>
+                  Lägg till en e-postadress på atleten först.
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <ScrollView contentContainerStyle={athleteInfoStyles.scroll}>
@@ -955,6 +1012,16 @@ const athleteInfoStyles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   emptyIcon: { fontSize: 40 },
   emptyText: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 20 },
+  inviteBtn: {
+    marginTop: 20, paddingHorizontal: 24, paddingVertical: 12,
+    borderRadius: 10, backgroundColor: '#00D4AA', minWidth: 220, alignItems: 'center',
+  },
+  inviteBtnTxt: { fontSize: 15, fontWeight: '600', color: '#000' },
+  noEmailWarning: {
+    marginTop: 16, paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 8, backgroundColor: 'rgba(255,180,0,0.12)', borderWidth: 1, borderColor: 'rgba(255,180,0,0.3)',
+  },
+  noEmailTxt: { fontSize: 13, color: 'rgba(255,180,0,0.9)', textAlign: 'center' },
   scroll: { padding: 20, gap: 24 },
   section: { gap: 0 },
   sectionTitle: {
