@@ -546,7 +546,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
     } finally {
       setIsInviting(false);
     }
-  }, [client, showAlert]);
+  }, [client, inviteEmail, showAlert]);
 
   const handleAutoGenerate = useCallback(
     async (assessment: MovementAssessmentRow) => {
