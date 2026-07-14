@@ -180,6 +180,7 @@ export function ExerciseSwapSheet({
   suggestions,
   onSelect,
   onKeepSets,
+  onToggleKeepSets,
 }: {
   visible: boolean;
   onClose: () => void;
