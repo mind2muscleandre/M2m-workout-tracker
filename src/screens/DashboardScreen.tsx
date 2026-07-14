@@ -10,6 +10,8 @@ import { StatsStrip } from '../components/ui/StatsStrip';
 import { FilterTabs } from '../components/ui/FilterTabs';
 import { AthleteCard } from '../components/ui/AthleteCard';
 import { SearchBar } from '../components/ui/SearchBar';
+import { GlassCard } from '../components/ui/GlassCard';
+import { SectionLabel } from '../components/ui/SectionLabel';
 import { Button, IconButton } from '../components/ui/Button';
 import { AssignAthleteModal } from '../components/AssignAthleteModal';
 import { AddAthleteMenuModal } from '../components/AddAthleteMenuModal';
@@ -215,7 +217,7 @@ export function DashboardScreen() {
   return (
     <>
       <ScreenContainer
-        title="Dashboard"
+        title="Översikt"
         search={
           searchOpen || !showDetailPanel ? (
             <SearchBar value={search} onChangeText={setSearch} placeholder="Sök atlet…" />
@@ -242,15 +244,20 @@ export function DashboardScreen() {
         onRefresh={onRefresh}
         detailPanel={detailPanel}
       >
-        <StatsStrip
-          items={[
-            { value: stats.training, label: 'Tränar idag', color: 'coach' },
-            { value: stats.recovery, label: 'Återhämtning', color: 'accent' },
-            { value: stats.alert, label: 'Varningar', color: 'orange' },
-            { value: stats.total, label: 'Totalt', color: 'muted' },
-          ]}
-        />
+        <GlassCard variant="coach" padding={14} style={styles.statsCard}>
+          <SectionLabel>Status idag</SectionLabel>
+          <StatsStrip
+            items={[
+              { value: stats.training, label: 'Tränar idag', color: 'coach' },
+              { value: stats.recovery, label: 'Återhämtning', color: 'accent' },
+              { value: stats.alert, label: 'Varningar', color: 'orange' },
+              { value: stats.total, label: 'Totalt', color: 'muted' },
+            ]}
+          />
+        </GlassCard>
+        <SectionLabel>Filtrera trupp</SectionLabel>
         <FilterTabs tabs={filterTabs} activeId={filter} onChange={setFilter} />
+        <SectionLabel>Atleter</SectionLabel>
         <View style={styles.list}>
           {filtered.length === 0 ? (
             <Text style={styles.empty}>Inga atleter matchar filtret</Text>
@@ -338,15 +345,16 @@ function OverviewPanel({
 
   return (
     <>
-      <PanelSection variant="coach">
-        <Text style={styles.overviewTodayLabel}>Idag — {today}</Text>
+      <GlassCard variant="coach" padding={12} style={styles.overviewCard}>
+        <SectionLabel>{`Idag — ${today}`}</SectionLabel>
         <PanelRow label="Sessioner planerade" value={planned} valueColor={coachColors.coach} />
         <PanelRow label="Återhämtning aktiv" value={stats.recovery} valueColor={coachColors.accent} />
         <PanelRow label="Varningar att åtgärda" value={stats.alert} valueColor={coachColors.orange} />
         <PanelRow label="Genomsnittlig målstatus" value={`${avgGoal}%`} valueColor={coachColors.coach} />
-      </PanelSection>
+      </GlassCard>
       {upcoming.length > 0 ? (
-        <PanelSection label="Kommande sessioner">
+        <GlassCard padding={12}>
+          <SectionLabel>Kommande sessioner</SectionLabel>
           {upcoming.map((w) => {
             const client = clients.find((c) => c.id === w.client_id);
             return (
@@ -363,9 +371,10 @@ function OverviewPanel({
               </View>
             );
           })}
-        </PanelSection>
+        </GlassCard>
       ) : null}
-      <PanelSection label="Varningar att åtgärda">
+      <GlassCard padding={12}>
+        <SectionLabel>Varningar att åtgärda</SectionLabel>
         {alerts.length === 0 ? (
           <Text style={styles.muted}>Inga varningar just nu</Text>
         ) : (
@@ -379,7 +388,7 @@ function OverviewPanel({
             </View>
           ))
         )}
-      </PanelSection>
+      </GlassCard>
     </>
   );
 }
@@ -423,7 +432,8 @@ function AthletePanelContent({
 
   return (
     <>
-      <View style={styles.athHero}>
+      <GlassCard variant="coach" padding={12} style={styles.athHeroCard}>
+        <View style={styles.athHero}>
         <View
           style={[
             styles.athAvatar,
@@ -445,7 +455,8 @@ function AthletePanelContent({
             ) : null}
           </View>
         </View>
-      </View>
+        </View>
+      </GlassCard>
 
       {tab === 'goals' ? <GoalsTab aggregate={aggregate} fallbackGoal={card.goal} goalPct={card.goalPct} /> : null}
       {tab === 'program' ? (
@@ -669,6 +680,9 @@ function NutritionTab({
 }
 
 const styles = StyleSheet.create({
+  statsCard: { marginBottom: 4 },
+  overviewCard: { marginBottom: 8 },
+  athHeroCard: { marginBottom: 4 },
   list: { gap: 8 },
   empty: { textAlign: 'center', color: coachColors.muted, padding: 48, fontFamily: fonts.body, fontSize: 13 },
   muted: { color: coachColors.muted, fontSize: 13, fontFamily: fonts.body },
@@ -719,12 +733,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
-    borderRadius: borderRadius.lg,
-    backgroundColor: coachColors.glassBgCoach,
-    borderWidth: 1,
-    borderColor: 'rgba(0,212,170,0.18)',
-    marginBottom: 4,
   },
   athAvatar: {
     width: 50,

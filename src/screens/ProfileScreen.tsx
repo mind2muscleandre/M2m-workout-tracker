@@ -20,6 +20,8 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
+import { GlassCard } from '../components/ui/GlassCard';
+import { SectionLabel } from '../components/ui/SectionLabel';
 import { clientToAthleteCard } from '../lib/athleteStatus';
 import { fetchAppBadgesForUser } from '../services/platformUsers';
 import { coachColors, fonts, borderRadius, spacing, shadows } from '../lib/theme';
@@ -139,17 +141,14 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleNotificationsToggle = useCallback((value: boolean) => {
     setNotifications(value);
-    Alert.alert('Kommer snart', 'Notifikationer är under utveckling.');
   }, []);
 
   const handleSessionAlertsToggle = useCallback((value: boolean) => {
     setSessionAlerts(value);
-    Alert.alert('Kommer snart', 'Sessionsvarningar är under utveckling.');
   }, []);
 
   const handleAutoSyncToggle = useCallback((value: boolean) => {
     setAutoSync(value);
-    Alert.alert('Kommer snart', 'Automatisk synk är under utveckling.');
   }, []);
 
   const handleLanguageToggle = useCallback(() => {
@@ -175,7 +174,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <ScreenContainer title="Profil" scroll>
-      <View style={styles.hero}>
+      <GlassCard variant="coach" padding={20} style={styles.hero}>
         <View style={styles.heroGlow} />
         <TouchableOpacity style={styles.editBtn} onPress={handleEditProfile} activeOpacity={0.75}>
           <Text style={styles.editBtnText}>✎ Redigera</Text>
@@ -192,25 +191,27 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.profileEmail}>{user?.email ?? 'Ingen e-post'}</Text>
           </View>
         </View>
-      </View>
+      </GlassCard>
 
       <View style={styles.kpiRow}>
-        <View style={styles.kpiCard}>
+        <GlassCard padding={14} style={styles.kpiCard}>
           <Text style={[styles.kpiVal, { color: coachColors.coach }]}>{activeClients.length}</Text>
           <Text style={styles.kpiLbl}>Aktiva atleter</Text>
-        </View>
-        <View style={styles.kpiCard}>
+        </GlassCard>
+        <GlassCard padding={14} style={styles.kpiCard}>
           <Text style={[styles.kpiVal, { color: coachColors.accent }]}>{sessionsThisMonth}</Text>
           <Text style={styles.kpiLbl}>Sessioner / månad</Text>
-        </View>
-        <View style={styles.kpiCard}>
+        </GlassCard>
+        <GlassCard padding={14} style={styles.kpiCard}>
           <Text style={styles.kpiVal}>{avgGoal != null ? `${avgGoal}%` : '—'}</Text>
           <Text style={styles.kpiLbl}>Snitt målstatus</Text>
-        </View>
+        </GlassCard>
       </View>
 
-      <View style={styles.settingsSection}>
-        <Text style={styles.settingsSectionTitle}>App-inställningar</Text>
+      <GlassCard padding={0} style={styles.settingsSection}>
+        <View style={styles.settingsSectionHeader}>
+          <SectionLabel style={styles.settingsSectionTitle}>App-inställningar</SectionLabel>
+        </View>
         <SettingRow
           label="Mörkt läge"
           sub="Coach-appen är alltid i dark mode"
@@ -255,10 +256,12 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.settingArrow}>›</Text>
           </View>
         </TouchableOpacity>
-      </View>
+      </GlassCard>
 
-      <View style={styles.settingsSection}>
-        <Text style={styles.settingsSectionTitle}>M2M-integrationer</Text>
+      <GlassCard padding={0} style={styles.settingsSection}>
+        <View style={styles.settingsSectionHeader}>
+          <SectionLabel style={styles.settingsSectionTitle}>M2M-integrationer</SectionLabel>
+        </View>
         {INTEGRATIONS.map((app, index) => {
           const connected = appBadges ? Boolean(appBadges[app.id]) : false;
           const label = appBadges ? (connected ? 'Ansluten' : 'Ej ansluten') : '—';
@@ -281,10 +284,12 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           );
         })}
-      </View>
+      </GlassCard>
 
-      <View style={styles.settingsSection}>
-        <Text style={styles.settingsSectionTitle}>Konto</Text>
+      <GlassCard padding={0} style={styles.settingsSection}>
+        <View style={styles.settingsSectionHeader}>
+          <SectionLabel style={styles.settingsSectionTitle}>Konto</SectionLabel>
+        </View>
         <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
           <Text style={styles.settingLabel}>E-postadress</Text>
           <View style={styles.settingRight}>
@@ -328,7 +333,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <Text style={[styles.settingArrow, styles.dangerText]}>›</Text>
         </TouchableOpacity>
-      </View>
+      </GlassCard>
 
       <TouchableOpacity
         style={styles.logoutBtn}
@@ -368,15 +373,9 @@ function SettingRow({
 
 const styles = StyleSheet.create({
   hero: {
-    padding: 20,
-    borderRadius: borderRadius.xl,
-    backgroundColor: coachColors.glassBgCoach,
-    borderWidth: 1,
-    borderColor: 'rgba(0,212,170,0.18)',
     marginBottom: 20,
     overflow: 'hidden',
     position: 'relative',
-    ...shadows.glassCoach,
   },
   heroGlow: {
     position: 'absolute',
@@ -465,14 +464,7 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: borderRadius.lg,
-    backgroundColor: coachColors.glassBg,
-    borderWidth: 1,
-    borderColor: coachColors.glassBorder,
     alignItems: 'center',
-    ...shadows.glass,
   },
   kpiVal: {
     fontFamily: fonts.display,
@@ -491,25 +483,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   settingsSection: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: coachColors.glassBorder,
-    backgroundColor: coachColors.glassBg,
     marginBottom: 12,
+    overflow: 'hidden',
   },
-  settingsSectionTitle: {
+  settingsSectionHeader: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontFamily: fonts.mono,
-    fontSize: 8,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: coachColors.muted,
+    paddingTop: 10,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: coachColors.border,
     backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  settingsSectionTitle: {
+    marginBottom: 0,
   },
   settingRow: {
     flexDirection: 'row',

@@ -1,6 +1,14 @@
 import { supabase } from '../lib/supabase';
 import { PLATFORM_DB } from '../lib/dbTables';
+import { coachAthleteHasScope } from '../lib/consent';
 import type { MacroView, MealRow, NutritionGoalRow } from '../types/platform';
+
+const EMPTY_MACRO_VIEW: MacroView = {
+  nutritionGoal: null,
+  recentMeals: [],
+  weightEntries: [],
+  tdeeHistory: [],
+};
 
 type MealDbRow = Omit<MealRow, 'logged_at'> & { created_at: string | null };
 
@@ -19,6 +27,9 @@ function mapMealRow(row: MealDbRow): MealRow {
 }
 
 export async function fetchMacroViewForUser(userId: string): Promise<MacroView> {
+  const hasScope = await coachAthleteHasScope(userId, 'nutrition');
+  if (!hasScope) return { ...EMPTY_MACRO_VIEW };
+
   const [goalRes, mealsRes, weightRes, tdeeRes] = await Promise.all([
     supabase
       .from(PLATFORM_DB.nutritionGoals)

@@ -6,7 +6,8 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { MovementAssessmentSummary } from '../types/athlete';
 
 export type RootStackParamList = {
-  Auth: undefined;
+  Auth: { mode?: 'signup' | 'login' } | undefined;
+  CoachOnboarding: { flow?: 'welcome' | 'activation' } | undefined;
   AuthCallback: undefined;
   AuthReset: { email?: string } | undefined;
   UpdatePassword: { email?: string } | undefined;

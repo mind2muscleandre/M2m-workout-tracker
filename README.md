@@ -2,6 +2,8 @@
 
 Coach aggregation hub for the M2M ecosystem — reads platform data (Perform, Tracker, Goalsetter) and manages PT-owned tables.
 
+**Design system:** [docs/design.md](../docs/design.md)
+
 ## Data model
 
 See the monorepo reference: [DATABASE-OCH-APPKOPPLINGAR.md](../M2M-eco-appar/docs/DATABASE-OCH-APPKOPPLINGAR.md) when this app lives under `M2M-eco-appar`, or run `node scripts/inventory-db.mjs` against project `cqpiejeiwtcopjnhccgn`.

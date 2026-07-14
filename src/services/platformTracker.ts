@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { PLATFORM_DB } from '../lib/dbTables';
+import { coachAthleteHasScope } from '../lib/consent';
 import type {
   TrackerProgramView,
   TrackerSessionRow,
@@ -13,6 +14,9 @@ import type {
 export async function fetchActiveTrackerProgram(
   userId: string
 ): Promise<TrainingProgramRow | null> {
+  const hasScope = await coachAthleteHasScope(userId, 'training');
+  if (!hasScope) return null;
+
   const { data, error } = await supabase
     .from(PLATFORM_DB.trainingPrograms)
     .select(
@@ -30,6 +34,9 @@ export async function fetchTrackerSessions(
   userId: string,
   limit = 30
 ): Promise<TrackerSessionRow[]> {
+  const hasScope = await coachAthleteHasScope(userId, 'training');
+  if (!hasScope) return [];
+
   const { data, error } = await supabase
     .from(PLATFORM_DB.workoutSessionsTracker)
     .select('id, user_id, client_session_id, goal_key, started_at, ended_at, sets')

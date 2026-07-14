@@ -280,7 +280,7 @@ export function ScreeningHubScreen({ navigation }: StackProps) {
           });
           return;
         }
-        navigation.navigate('ClientDetail', { clientId: item.clientId });
+        navigation.navigate('AthleteDetail', { clientId: item.clientId });
       }}
     />
   );
@@ -302,7 +302,7 @@ export function ScreeningTabScreen() {
           });
           return;
         }
-        navigation.navigate('ClientDetail', { clientId: item.clientId });
+        navigation.navigate('AthleteDetail', { clientId: item.clientId });
       }}
     />
   );

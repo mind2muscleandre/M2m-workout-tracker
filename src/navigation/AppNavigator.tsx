@@ -17,6 +17,7 @@ import { MainTabs } from './MainTabs';
 
 // Screens
 import AuthScreen from '../screens/AuthScreen';
+import CoachOnboardingScreen from '../screens/CoachOnboardingScreen';
 import ClientDetailRedirectScreen from '../screens/ClientDetailRedirectScreen';
 import { ClientManageScreen } from '../screens/ClientManageScreen';
 import { BroadcastScreen } from '../screens/BroadcastScreen';
@@ -40,6 +41,7 @@ import MovementAssessmentResultScreen from '../screens/MovementAssessmentResultS
 import AuthCallbackScreen from '../screens/AuthCallbackScreen';
 import UpdatePasswordScreen from '../screens/UpdatePasswordScreen';
 import { debugLog } from '../lib/debugLog';
+import { isCoachOnboardingComplete } from '../lib/coachOnboarding';
 
 // ============================================
 // Navigation Theme
@@ -91,6 +93,12 @@ const workoutActiveOptions = {
 function AuthStackNavigator({ initialRouteName }: { initialRouteName: 'Auth' | 'AuthCallback' }) {
   return (
     <Stack.Navigator screenOptions={screenOptions} initialRouteName={initialRouteName}>
+      <Stack.Screen
+        name="CoachOnboarding"
+        component={CoachOnboardingScreen}
+        options={authScreenOptions}
+        initialParams={{ flow: 'welcome' }}
+      />
       <Stack.Screen name="Auth" component={AuthScreen} options={authScreenOptions} />
       <Stack.Screen name="AuthCallback" component={AuthCallbackScreen} options={authScreenOptions} />
       <Stack.Screen name="AuthReset" component={AuthResetScreen} options={authScreenOptions} />
@@ -99,9 +107,18 @@ function AuthStackNavigator({ initialRouteName }: { initialRouteName: 'Auth' | '
   );
 }
 
-function MainStackNavigator() {
+function MainStackNavigator({ needsOnboarding }: { needsOnboarding: boolean }) {
   return (
-    <Stack.Navigator screenOptions={screenOptions} initialRouteName="MainTabs">
+    <Stack.Navigator
+      screenOptions={screenOptions}
+      initialRouteName={needsOnboarding ? 'CoachOnboarding' : 'MainTabs'}
+    >
+      <Stack.Screen
+        name="CoachOnboarding"
+        component={CoachOnboardingScreen}
+        options={authScreenOptions}
+        initialParams={{ flow: 'activation' }}
+      />
       <Stack.Screen name="MainTabs" component={MainTabs} options={mainTabsOptions} />
       <Stack.Screen name="ScreeningHub" component={ScreeningHubScreen} options={{ title: 'Screeningar' }} />
       <Stack.Screen name="BatchScreeningUpload" component={BatchScreeningUploadScreen} options={{ title: 'Bild-screening' }} />
@@ -159,6 +176,8 @@ export const AppNavigator: React.FC = () => {
   const isLoading = useAuthStore((state) => state.isLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const initialize = useAuthStore((state) => state.initialize);
+  const [onboardingReady, setOnboardingReady] = React.useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = React.useState(false);
 
   useEffect(() => {
     initialize();
@@ -166,6 +185,27 @@ export const AppNavigator: React.FC = () => {
 
   const isLoadingBool = isLoading === true;
   const isAuthenticatedBool = isAuthenticated === true;
+
+  useEffect(() => {
+    if (!isAuthenticatedBool) {
+      setOnboardingReady(true);
+      setNeedsOnboarding(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const done = await isCoachOnboardingComplete();
+      if (!cancelled) {
+        setNeedsOnboarding(!done);
+        setOnboardingReady(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticatedBool]);
 
   const hasIncomingAuthLink = useMemo(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
@@ -180,7 +220,7 @@ export const AppNavigator: React.FC = () => {
     );
   }, []);
 
-  if (isLoadingBool) {
+  if (isLoadingBool || (isAuthenticatedBool && !onboardingReady)) {
     return <LoadingScreen />;
   }
 
@@ -204,7 +244,7 @@ export const AppNavigator: React.FC = () => {
     <NavigationContainer theme={navigationTheme}>
       <View style={navRootStyle}>
         {isAuthenticatedBool ? (
-          <MainStackNavigator />
+          <MainStackNavigator needsOnboarding={needsOnboarding} />
         ) : (
           <AuthStackNavigator initialRouteName={authInitialRoute} />
         )}

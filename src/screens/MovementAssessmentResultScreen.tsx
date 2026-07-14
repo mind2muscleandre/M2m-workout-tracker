@@ -419,7 +419,7 @@ export default function MovementAssessmentResultScreen({ route, navigation }: Pr
         <Button
           label="Öppna profil →"
           variant="primary"
-          onPress={() => navigation.navigate('ClientDetail', { clientId })}
+          onPress={() => navigation.navigate('AthleteDetail', { clientId })}
           style={styles.actionBtnPrimary}
         />
       </View>

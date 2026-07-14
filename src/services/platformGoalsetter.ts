@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { PLATFORM_DB } from '../lib/dbTables';
+import { coachAthleteHasScope } from '../lib/consent';
 import type {
   GoalsetterView,
   GsGoalRow,
@@ -11,7 +12,21 @@ import type {
   ActivityStreakRow,
 } from '../types/platform';
 
+const EMPTY_GOALSETTER_VIEW: GoalsetterView = {
+  nutritionGoal: null,
+  routines: [],
+  physicalTests: [],
+  hasSportGoals: false,
+  goals: [],
+  habits: [],
+  tasks: [],
+  activityStreak: null,
+};
+
 export async function fetchGoalsetterViewForUser(userId: string): Promise<GoalsetterView> {
+  const hasScope = await coachAthleteHasScope(userId, 'goals');
+  if (!hasScope) return { ...EMPTY_GOALSETTER_VIEW };
+
   const [nutritionRes, routinesRes, testsRes, goalsRes, habitsRes, tasksRes, streakRes] =
     await Promise.all([
       supabase

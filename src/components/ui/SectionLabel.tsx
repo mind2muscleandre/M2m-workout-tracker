@@ -1,9 +1,14 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, TextStyle } from 'react-native';
 import { coachColors, fonts } from '../../lib/theme';
 
-export function SectionLabel({ children }: { children: string }) {
-  return <Text style={styles.label}>{children}</Text>;
+export type SectionLabelProps = {
+  children: string;
+  style?: TextStyle;
+};
+
+export function SectionLabel({ children, style }: SectionLabelProps) {
+  return <Text style={[styles.label, style]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({

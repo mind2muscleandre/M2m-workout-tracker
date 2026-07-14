@@ -2,8 +2,8 @@
 // PT Workout Tracker - Authentication Screen
 // ============================================
 
-import React, { useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import {
@@ -60,7 +60,8 @@ function RoleOption({ label, description, value, selected, onSelect }: RoleOptio
 
 export default function AuthScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const route = useRoute<RouteProp<RootStackParamList, 'Auth'>>();
+  const [isSignUp, setIsSignUp] = useState(route.params?.mode === 'signup');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,6 +69,12 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { signIn, signUp } = useAuthStore();
+
+  useEffect(() => {
+    if (route.params?.mode === 'signup') {
+      setIsSignUp(true);
+    }
+  }, [route.params?.mode]);
 
   const validateForm = (): boolean => {
     if (!email.trim()) {
@@ -281,6 +288,19 @@ export default function AuthScreen() {
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity
+            style={styles.onboardingLink}
+            onPress={() => navigation.navigate('CoachOnboarding', { flow: 'welcome' })}
+            disabled={isLoading}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.onboardingLinkText}>
+              {isSignUp
+                ? 'Vill du se coach-panelen först? Gå till introduktionen'
+                : 'Ny coach? Se vad du får innan du skapar konto'}
+            </Text>
+          </TouchableOpacity>
+
           <Text style={styles.versionFoot}>M2M Coach v2.1.0 · Säker anslutning</Text>
         </AuthCard>
       </KeyboardAvoidingView>
@@ -445,6 +465,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: coachColors.coach,
     fontFamily: fonts.bodyMedium,
+  },
+  onboardingLink: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  onboardingLinkText: {
+    fontSize: 12,
+    color: coachColors.mutedHi,
+    fontFamily: fonts.bodyMedium,
+    textAlign: 'center',
+    lineHeight: 17,
   },
   versionFoot: {
     textAlign: 'center',

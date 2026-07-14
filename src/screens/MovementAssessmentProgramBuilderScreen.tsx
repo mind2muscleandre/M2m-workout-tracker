@@ -436,7 +436,7 @@ export default function MovementAssessmentProgramBuilderScreen({ route, navigati
         : 'Passet sparades och aktiverades, men synkades inte till Perform — atleten saknar kopplad Perform-användare.';
 
       showCoachAlert('Sparat', message, () =>
-        navigation.navigate('ClientDetail', { clientId })
+        navigation.navigate('AthleteDetail', { clientId })
       );
     } catch (e) {
       showCoachAlert(

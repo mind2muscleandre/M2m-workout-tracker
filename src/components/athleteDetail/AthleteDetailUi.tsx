@@ -633,10 +633,10 @@ export function AthleteHero({
   const { width } = useWindowDimensions();
   const compact = width < 768;
   return (
-    <View style={[styles.athleteHero, compact && styles.athleteHeroCompact]}>
+    <GlassCard variant="coach" padding={compact ? 14 : 20} style={styles.athleteHeroCard}>
       {backButton ? <View style={styles.heroBack}>{backButton}</View> : null}
       <View style={[styles.heroInner, compact && styles.heroInnerCompact]}>{children}</View>
-    </View>
+    </GlassCard>
   );
 }
 
@@ -903,7 +903,8 @@ export function WhoopHeroSection({
     .map(([k]) => k);
 
   return (
-    <View style={heroSectionStyles.hero}>
+    <GlassCard variant="coach" padding={compact ? 14 : 20} style={heroSectionStyles.heroCard}>
+      <View style={heroSectionStyles.hero}>
       {backButton ? <View style={heroSectionStyles.backSlot}>{backButton}</View> : null}
       <View style={[heroSectionStyles.inner, compact && heroSectionStyles.innerCompact]}>
         {/* Left column */}
@@ -994,19 +995,18 @@ export function WhoopHeroSection({
         </View>
       </View>
     </View>
+    </GlassCard>
   );
 }
 
 const heroSectionStyles = StyleSheet.create({
-  hero: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    backgroundColor: coachColors.glassBgCoach,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,212,170,0.12)',
+  heroCard: {
     marginHorizontal: -20,
     marginTop: -20,
-    marginBottom: 0,
+    marginBottom: 12,
+  },
+  hero: {
+    position: 'relative',
   },
   backSlot: { position: 'absolute', top: 14, left: 16, zIndex: 2 },
   inner: { flexDirection: 'row', gap: 20, marginTop: 20, alignItems: 'flex-start' },
@@ -1681,24 +1681,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,212,170,0.20)',
   },
   recText: { fontSize: 12, color: coachColors.mutedHi, lineHeight: 18, fontFamily: fonts.body },
-  athleteHero: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    backgroundColor: coachColors.glassBgCoach,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,212,170,0.12)',
+  athleteHeroCard: {
     marginHorizontal: -20,
     marginTop: -20,
-    marginBottom: 0,
+    marginBottom: 12,
   },
-  athleteHeroCompact: { paddingVertical: 10, paddingHorizontal: 14 },
-  heroBack: { position: 'absolute', top: 14, left: 16, zIndex: 2 },
+  heroBack: { position: 'absolute', top: 0, left: 0, zIndex: 2 },
   heroInner: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 18,
-    marginTop: 20,
+    marginTop: 8,
   },
   heroInnerCompact: { marginTop: 14, gap: 12 },
 });
