@@ -7,7 +7,7 @@ import {
   TextStyle,
   ActivityIndicator,
 } from 'react-native';
-import { coachColors, borderRadius, fonts, shadows } from '../../lib/theme';
+import { coachColors, colors, borderRadius, fonts, shadows } from '../../lib/theme';
 
 interface ButtonProps {
   label: string;
@@ -108,8 +108,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   primary: {
-    backgroundColor: coachColors.coach,
-    borderColor: coachColors.coach,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
     ...shadows.glowCoach,
   },
   secondary: {

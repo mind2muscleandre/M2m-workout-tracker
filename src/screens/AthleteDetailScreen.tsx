@@ -72,7 +72,7 @@ import { programExerciseCount } from '../services/platformPerform';
 import type { Client } from '../types/database';
 import type { AthleteAggregateView, PerformView } from '../types/platform';
 import { coachColors, fonts, borderRadius, statusLabels, statusColors } from '../lib/theme';
-import { ExpandableSessionRow } from '../components/coach/ExpandableSessionRow';
+import { ExpandableSessionRow, type SetRowData } from '../components/coach/ExpandableSessionRow';
 import { BookSessionSheet } from '../components/coach/CoachModals';
 import { bandDisplaySv } from '../lib/movementAssessment/exportPayload';
 import type { ScoreBand } from '../types/movementAssessment';
@@ -190,6 +190,7 @@ function buildRoutineItems(aggregate: AthleteAggregateView | null) {
 function buildRecentSessions(aggregate: AthleteAggregateView | null) {
   const rows: {
     key: string;
+    workoutId?: string;
     date: string;
     name: string;
     sys: string;
@@ -208,6 +209,7 @@ function buildRecentSessions(aggregate: AthleteAggregateView | null) {
   for (const w of aggregate?.coachWorkouts?.slice(0, 5) ?? []) {
     rows.push({
       key: `coach-${w.id}`,
+      workoutId: w.id,
       date: formatSessionDateLabel(w.completed_at ?? w.date),
       name: w.title ?? 'Coach-pass',
       sys: w.status,
@@ -860,13 +862,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
         />
       )}
       {tab === 'sessions' && (
-        <SessionsTab
-          aggregate={aggregate}
-          client={client}
-          onOpenWorkout={(workoutId) =>
-            client && navigation.navigate('SessionTimer', { clientId: client.id, workoutId })
-          }
-        />
+        <SessionsTab aggregate={aggregate} client={client} />
       )}
       {tab === 'perform' && (
         <PerformTab
@@ -1487,11 +1483,9 @@ function OverviewTab({
 function SessionsTab({
   aggregate,
   client,
-  onOpenWorkout,
 }: {
   aggregate: AthleteAggregateView | null;
   client: Client | null;
-  onOpenWorkout: (workoutId: string) => void;
 }) {
   const rows = buildRecentSessions(aggregate);
   const performRows = aggregate?.perform?.workoutHistory ?? [];
@@ -1504,32 +1498,33 @@ function SessionsTab({
         {rows.length === 0 && performRows.length === 0 && trackerRows.length === 0 ? (
           <Text style={styles.muted}>Inga sessioner</Text>
         ) : null}
-        {rows.slice(0, 3).map((s, idx) => (
-          <ExpandableSessionRow
-            key={s.key}
-            defaultExpanded={idx === 0}
-            session={{
-              id: s.key,
-              badge: s.sys?.includes('PT') ? 'PT' : 'TR',
-              title: s.name,
-              meta: `${s.date} · ${s.sys}`,
-              screeningNote:
-                idx === 0 && client?.notes
-                  ? client.notes
-                  : idx === 0
-                    ? 'Fotled stel — överväg extra mobilitet före nästa styrkepass.'
-                    : undefined,
-              sets:
-                idx === 0
-                  ? [
-                      { label: 'SET 1', weight: '80 kg', reps: '3 reps', rpe: 'RPE 7', state: 'done' },
-                      { label: 'SET 2', weight: '82,5 kg', reps: '3 reps', rpe: 'RPE 8', pb: true, state: 'done' },
-                      { label: 'SET 3', weight: '82,5 kg', reps: '3 reps', rpe: 'RPE –', state: 'current' },
-                    ]
-                  : undefined,
-            }}
-          />
-        ))}
+        {rows.slice(0, 3).map((s, idx) =>
+          s.workoutId ? (
+            <CoachWorkoutSessionRow
+              key={s.key}
+              workoutId={s.workoutId}
+              defaultExpanded={idx === 0}
+              session={{
+                id: s.key,
+                badge: 'PT',
+                title: s.name,
+                meta: `${s.date} · ${s.sys}`,
+                screeningNote: client?.notes ?? undefined,
+              }}
+            />
+          ) : (
+            <ExpandableSessionRow
+              key={s.key}
+              defaultExpanded={idx === 0}
+              session={{
+                id: s.key,
+                badge: 'TR',
+                title: s.name,
+                meta: `${s.date} · ${s.sys}`,
+              }}
+            />
+          )
+        )}
         {performRows.slice(0, 2).map((s) => (
           <ExpandableSessionRow
             key={s.id}
@@ -1549,11 +1544,98 @@ function SessionsTab({
               badge: 'TR',
               title: s.goal_key,
               meta: `${new Date(s.ended_at).toLocaleDateString('sv-SE')} · ${s.sets.length} set`,
+              sets: s.sets.map((set, setIdx) => ({
+                label: `SET ${setIdx + 1}`,
+                weight: set.weight != null ? `${set.weight} kg` : '—',
+                reps: set.reps != null ? `${set.reps} reps` : '—',
+                rpe: undefined,
+                state: 'done' as const,
+              })),
             }}
           />
         ))}
       </View>
     </View>
+  );
+}
+
+function CoachWorkoutSessionRow({
+  workoutId,
+  session,
+  defaultExpanded,
+}: {
+  workoutId: string;
+  session: {
+    id: string;
+    badge: string;
+    title: string;
+    meta: string;
+    screeningNote?: string;
+  };
+  defaultExpanded?: boolean;
+}) {
+  const [sets, setSets] = useState<SetRowData[] | undefined>();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const { data: workoutExercises, error: weError } = await supabase
+          .from('workout_exercises')
+          .select('id')
+          .eq('workout_id', workoutId)
+          .order('order_index', { ascending: true });
+        if (weError || !workoutExercises?.length) {
+          if (!cancelled) setSets(undefined);
+          return;
+        }
+        const weIds = workoutExercises.map((we) => we.id);
+        const { data: setsData, error: setsError } = await supabase
+          .from('sets')
+          .select('*')
+          .in('workout_exercise_id', weIds)
+          .order('set_number', { ascending: true });
+        if (setsError || !setsData?.length) {
+          if (!cancelled) setSets(undefined);
+          return;
+        }
+        const firstIncomplete = setsData.findIndex((s) => !s.completed_at);
+        const mapped: SetRowData[] = setsData.map((set, idx) => {
+          const state: SetRowData['state'] =
+            set.completed_at
+              ? 'done'
+              : idx === firstIncomplete
+                ? 'current'
+                : 'todo';
+          return {
+            label: `SET ${set.set_number}`,
+            weight: set.weight_kg != null ? `${set.weight_kg} kg` : '—',
+            reps: set.reps != null ? `${set.reps} reps` : '—',
+            rpe: set.rpe != null ? `RPE ${set.rpe}` : undefined,
+            pb: !!set.is_pr,
+            state,
+          };
+        });
+        if (!cancelled) setSets(mapped);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workoutId]);
+
+  return (
+    <ExpandableSessionRow
+      defaultExpanded={defaultExpanded}
+      session={{
+        ...session,
+        sets: loading ? undefined : sets,
+      }}
+    />
   );
 }
 

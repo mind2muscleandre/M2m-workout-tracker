@@ -55,19 +55,21 @@ export function CurrentExerciseCard({
 }
 
 export function RestTimerRing({
-  seconds,
+  secondsRemaining,
+  totalSeconds = 90,
   label,
   onSkip,
 }: {
-  seconds: number;
+  secondsRemaining: number;
+  totalSeconds?: number;
   label: string;
   onSkip?: () => void;
 }) {
-  const pct = Math.min(100, Math.max(0, (seconds / 90) * 100));
+  const pct = Math.min(100, Math.max(0, (secondsRemaining / totalSeconds) * 100));
   return (
     <GlassCard style={styles.rest}>
-      <View style={styles.rring}>
-        <Text style={styles.rringVal}>{seconds}s</Text>
+      <View style={[styles.rring, { borderColor: coachColors.accent, opacity: 0.4 + pct / 200 }]}>
+        <Text style={styles.rringVal}>{secondsRemaining}s</Text>
       </View>
       <View style={styles.restBody}>
         <Text style={styles.restTitle}>{label}</Text>

@@ -67,6 +67,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('pt');
   const [isLoading, setIsLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const { signIn, signUp } = useAuthStore();
 
@@ -190,11 +191,13 @@ export default function AuthScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Fullständigt namn</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, focusedField === 'name' && styles.inputFocused]}
                   placeholder="Ditt namn"
                   placeholderTextColor={coachColors.muted}
                   value={fullName}
                   onChangeText={setFullName}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField(null)}
                   autoCapitalize="words"
                   autoCorrect={false}
                   editable={!isLoading}
@@ -205,11 +208,13 @@ export default function AuthScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>E-postadress</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, focusedField === 'email' && styles.inputFocused]}
                 placeholder="coach@m2m.se"
                 placeholderTextColor={coachColors.muted}
                 value={email}
                 onChangeText={setEmail}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -221,11 +226,13 @@ export default function AuthScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Lösenord</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, focusedField === 'password' && styles.inputFocused]}
                 placeholder="••••••••"
                 placeholderTextColor={coachColors.muted}
                 value={password}
                 onChangeText={setPassword}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -275,6 +282,21 @@ export default function AuthScreen() {
               loading={isLoading}
               style={styles.submitBtn}
             />
+
+            {!isSignUp ? (
+              <View style={styles.oauthRow}>
+                <Text style={styles.oauthLabel}>Eller fortsätt med</Text>
+                <View style={styles.oauthButtons}>
+                  <TouchableOpacity style={styles.oauthBtn} disabled activeOpacity={0.7}>
+                    <Text style={styles.oauthBtnText}>Google</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.oauthBtn} disabled activeOpacity={0.7}>
+                    <Text style={styles.oauthBtnText}>Apple</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.oauthHint}>OAuth kommer snart</Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.footer}>
@@ -383,6 +405,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: coachColors.glassBorder,
     fontFamily: fonts.body,
+  },
+  inputFocused: {
+    borderColor: coachColors.accent,
+    shadowColor: coachColors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  oauthRow: {
+    gap: 10,
+    marginTop: 4,
+  },
+  oauthLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: coachColors.muted,
+    textAlign: 'center',
+  },
+  oauthButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  oauthBtn: {
+    flex: 1,
+    height: 42,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.55,
+  },
+  oauthBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: coachColors.mutedHi,
+  },
+  oauthHint: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.8,
+    color: coachColors.muted,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   roleContainer: {
     gap: 10,

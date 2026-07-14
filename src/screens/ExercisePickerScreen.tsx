@@ -24,6 +24,9 @@ import { Button } from '../components/ui/Button';
 import { useExerciseStore } from '../stores/exerciseStore';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useAuthStore } from '../stores/authStore';
+import { useClientStore } from '../stores/clientStore';
+import { usePlatformStore } from '../stores/platformStore';
+import { CoverageBanner } from '../components/coach/CoverageBanner';
 import { Exercise, ExerciseCategory, ExerciseInsert, ExerciseTrackingType, MuscleGroup } from '../types/database';
 import { getLibraryCategoryLabel } from '../utils/helpers';
 import {
@@ -72,6 +75,8 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
   const { addExercise } = useExerciseStore();
   const { addExerciseToWorkout, activeWorkout } = useWorkoutStore();
   const { user } = useAuthStore();
+  const { clients } = useClientStore();
+  const { getAggregate } = usePlatformStore();
   const [libraryExercises, setLibraryExercises] = useState<LibraryExercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,6 +118,41 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
       }),
     [filteredExercises]
   );
+
+  const screeningContext = useMemo(() => {
+    const clientId = activeWorkout?.client_id;
+    if (!clientId) return null;
+    const aggregate = getAggregate(clientId);
+    const latest = aggregate?.perform?.screeningSessions?.[0];
+    if (!latest?.areas?.length) return null;
+    const weakest = [...latest.areas]
+      .filter((a) => a.score != null)
+      .sort((a, b) => Number(a.score) - Number(b.score))[0];
+    if (!weakest?.testområde) return null;
+    return {
+      area: weakest.testområde,
+      score: Math.round(Number(weakest.score)),
+      clientName: clients.find((c) => c.id === clientId)?.name?.split(' ')[0] ?? 'Atleten',
+    };
+  }, [activeWorkout?.client_id, getAggregate, clients]);
+
+  const screeningSuggestions = useMemo(() => {
+    if (!screeningContext) return [];
+    const area = screeningContext.area.toLowerCase();
+    return sortedExercises
+      .filter((ex) => {
+        const cat = ex.category ?? '';
+        const name = ex.name.toLowerCase();
+        const muscles = (ex.muscleLabel ?? '').toLowerCase();
+        return (
+          cat === 'rorlighet' ||
+          cat === 'koordination' ||
+          name.includes(area.split(' ')[0]) ||
+          muscles.includes(area.split(' ')[0])
+        );
+      })
+      .slice(0, 5);
+  }, [screeningContext, sortedExercises]);
 
   // Check if we have a search query with no results
   const hasSearchQuery = searchQuery.trim().length > 0;
@@ -222,6 +262,33 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
         onChangeText={setSearchQuery}
         placeholder="Sök övning..."
       />
+
+      {screeningContext ? (
+        <>
+          <CoverageBanner
+            tone="unmatched"
+            message={`**${screeningContext.clientName}** behöver täckning för **${screeningContext.area}** (${screeningContext.score}/100) enligt senaste screening.`}
+          />
+          {screeningSuggestions.length > 0 ? (
+            <View style={styles.screeningSection}>
+              <SectionLabel>Screening-förslag</SectionLabel>
+              {screeningSuggestions.map((item) => (
+                <TouchableOpacity key={`screen-${item.source}:${item.id}`} onPress={() => handleSelectExercise(item)}>
+                  <GlassCard style={styles.exerciseItem}>
+                    <View style={styles.exerciseRow}>
+                      <View style={styles.exerciseInfo}>
+                        <Text style={styles.exerciseName}>{item.name}</Text>
+                        <Text style={styles.screeningMatchTag}>Screening-prioriterad</Text>
+                      </View>
+                      <Text style={styles.addIcon}>+</Text>
+                    </View>
+                  </GlassCard>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+        </>
+      ) : null}
 
       <ScrollView
         horizontal
@@ -521,6 +588,15 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   back: { color: coachColors.muted, fontFamily: fonts.bodyMedium, fontSize: 13 },
   list: { gap: 8, paddingBottom: 24, marginTop: 12 },
+  screeningSection: { gap: 8, marginTop: 8, marginBottom: 4 },
+  screeningMatchTag: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.6,
+    color: coachColors.accent,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
   categoryChips: { flexDirection: 'row', gap: 7, marginTop: 12, marginBottom: 4, paddingRight: 8 },
   chip: {
     height: 30,

@@ -31,6 +31,7 @@ import {
   buildActivityFeed,
   buildKpiDeltas,
   buildNeedsYouQueue,
+  countScreeningsForWeek,
   sparklineFromGoalPct,
 } from '../lib/dashboardInsights';
 import { NeedsYouQueue } from '../components/coach/NeedsYouQueue';
@@ -110,9 +111,16 @@ export function DashboardScreen() {
     };
   }, [activeClients, workouts, getTimerSessions]);
 
-  const kpiDeltas = useMemo(
-    () => buildKpiDeltas(stats.total, stats.alert),
-    [stats.total, stats.alert]
+  const kpiDeltas = useMemo(() => {
+    const thisWeek = countScreeningsForWeek(activeClients, getAggregate, 0);
+    const lastWeek = countScreeningsForWeek(activeClients, getAggregate, -1);
+    const screeningDelta = thisWeek === 0 && lastWeek === 0 ? null : thisWeek - lastWeek;
+    return buildKpiDeltas(stats.total, stats.alert, screeningDelta);
+  }, [stats.total, stats.alert, activeClients, getAggregate]);
+
+  const screeningsThisWeek = useMemo(
+    () => countScreeningsForWeek(activeClients, getAggregate, 0),
+    [activeClients, getAggregate]
   );
 
   const needsYou = useMemo(
@@ -291,7 +299,7 @@ export function DashboardScreen() {
                 deltaTone: kpiDeltas.alerts?.tone,
               },
               {
-                value: 7,
+                value: screeningsThisWeek,
                 label: 'Screenings v.',
                 color: 'muted',
                 delta: kpiDeltas.screenings?.label,
@@ -314,7 +322,7 @@ export function DashboardScreen() {
         <TouchableOpacity onPress={() => navigation.navigate('Helhetsvy')}>
           <GlassCard padding={14} style={styles.helhetLink}>
             <Text style={styles.helhetTitle}>Öppna helhetsvy</Text>
-            <Text style={styles.helhetSub}>SQUAD COMMAND CENTER · KPI · RADAR · TRIAGE</Text>
+            <Text style={styles.helhetSub}>HELHETSVY · KPI · RADAR · TRIAGE</Text>
           </GlassCard>
         </TouchableOpacity>
         <SectionLabel>Filtrera trupp</SectionLabel>
@@ -334,7 +342,8 @@ export function DashboardScreen() {
                     aggregate: getAggregate(item.id),
                   }),
                   sparkline: sparklineFromGoalPct(
-                    deriveGoalPct(getAggregate(item.id))
+                    deriveGoalPct(getAggregate(item.id)),
+                    getAggregate(item.id)?.tracker?.trends
                   ),
                   apps: getAggregate(item.id)?.apps ?? null,
                 }}

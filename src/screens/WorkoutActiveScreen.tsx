@@ -21,7 +21,9 @@ import {
   SessionProgressBar,
   CurrentExerciseCard,
   NextExercisePreview,
+  RestTimerRing,
 } from '../components/coach/LiveSessionChrome';
+import { StickyCTA } from '../components/ui/StickyCTA';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useExerciseStore } from '../stores/exerciseStore';
 import { WorkoutExercise, WorkoutSet, Exercise } from '../types/database';
@@ -69,7 +71,30 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
   const [swapVisible, setSwapVisible] = useState(false);
   const [swapTargetId, setSwapTargetId] = useState<string | null>(null);
   const [keepSetsOnSwap, setKeepSetsOnSwap] = useState(true);
+  const [restTimer, setRestTimer] = useState<{ remaining: number; total: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startRestTimer = useCallback((seconds = 90) => {
+    setRestTimer({ remaining: seconds, total: seconds });
+  }, []);
+
+  useEffect(() => {
+    if (!restTimer) return;
+    if (restTimer.remaining <= 0) {
+      setRestTimer(null);
+      return;
+    }
+    restTimerRef.current = setInterval(() => {
+      setRestTimer((prev) => {
+        if (!prev || prev.remaining <= 1) return null;
+        return { ...prev, remaining: prev.remaining - 1 };
+      });
+    }, 1000);
+    return () => {
+      if (restTimerRef.current) clearInterval(restTimerRef.current);
+    };
+  }, [restTimer?.total]);
 
   useEffect(() => {
     fetchWorkoutDetail(workoutId);
@@ -149,6 +174,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
         notes: null,
         completed_at: new Date().toISOString(),
       });
+      startRestTimer(90);
     } catch {
       Alert.alert('Fel', 'Kunde inte lägga till set');
     }
@@ -170,11 +196,10 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
   };
 
   const swapSuggestions = useMemo(() => {
-    return exercises.slice(0, 8).map((ex, i) => ({
+    return exercises.slice(0, 8).map((ex) => ({
       id: ex.id,
       name: ex.name,
       meta: Array.isArray(ex.muscle_group) ? ex.muscle_group.join(', ') : 'Övning',
-      screeningMatch: i < 2,
     }));
   }, [exercises]);
 
@@ -263,6 +288,10 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
 
   const currentWe = activeWorkout.workout_exercises[currentExerciseIndex];
   const nextWe = activeWorkout.workout_exercises[currentExerciseIndex + 1];
+  const currentSetNumber =
+    currentWe?.sets.filter((s) => s.completed_at).length != null
+      ? currentWe.sets.filter((s) => s.completed_at).length + 1
+      : 1;
 
   if (showSummary && activeWorkout) {
     const totalSets = activeWorkout.workout_exercises.reduce((s, we) => s + we.sets.length, 0);
@@ -344,12 +373,23 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
         </>
       ) : null}
 
+      {isActive && restTimer && restTimer.remaining > 0 ? (
+        <RestTimerRing
+          secondsRemaining={restTimer.remaining}
+          totalSeconds={restTimer.total}
+          label="Vila mellan set"
+          onSkip={() => setRestTimer(null)}
+        />
+      ) : null}
+
       <ScrollView
         style={styles.exerciseList}
         contentContainerStyle={styles.exerciseListContent}
         nestedScrollEnabled
       >
-        {activeWorkout.workout_exercises.map((we, weIndex) => (
+        {activeWorkout.workout_exercises.map((we, weIndex) => {
+          const firstOpenIdx = we.sets.findIndex((s) => !s.completed_at);
+          return (
           <ExerciseSection
             key={we.id}
             workoutExercise={we}
@@ -357,6 +397,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
             isExpanded={expandedExercise === we.id || expandedExercise === null}
             isActive={isActive}
             isCompleted={isCompleted}
+            currentSetIndex={firstOpenIdx >= 0 ? firstOpenIdx : we.sets.length - 1}
             onToggle={() =>
               setExpandedExercise(expandedExercise === we.id ? null : we.id)
             }
@@ -364,9 +405,11 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
             onUpdateSet={handleUpdateSet}
             onDeleteSet={handleDeleteSet}
             onRestTimeLogged={handleRestTimeLogged}
+            onSetLogged={() => startRestTimer(90)}
             onRemoveExercise={isActive ? () => handleRemoveExercise(we.id, we.exercise?.name || 'Övning') : undefined}
           />
-        ))}
+        );
+        })}
 
         {activeWorkout.workout_exercises.length === 0 && (
           <GlassCard style={styles.emptyState}>
@@ -391,6 +434,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
               }
             />
             <Button label="Lägg till övning" variant="secondary" onPress={handleAddExercise} />
+            <Button label="Avsluta pass" variant="danger" onPress={handleCompleteWorkout} />
           </>
         ) : null}
         {activeWorkout.status === 'planned' || activeWorkout.status === 'draft' ? (
@@ -400,10 +444,17 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
             onPress={handleStartWorkout}
           />
         ) : null}
-        {isActive ? (
-          <Button label="Avsluta pass" variant="danger" onPress={handleCompleteWorkout} />
-        ) : null}
       </View>
+
+      {isActive && currentWe ? (
+        <StickyCTA
+          label={`Logga set ${Math.min(currentSetNumber, currentWe.sets.length || 1)}`}
+          sublabel={currentWe.exercise?.name ?? 'Övning'}
+          onPress={() => handleAddSet(currentWe.id, currentWe.sets.length, currentWe.exercise?.tracking_type)}
+          locked={!!restTimer && restTimer.remaining > 0}
+          lockedReason={restTimer && restTimer.remaining > 0 ? `Vila ${restTimer.remaining}s kvar` : undefined}
+        />
+      ) : null}
 
       <ExerciseSwapSheet
         visible={swapVisible}
@@ -428,11 +479,13 @@ interface ExerciseSectionProps {
   isExpanded: boolean;
   isActive: boolean;
   isCompleted: boolean;
+  currentSetIndex: number;
   onToggle: () => void;
   onAddSet: () => void;
   onUpdateSet: (setId: string, field: string, value: number | string | null) => void;
   onDeleteSet: (setId: string) => void;
   onRestTimeLogged: (setId: string, seconds: number) => void;
+  onSetLogged?: () => void;
   onRemoveExercise?: () => void;
 }
 
@@ -442,15 +495,16 @@ function ExerciseSection({
   isExpanded,
   isActive,
   isCompleted,
+  currentSetIndex,
   onToggle,
   onAddSet,
   onUpdateSet,
   onDeleteSet,
   onRestTimeLogged,
+  onSetLogged,
   onRemoveExercise,
 }: ExerciseSectionProps) {
   const exercise = workoutExercise.exercise;
-  const trackingType = exercise?.tracking_type || 'weight';
 
   return (
     <GlassCard style={styles.exerciseSection}>
@@ -471,46 +525,34 @@ function ExerciseSection({
 
       {isExpanded && (
         <View style={styles.setsContainer}>
-          {/* Table Header */}
-          <View style={styles.setTableHeader}>
-            <Text style={[styles.setHeaderText, { width: 40 }]}>Set</Text>
-            {trackingType === 'weight' ? (
-              <>
-                <Text style={[styles.setHeaderText, { flex: 1 }]}>Vikt (kg)</Text>
-                <Text style={[styles.setHeaderText, { flex: 1 }]}>Reps</Text>
-              </>
-            ) : trackingType === 'time' ? (
-              <Text style={[styles.setHeaderText, { flex: 2 }]}>Tid</Text>
-            ) : (
-              <Text style={[styles.setHeaderText, { flex: 2 }]}>-</Text>
-            )}
-            <Text style={[styles.setHeaderText, { width: 50 }]}>RPE</Text>
-            <Text style={[styles.setHeaderText, { width: 60 }]}>Vila</Text>
-            {isActive && <Text style={[styles.setHeaderText, { width: 40 }]} />}
-          </View>
+          {workoutExercise.sets.map((set, setIdx) => {
+            const rowState: 'done' | 'current' | 'todo' = set.completed_at
+              ? 'done'
+              : setIdx === currentSetIndex
+                ? 'current'
+                : 'todo';
+            return (
+              <SetRow
+                key={set.id}
+                set={set}
+                exercise={exercise}
+                rowState={rowState}
+                isActive={isActive}
+                isCompleted={isCompleted}
+                onUpdateSet={onUpdateSet}
+                onDeleteSet={onDeleteSet}
+                onRestTimeLogged={onRestTimeLogged}
+                onSetLogged={onSetLogged}
+              />
+            );
+          })}
 
-          {/* Sets */}
-          {workoutExercise.sets.map((set) => (
-            <SetRow
-              key={set.id}
-              set={set}
-              exercise={exercise}
-              isActive={isActive}
-              isCompleted={isCompleted}
-              onUpdateSet={onUpdateSet}
-              onDeleteSet={onDeleteSet}
-              onRestTimeLogged={onRestTimeLogged}
-            />
-          ))}
-
-          {/* Add Set button */}
           {isActive && (
             <TouchableOpacity style={styles.addSetButton} onPress={onAddSet}>
               <Text style={styles.addSetText}>+ Lägg till set</Text>
             </TouchableOpacity>
           )}
 
-          {/* Remove Exercise button */}
           {isActive && onRemoveExercise && (
             <TouchableOpacity style={styles.removeExerciseButton} onPress={onRemoveExercise}>
               <Text style={styles.removeExerciseText}>Ta bort övning</Text>
@@ -535,20 +577,32 @@ function ExerciseSection({
 interface SetRowProps {
   set: WorkoutSet;
   exercise?: Exercise;
+  rowState: 'done' | 'current' | 'todo';
   isActive: boolean;
   isCompleted: boolean;
   onUpdateSet: (setId: string, field: string, value: number | string | null) => void;
   onDeleteSet: (setId: string) => void;
   onRestTimeLogged: (setId: string, seconds: number) => void;
+  onSetLogged?: () => void;
 }
 
-function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet, onRestTimeLogged }: SetRowProps) {
+function SetRow({
+  set,
+  exercise,
+  rowState,
+  isActive,
+  isCompleted,
+  onUpdateSet,
+  onDeleteSet,
+  onRestTimeLogged,
+  onSetLogged,
+}: SetRowProps) {
   const [showTimer, setShowTimer] = useState(false);
   const [showWeightPicker, setShowWeightPicker] = useState(false);
   const [showRepsPicker, setShowRepsPicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showRpePicker, setShowRpePicker] = useState(false);
-  
+
   const trackingType = exercise?.tracking_type || 'weight';
 
   const handleWeightSelect = (value: number) => {
@@ -557,6 +611,7 @@ function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet
 
   const handleRepsSelect = (value: number) => {
     onUpdateSet(set.id, 'reps', value === 0 ? null : value);
+    if (isActive && rowState === 'current') onSetLogged?.();
   };
 
   const handleRpeSelect = (value: number) => {
@@ -565,121 +620,87 @@ function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet
 
   const handleTimeSelect = (value: number) => {
     onUpdateSet(set.id, 'duration_seconds', value === 0 ? null : value);
+    if (isActive && rowState === 'current') onSetLogged?.();
   };
 
   const formatWeight = (weight: number | null) => {
-    if (weight == null) return '-';
-    return weight % 1 === 0 ? weight.toString() : weight.toFixed(1);
+    if (weight == null) return '—';
+    return `${weight % 1 === 0 ? weight.toString() : weight.toFixed(1)} kg`;
   };
 
-  const formatTime = (seconds: number | null) => {
-    if (seconds == null) return '-';
+  const formatTimeDisplay = (seconds: number | null) => {
+    if (seconds == null) return '—';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
   };
 
+  const valueText =
+    trackingType === 'weight'
+      ? `${formatWeight(set.weight_kg)} · ${set.reps != null ? `${set.reps} reps` : '—'}`
+      : trackingType === 'time'
+        ? formatTimeDisplay(set.duration_seconds)
+        : '—';
+
   return (
     <>
       <View style={[styles.setRow, set.is_pr && styles.setRowPR]}>
-        <View style={{ width: 40, alignItems: 'center' }}>
-          <Text style={styles.setNumber}>{set.set_number}</Text>
-          {set.is_pr && <Text style={styles.prBadge}>PR</Text>}
+        <View
+          style={[
+            styles.setCircle,
+            rowState === 'done' && styles.setDone,
+            rowState === 'current' && styles.setCurrent,
+            rowState === 'todo' && styles.setTodo,
+          ]}
+        >
+          {rowState === 'done' ? <Text style={styles.setCheck}>✓</Text> : null}
         </View>
-
-        {trackingType === 'weight' ? (
-          <>
-            {/* Weight */}
-            <View style={{ flex: 1, paddingHorizontal: 4 }}>
-              {isActive ? (
-                <TouchableOpacity
-                  style={styles.setInput}
-                  onPress={() => setShowWeightPicker(true)}
-                >
-                  <Text style={[styles.setInputText, !set.weight_kg && styles.placeholderText]}>
-                    {formatWeight(set.weight_kg)}
-                  </Text>
+        <Text style={styles.setLbl}>SET {set.set_number}</Text>
+        {isActive && rowState === 'current' ? (
+          <View style={styles.setValRow}>
+            {trackingType === 'weight' ? (
+              <>
+                <TouchableOpacity style={styles.setInputCompact} onPress={() => setShowWeightPicker(true)}>
+                  <Text style={styles.setInputText}>{formatWeight(set.weight_kg)}</Text>
                 </TouchableOpacity>
-              ) : (
-                <Text style={styles.setValue}>{formatWeight(set.weight_kg)}</Text>
-              )}
-            </View>
-
-            {/* Reps */}
-            <View style={{ flex: 1, paddingHorizontal: 4 }}>
-              {isActive ? (
-                <TouchableOpacity
-                  style={styles.setInput}
-                  onPress={() => setShowRepsPicker(true)}
-                >
-                  <Text style={[styles.setInputText, !set.reps && styles.placeholderText]}>
-                    {set.reps ?? '-'}
-                  </Text>
+                <TouchableOpacity style={styles.setInputCompact} onPress={() => setShowRepsPicker(true)}>
+                  <Text style={styles.setInputText}>{set.reps ?? '—'}</Text>
                 </TouchableOpacity>
-              ) : (
-                <Text style={styles.setValue}>{set.reps ?? '-'}</Text>
-              )}
-            </View>
-          </>
-        ) : trackingType === 'time' ? (
-          /* Duration */
-          <View style={{ flex: 2, paddingHorizontal: 4 }}>
-            {isActive ? (
-              <TouchableOpacity
-                style={styles.setInput}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={[styles.setInputText, !set.duration_seconds && styles.placeholderText]}>
-                  {formatTime(set.duration_seconds)}
-                </Text>
+              </>
+            ) : trackingType === 'time' ? (
+              <TouchableOpacity style={styles.setInputCompact} onPress={() => setShowTimePicker(true)}>
+                <Text style={styles.setInputText}>{formatTimeDisplay(set.duration_seconds)}</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.setValue}>{formatTime(set.duration_seconds)}</Text>
+              <Text style={styles.setVal}>{valueText}</Text>
             )}
           </View>
         ) : (
-          /* Other */
-          <View style={{ flex: 2, paddingHorizontal: 4 }}>
-            <Text style={styles.setValue}>-</Text>
-          </View>
-        )}
-
-        {/* RPE */}
-        <View style={{ width: 50, paddingHorizontal: 2 }}>
-          {isActive ? (
-            <TouchableOpacity
-              style={[styles.setInput, { paddingHorizontal: 4 }]}
-              onPress={() => setShowRpePicker(true)}
-            >
-              <Text style={[styles.setInputText, { fontSize: 13 }, !set.rpe && styles.placeholderText]}>
-                {set.rpe ?? '-'}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={[styles.setValue, { fontSize: 13 }]}>{set.rpe ?? '-'}</Text>
-          )}
-        </View>
-
-        {/* Rest Timer */}
-        <TouchableOpacity
-          style={{ width: 60, alignItems: 'center' }}
-          onPress={() => isActive && setShowTimer(!showTimer)}
-          disabled={!isActive}
-        >
-          <Text style={[styles.setValue, { fontSize: 13, color: coachColors.coach }]}>
-            {set.rest_time_seconds ? formatTime(set.rest_time_seconds) : isActive ? 'Start' : '-'}
+          <Text style={styles.setVal}>
+            <Text style={styles.setValB}>{valueText.split(' · ')[0]}</Text>
+            {valueText.includes(' · ') ? ` · ${valueText.split(' · ').slice(1).join(' · ')}` : ''}
           </Text>
-        </TouchableOpacity>
-
-        {/* Delete */}
-        {isActive && (
-          <TouchableOpacity style={{ width: 40, alignItems: 'center' }} onPress={() => onDeleteSet(set.id)}>
-            <Text style={{ color: coachColors.danger, fontSize: 16 }}>X</Text>
-          </TouchableOpacity>
         )}
+        {set.rpe != null ? (
+          <TouchableOpacity
+            disabled={!isActive || rowState !== 'current'}
+            onPress={() => setShowRpePicker(true)}
+          >
+            <Text style={[styles.rpe, set.rpe >= 9 && styles.rpeHi]}>RPE {set.rpe}</Text>
+          </TouchableOpacity>
+        ) : isActive && rowState === 'current' ? (
+          <TouchableOpacity onPress={() => setShowRpePicker(true)}>
+            <Text style={styles.rpe}>RPE –</Text>
+          </TouchableOpacity>
+        ) : null}
+        {set.is_pr ? <Text style={styles.pbChip}>PB</Text> : null}
+        {isActive ? (
+          <TouchableOpacity onPress={() => onDeleteSet(set.id)}>
+            <Text style={styles.deleteSet}>×</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      {/* Inline Rest Timer */}
       {showTimer && isActive && (
         <View style={styles.timerInline}>
           <RestTimer
@@ -692,7 +713,6 @@ function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet
         </View>
       )}
 
-      {/* Weight Picker */}
       <WheelPicker
         visible={showWeightPicker}
         onClose={() => setShowWeightPicker(false)}
@@ -702,8 +722,6 @@ function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet
         unit="kg"
         title="Välj vikt"
       />
-
-      {/* Reps Picker */}
       <WheelPicker
         visible={showRepsPicker}
         onClose={() => setShowRepsPicker(false)}
@@ -713,8 +731,6 @@ function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet
         unit="reps"
         title="Välj repetitioner"
       />
-
-      {/* RPE Picker */}
       <WheelPicker
         visible={showRpePicker}
         onClose={() => setShowRpePicker(false)}
@@ -724,8 +740,6 @@ function SetRow({ set, exercise, isActive, isCompleted, onUpdateSet, onDeleteSet
         unit=""
         title="Välj RPE"
       />
-
-      {/* Time Picker */}
       <WheelPicker
         visible={showTimePicker}
         onClose={() => setShowTimePicker(false)}
@@ -761,7 +775,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
   },
   exerciseList: { flex: 1 },
-  exerciseListContent: { gap: 10, paddingBottom: 100 },
+  exerciseListContent: { gap: 10, paddingBottom: 160 },
   exerciseSection: {
     marginBottom: 0,
     overflow: 'hidden',
@@ -806,13 +820,75 @@ const styles = StyleSheet.create({
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    gap: 10,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: coachColors.border + '40',
   },
   setRowPR: { backgroundColor: coachColors.orange + '10' },
-  setNumber: { fontSize: 15, fontWeight: '600', color: coachColors.muted },
-  prBadge: { fontSize: 9, fontWeight: '700', color: coachColors.orange, marginTop: 2 },
+  setCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setDone: { backgroundColor: coachColors.accent },
+  setCurrent: {
+    borderWidth: 1.5,
+    borderColor: coachColors.accent,
+  },
+  setTodo: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderStyle: 'dashed',
+  },
+  setCheck: { fontSize: 11, fontWeight: '700', color: '#17191c' },
+  setLbl: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.6,
+    color: 'rgba(255,255,255,0.24)',
+    width: 44,
+  },
+  setVal: {
+    flex: 1,
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: coachColors.fg,
+  },
+  setValB: { color: coachColors.accent, fontWeight: '500' },
+  setValRow: { flex: 1, flexDirection: 'row', gap: 6 },
+  setInputCompact: {
+    flex: 1,
+    backgroundColor: coachColors.glassBg,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    alignItems: 'center',
+  },
+  rpe: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: coachColors.muted,
+    width: 46,
+    textAlign: 'right',
+  },
+  rpeHi: { color: '#FB923C' },
+  pbChip: {
+    fontFamily: fonts.mono,
+    fontSize: 7,
+    color: '#17191c',
+    backgroundColor: '#4ADE80',
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    fontWeight: '500',
+    overflow: 'hidden',
+  },
+  deleteSet: { color: coachColors.danger, fontSize: 18, paddingHorizontal: 4 },
   setInput: {
     backgroundColor: coachColors.glassBg,
     borderRadius: borderRadius.sm,

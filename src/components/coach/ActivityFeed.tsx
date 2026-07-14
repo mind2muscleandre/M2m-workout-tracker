@@ -20,7 +20,7 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
         <SectionLabel>Aktivitetsflöde</SectionLabel>
         <View style={styles.live}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE</Text>
+          <Text style={styles.liveText}>DIREKT</Text>
         </View>
       </View>
       <GlassCard padding={14}>

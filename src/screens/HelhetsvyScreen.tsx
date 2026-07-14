@@ -15,6 +15,11 @@ import {
   buildActivityFeed,
   buildKpiDeltas,
   buildNeedsYouQueue,
+  computeAdherenceSparkline,
+  computeAdherenceWeekDelta,
+  computeAvgReadiness,
+  computeTodaySessionStats,
+  countScreeningsForWeek,
   sparklineFromGoalPct,
 } from '../lib/dashboardInsights';
 import { clientToAthleteCard, deriveAthleteStatus, deriveGoalPct } from '../lib/athleteStatus';
@@ -57,7 +62,16 @@ export function HelhetsvyScreen() {
     [active, workouts, getTimerSessions]
   );
 
-  const deltas = buildKpiDeltas(active.length, alertCount);
+  const deltas = buildKpiDeltas(
+    active.length,
+    alertCount,
+    (() => {
+      const thisWeek = countScreeningsForWeek(active, getAggregate, 0);
+      const lastWeek = countScreeningsForWeek(active, getAggregate, -1);
+      if (thisWeek === 0 && lastWeek === 0) return null;
+      return thisWeek - lastWeek;
+    })()
+  );
   const needsYou = buildNeedsYouQueue(active, workouts, getTimerSessions, getAggregate);
   const feed = buildActivityFeed(active, workouts);
 
@@ -68,40 +82,96 @@ export function HelhetsvyScreen() {
     return pcts.length ? Math.round(pcts.reduce((s, p) => s + p, 0) / pcts.length) : 0;
   }, [active, getAggregate]);
 
+  const avgReadiness = useMemo(
+    () => computeAvgReadiness(active, getAggregate),
+    [active, getAggregate]
+  );
+
+  const adherenceSparkline = useMemo(
+    () => computeAdherenceSparkline(active, workouts),
+    [active, workouts]
+  );
+
+  const adherenceDelta = useMemo(
+    () => computeAdherenceWeekDelta(active, workouts),
+    [active, workouts]
+  );
+
+  const screeningsThisWeek = useMemo(
+    () => countScreeningsForWeek(active, getAggregate, 0),
+    [active, getAggregate]
+  );
+
+  const clientIdSet = useMemo(() => new Set(active.map((c) => c.id)), [active]);
+  const todayStats = useMemo(
+    () => computeTodaySessionStats(workouts, clientIdSet),
+    [workouts, clientIdSet]
+  );
+
   const todaySessions = workouts.filter(
     (w) => w.status === 'planned' || w.status === 'in_progress'
   ).length;
 
   const roster = active.slice(0, 12).map((c) => {
+    const agg = getAggregate(c.id);
     const card = clientToAthleteCard(c, workouts, {
       timerSessions: getTimerSessions(c.client_user_id),
-      aggregate: getAggregate(c.id),
+      aggregate: agg,
     });
+    const spark = sparklineFromGoalPct(card.goalPct, agg?.tracker?.trends);
     return {
       ...card,
-      spark: sparklineFromGoalPct(card.goalPct),
+      spark,
       score: card.goalPct ?? 0,
       risk: card.status === 'alert',
     };
   });
 
   const kpiValues: Record<string, { value: string; delta?: string; tone?: 'up' | 'down' | 'flat' }> = {
-    readiness: { value: String(Math.min(99, avgGoal + 6)), delta: '▲ +3 mot förra v.', tone: 'up' },
-    risk: { value: String(alertCount), delta: alertCount ? '▲ +1 idag' : undefined, tone: 'down' },
-    adherence: { value: `${avgGoal}%`, delta: '▲ +4%', tone: 'up' },
-    today: { value: String(todaySessions), delta: '2 KLARA · 1 KVAR', tone: 'flat' },
-    screenings: { value: '7', delta: deltas.screenings?.label, tone: 'up' },
+    readiness: {
+      value: avgReadiness != null ? String(avgReadiness) : '—',
+      delta: undefined,
+      tone: 'flat',
+    },
+    risk: {
+      value: String(alertCount),
+      delta: alertCount > 0 ? `▲ +${alertCount} idag` : undefined,
+      tone: 'down',
+    },
+    adherence: {
+      value: avgGoal > 0 ? `${avgGoal}%` : '—',
+      delta:
+        adherenceDelta != null && adherenceDelta !== 0
+          ? `${adherenceDelta > 0 ? '▲' : '▼'} ${Math.abs(adherenceDelta)} pass v.`
+          : undefined,
+      tone: adherenceDelta != null && adherenceDelta > 0 ? 'up' : 'flat',
+    },
+    today: {
+      value: String(todayStats.total > 0 ? todayStats.total : todaySessions),
+      delta:
+        todayStats.total > 0
+          ? `${todayStats.completed} KLARA · ${todayStats.remaining} KVAR`
+          : todaySessions > 0
+            ? `${todaySessions} PLANERADE`
+            : undefined,
+      tone: 'flat',
+    },
+    screenings: {
+      value: String(screeningsThisWeek),
+      delta: deltas.screenings?.label,
+      tone: deltas.screenings?.tone,
+    },
   };
 
   return (
     <ScreenContainer
       title="Helhetsvy"
-      subtitle="Squad command center"
+      subtitle="Stallöversikt"
       scroll
       headerRight={
         <View style={styles.live}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE</Text>
+          <Text style={styles.liveText}>DIREKT</Text>
         </View>
       }
     >
@@ -144,18 +214,30 @@ export function HelhetsvyScreen() {
         <GlassCard padding={16} style={styles.pulse}>
           <View style={styles.pulseTop}>
             <SectionLabel>Stallets puls</SectionLabel>
-            <Text style={styles.pulseStable}>STABIL ▲</Text>
+            <Text style={styles.pulseStable}>
+              {avgReadiness != null && avgReadiness >= 70 ? 'STABIL ▲' : avgReadiness != null ? 'UPPFÖLJ' : '—'}
+            </Text>
           </View>
-          <Text style={styles.pulseScore}>{avgGoal}</Text>
-          <Text style={styles.pulseHint}>Snitt målstatus · {active.length} atleter</Text>
+          <Text style={styles.pulseScore}>{avgReadiness ?? avgGoal ?? '—'}</Text>
+          <Text style={styles.pulseHint}>
+            {avgReadiness != null ? 'Snitt återhämtning' : 'Snitt målstatus'} · {active.length} atleter
+          </Text>
         </GlassCard>
 
         <GlassCard padding={16} style={styles.trend}>
           <View style={styles.pulseTop}>
             <SectionLabel>Följsamhet 7d</SectionLabel>
-            <Text style={styles.trendNow}>+4%</Text>
+            <Text style={styles.trendNow}>
+              {adherenceDelta != null && adherenceDelta !== 0
+                ? `${adherenceDelta > 0 ? '+' : ''}${adherenceDelta} pass`
+                : '—'}
+            </Text>
           </View>
-          <Sparkline values={[58, 61, 60, 64, 63, 66, avgGoal || 68]} height={48} />
+          {adherenceSparkline.length > 0 ? (
+            <Sparkline values={adherenceSparkline} height={48} />
+          ) : (
+            <Text style={styles.pulseHint}>Ingen historik ännu</Text>
+          )}
         </GlassCard>
       </View>
 
@@ -175,9 +257,11 @@ export function HelhetsvyScreen() {
           >
             <View style={styles.rcTop}>
               <Text style={styles.rcName} numberOfLines={1}>{r.name.split(' ')[0]}</Text>
-              <Text style={styles.rcScore}>{r.score}</Text>
+              <Text style={styles.rcScore}>{r.score > 0 ? r.score : '—'}</Text>
             </View>
-            <Sparkline values={r.spark} height={16} highlightLast={false} />
+            {r.spark.length > 0 ? (
+              <Sparkline values={r.spark} height={16} highlightLast={false} />
+            ) : null}
           </TouchableOpacity>
         ))}
       </View>

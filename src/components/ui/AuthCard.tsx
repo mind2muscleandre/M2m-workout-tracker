@@ -15,9 +15,14 @@ export function AuthCard({ title = 'M2M COACH', subtitle, children }: AuthCardPr
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.card}>
-        <Text style={styles.logo}>{title}</Text>
-        {subtitle ? <Text style={styles.sub}>{subtitle}</Text> : null}
-        {children}
+        <View style={styles.logoWrap}>
+          <View style={styles.logoMark}>
+            <Text style={styles.logoMarkText}>M</Text>
+          </View>
+          <Text style={styles.logo}>{title}</Text>
+          {subtitle ? <Text style={styles.sub}>{subtitle}</Text> : null}
+        </View>
+        <View style={styles.body}>{children}</View>
       </View>
     </ScrollView>
   );
@@ -43,12 +48,35 @@ const styles = StyleSheet.create({
     ...shadows.glass,
     gap: 16,
   },
+  logoWrap: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  body: {
+    width: '100%',
+    gap: 16,
+  },
+  logoMark: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: coachColors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  logoMarkText: {
+    fontFamily: fonts.display,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#17191c',
+  },
   logo: {
     fontFamily: fonts.display,
     fontSize: 32,
     fontWeight: '700',
     letterSpacing: 2,
-    color: coachColors.coach,
+    color: coachColors.accent,
     textAlign: 'center',
   },
   sub: {
