@@ -173,7 +173,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
     return exercises.slice(0, 8).map((ex, i) => ({
       id: ex.id,
       name: ex.name,
-      meta: ex.muscle_group ?? 'Övning',
+      meta: Array.isArray(ex.muscle_group) ? ex.muscle_group.join(', ') : 'Övning',
       screeningMatch: i < 2,
     }));
   }, [exercises]);
@@ -253,13 +253,13 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
         ? 'Utkast'
         : 'Planerat';
 
-  const currentExerciseIndex = useMemo(() => {
+  const currentExerciseIndex = (() => {
     if (!isActive) return 0;
     const idx = activeWorkout.workout_exercises.findIndex((we) =>
       we.sets.some((s) => !s.completed_at)
     );
-    return idx >= 0 ? idx : activeWorkout.workout_exercises.length - 1;
-  }, [activeWorkout.workout_exercises, isActive]);
+    return idx >= 0 ? idx : Math.max(0, activeWorkout.workout_exercises.length - 1);
+  })();
 
   const currentWe = activeWorkout.workout_exercises[currentExerciseIndex];
   const nextWe = activeWorkout.workout_exercises[currentExerciseIndex + 1];
@@ -314,6 +314,36 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
         <Text style={styles.statusText}>{statusLabel}</Text>
       </GlassCard>
 
+      {isActive && activeWorkout.workout_exercises.length > 0 ? (
+        <>
+          <SessionProgressBar
+            total={activeWorkout.workout_exercises.length}
+            currentIndex={currentExerciseIndex}
+          />
+          {currentWe ? (
+            <CurrentExerciseCard
+              tag={`ÖVNING ${currentExerciseIndex + 1}/${activeWorkout.workout_exercises.length}`}
+              name={currentWe.exercise?.name ?? 'Övning'}
+              subtitle={
+                currentWe.target_sets && currentWe.target_reps
+                  ? `${currentWe.target_sets} × ${currentWe.target_reps} · ${currentWe.sets.filter((s) => s.completed_at).length}/${currentWe.sets.length} set klara`
+                  : `${currentWe.sets.filter((s) => s.completed_at).length}/${currentWe.sets.length} set klara`
+              }
+            />
+          ) : null}
+          {nextWe ? (
+            <NextExercisePreview
+              name={nextWe.exercise?.name ?? 'Övning'}
+              meta={
+                nextWe.target_sets && nextWe.target_reps
+                  ? `${nextWe.target_sets} × ${nextWe.target_reps}`
+                  : 'Nästa i passet'
+              }
+            />
+          ) : null}
+        </>
+      ) : null}
+
       <ScrollView
         style={styles.exerciseList}
         contentContainerStyle={styles.exerciseListContent}
@@ -351,7 +381,15 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
       <View style={styles.footer}>
         {isActive ? (
           <>
-            <Button label="Byt övning" variant="secondary" onPress={handleAddExercise} />
+            <Button
+              label="Byt övning"
+              variant="secondary"
+              onPress={() =>
+                openSwapForExercise(
+                  currentWe?.id ?? activeWorkout.workout_exercises[0]?.id ?? ''
+                )
+              }
+            />
             <Button label="Lägg till övning" variant="secondary" onPress={handleAddExercise} />
           </>
         ) : null}
@@ -366,6 +404,16 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
           <Button label="Avsluta pass" variant="danger" onPress={handleCompleteWorkout} />
         ) : null}
       </View>
+
+      <ExerciseSwapSheet
+        visible={swapVisible}
+        onClose={() => setSwapVisible(false)}
+        currentName={currentWe?.exercise?.name ?? 'Övning'}
+        suggestions={swapSuggestions}
+        onSelect={handleSwapSelect}
+        onKeepSets={keepSetsOnSwap}
+        onToggleKeepSets={setKeepSetsOnSwap}
+      />
     </ScreenContainer>
   );
 }

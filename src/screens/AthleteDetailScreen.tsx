@@ -73,6 +73,7 @@ import type { Client } from '../types/database';
 import type { AthleteAggregateView, PerformView } from '../types/platform';
 import { coachColors, fonts, borderRadius, statusLabels, statusColors } from '../lib/theme';
 import { ExpandableSessionRow } from '../components/coach/ExpandableSessionRow';
+import { BookSessionSheet } from '../components/coach/CoachModals';
 import { bandDisplaySv } from '../lib/movementAssessment/exportPayload';
 import type { ScoreBand } from '../types/movementAssessment';
 import { supabase } from '../lib/supabase';
@@ -380,6 +381,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
   const [isInviting, setIsInviting] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteEmailError, setInviteEmailError] = useState(false);
+  const [bookSessionVisible, setBookSessionVisible] = useState(false);
 
   const client = resolvedClient ?? clients.find((c) => c.id === clientId) ?? null;
   const isAssignedToMe = isClientAssignedToCurrentUser(client, authUser?.id);
@@ -846,6 +848,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
           onStartSession={() =>
             client && navigation.navigate('SessionTimer', { clientId: client.id })
           }
+          onBookSession={() => setBookSessionVisible(true)}
           onOpenAssessmentProgram={(assessmentId) =>
             navigation.navigate('MovementAssessmentProgramBuilder', {
               clientId: client?.id ?? clientId,
@@ -909,6 +912,19 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
       onSelect={handleCoachPick}
       isSelecting={isAssigning}
       fetchTrainers={loadTrainers}
+    />
+
+    <BookSessionSheet
+      visible={bookSessionVisible}
+      onClose={() => setBookSessionVisible(false)}
+      athleteName={displayName}
+      onBook={(date, time) => {
+        setBookSessionVisible(false);
+        navigation.navigate('CreateSession', {
+          clientId: client?.id,
+        });
+        Alert.alert('Bokad', `Session bokad ${date} kl ${time}`);
+      }}
     />
 
     {/* ---- User Profile Info Modal ---- */}
@@ -1099,6 +1115,7 @@ function OverviewTab({
   onEditProgram,
   onEditPerformProgram,
   onStartSession,
+  onBookSession,
   onOpenAssessmentProgram,
   onAutoGenerate,
   autoGenerating,
@@ -1121,6 +1138,7 @@ function OverviewTab({
     screeningId?: string;
   }) => void;
   onStartSession: () => void;
+  onBookSession?: () => void;
   onOpenAssessmentProgram: (assessmentId: string) => void;
   onAutoGenerate: (assessment: MovementAssessmentRow) => void;
   autoGenerating: boolean;
@@ -1179,6 +1197,12 @@ function OverviewTab({
           <Text style={styles.quickActionIcon}>▶</Text>
           <Text style={styles.quickActionLabel}>Starta session</Text>
         </TouchableOpacity>
+        {onBookSession ? (
+          <TouchableOpacity style={styles.quickActionBtn} onPress={onBookSession} activeOpacity={0.8}>
+            <Text style={styles.quickActionIcon}>📅</Text>
+            <Text style={styles.quickActionLabel}>Boka session</Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity style={styles.quickActionBtn} onPress={onMovement} activeOpacity={0.8}>
           <Text style={styles.quickActionIcon}>📋</Text>
           <Text style={styles.quickActionLabel}>Rörelsebedömning</Text>
