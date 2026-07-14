@@ -36,6 +36,10 @@ import type {
   TrainingSessionRow,
   TrackerProgramView,
 } from '../types/platform';
+import { KravStrip } from '../components/coach/KravStrip';
+import { BlockPhaseCard } from '../components/coach/BlockPhaseCard';
+import { CoverageBanner } from '../components/coach/CoverageBanner';
+import { SaveTemplateSheet } from '../components/coach/CoachModals';
 import { coachColors, fonts, borderRadius } from '../lib/theme';
 
 type Props = StackScreenProps<RootStackParamList, 'ProgramBuilder'>;
@@ -55,6 +59,7 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
   const [weeks, setWeeks] = useState('4');
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleName, setScheduleName] = useState('Träningspass');
+  const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
 
   const athleteUserId = routeUserId ?? null;
 
@@ -303,16 +308,67 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
       <View style={styles.detailHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.detailTitle}>{adaptView.program.name}</Text>
-          <View style={styles.detailMeta}>
-            <EnergySystemPill system="atp" />
-            <Text style={styles.sub}>
-              Vecka {adaptView.currentWeek}/
-              {adaptView.program.duration_weeks ?? adaptView.program.weeks ?? '?'}
-            </Text>
-          </View>
-          <Text style={styles.readOnly}>Adapt-program — läsning</Text>
+          <Text style={styles.sub}>
+            {adaptView.program.sport_tag ?? 'Program'} ·{' '}
+            {adaptView.program.duration_weeks ?? adaptView.program.weeks ?? '?'} veckor ·{' '}
+            {adaptView.sessions.length} pass
+          </Text>
         </View>
+        <TouchableOpacity style={styles.saveTpl} onPress={() => setTemplateSheetOpen(true)}>
+          <Text style={styles.saveTplText}>Spara som mall</Text>
+        </TouchableOpacity>
       </View>
+
+      <KravStrip
+        title={`KRAV · ${(adaptView.program.sport_tag ?? 'ATLET').toUpperCase()} + SCREENING`}
+        chips={[
+          { label: 'HÖFT/LJUMSK-PRIO' },
+          { label: 'UNILATERAL UNDERKROPP' },
+          { label: 'MAXSTYRKA + POWER' },
+          { label: 'FOTLED DORSALFLEX. 58', tone: 'scr' },
+          { label: '12% ASYMMETRI VÄ FOTLED', tone: 'warn' },
+        ]}
+      />
+
+      <SectionLabel>Block</SectionLabel>
+      <BlockPhaseCard
+        block={{
+          id: 'b1',
+          phaseLabel: 'BLOCK 1',
+          title: 'Hypertrofi & bas',
+          meta: `VECKA 1–4 · KLART · ${adaptView.sessions.length} PASS`,
+          weeks: ['done', 'done', 'done', 'done'],
+          onOpenSessions: () => adaptView.sessions[0] && setSelectedSession(adaptView.sessions[0]),
+          onSaveTemplate: () => setTemplateSheetOpen(true),
+        }}
+      />
+      <BlockPhaseCard
+        block={{
+          id: 'b2',
+          phaseLabel: 'BLOCK 2',
+          title: 'Maxstyrka',
+          meta: `VECKA 5–8 · PÅGÅR · VECKA ${adaptView.currentWeek}`,
+          weeks: ['done', 'done', 'current', 'plan'],
+          accent: true,
+          onOpenSessions: () => adaptView.sessions[0] && setSelectedSession(adaptView.sessions[0]),
+          onSaveTemplate: () => setTemplateSheetOpen(true),
+        }}
+      />
+
+      {selectedSession ? (
+        <>
+          <CoverageBanner
+            tone="unmatched"
+            message="Elsas svagaste område är **fotled dorsalflexion (58)** — det täcks inte fullt ut av passet."
+            fixLabel="FIXA →"
+            onFix={() => Alert.alert('Täckningsanalys', 'Öppna övningsbiblioteket för att lägga till fotledsövningar.')}
+          />
+          <CoverageBanner
+            tone="matched"
+            message="**Unilateral underkropp** och **maxstyrka** matchar kravprofilen."
+          />
+        </>
+      ) : null}
 
       <GlassCard style={styles.card}>
         <SectionLabel>Veckoschema</SectionLabel>
@@ -449,6 +505,15 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
           showDetail
         />
       )}
+      <SaveTemplateSheet
+        visible={templateSheetOpen}
+        onClose={() => setTemplateSheetOpen(false)}
+        onSave={() => {
+          setTemplateSheetOpen(false);
+          Alert.alert('Sparat', 'Blockmall sparad i mallbiblioteket.');
+        }}
+        preview={`${adaptView?.program.duration_weeks ?? 4} VECKOR · ${adaptView?.sessions.length ?? 0} PASS`}
+      />
     </ScreenContainer>
   );
 }
@@ -543,6 +608,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  saveTpl: {
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  saveTplText: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.8,
+    color: coachColors.mutedHi,
+    textTransform: 'uppercase',
   },
   detailTitle: {
     fontFamily: fonts.display,

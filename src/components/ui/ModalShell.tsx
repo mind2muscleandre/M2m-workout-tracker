@@ -67,6 +67,7 @@ export function ModalShell({
             ]}
             onPress={() => {}}
           >
+            {isSheet ? <View style={styles.grab} /> : null}
             {title ? <Text style={styles.title}>{title}</Text> : null}
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
             {body}
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     maxHeight: '92%',
+    paddingTop: 10,
   },
   panelCenter: {
     borderRadius: borderRadius.xl,
@@ -136,5 +138,13 @@ const styles = StyleSheet.create({
   footer: {
     gap: 10,
     paddingTop: 4,
+  },
+  grab: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'center',
+    marginBottom: 8,
   },
 });

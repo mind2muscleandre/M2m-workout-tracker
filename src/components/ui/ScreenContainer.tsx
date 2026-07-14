@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, Platform } from 'react-native';
 import { coachColors, layout } from '../../lib/theme';
+import { webOnly } from '../../lib/webStyles';
 import { debugLog } from '../../lib/debugLog';
 import { useLayout } from '../../lib/useLayout';
 import { PageHeader } from './PageHeader';
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     minHeight: 0,
-    ...(Platform.OS === 'web' ? ({ height: '100%', overflow: 'hidden' } as const) : null),
+    ...webOnly({ height: '100%', overflow: 'hidden' }),
   },
   row: { flex: 1, flexDirection: 'row', minHeight: 0 },
   main: { flex: 1, minWidth: 0, minHeight: 0 },
@@ -141,12 +142,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   scroll: { flex: 1 },
-  scrollWeb: {
+  scrollWeb: webOnly({
     overflowY: 'auto',
     WebkitOverflowScrolling: 'touch',
     minHeight: 0,
     height: '100%',
-  } as const,
+  }),
   body: {
     padding: 20,
     paddingBottom: 20,

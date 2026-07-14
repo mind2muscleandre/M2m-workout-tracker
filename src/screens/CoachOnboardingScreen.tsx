@@ -17,6 +17,30 @@ import { ProgressBar } from '../components/ui/ProgressBar';
 import { markCoachOnboardingComplete } from '../lib/coachOnboarding';
 import { coachColors, fonts, borderRadius } from '../lib/theme';
 
+const SPORT_OPTIONS = ['Hockey', 'Fotboll', 'Basket', 'Löpning', 'Golf', 'Friidrott'];
+const FOCUS_OPTIONS = ['Fysträning / S&C', 'Rehab', 'Ungdomsutveckling', 'Elit / senior'];
+
+const ACTIVATION_STEPS = [
+  {
+    key: 'profile',
+    label: 'Coachprofil',
+    title: 'Din coachprofil',
+    body: 'Vi anpassar kravprofiler, mallar och rekommendationer efter hur du tränar dina atleter.',
+  },
+  {
+    key: 'capacity',
+    label: 'Kapacitet',
+    title: 'Klientkapacitet',
+    body: 'Styr påminnelser och dashboard-layout utifrån hur många atleter du coachar samtidigt.',
+  },
+  {
+    key: 'ready',
+    label: 'Klar',
+    title: 'Redo att coacha',
+    body: 'Din panel är konfigurerad. Börja med att tilldela din första atlet eller utforska helhetsvyn.',
+  },
+] as const;
+
 type Nav = StackNavigationProp<RootStackParamList, 'CoachOnboarding'>;
 type Route = RouteProp<RootStackParamList, 'CoachOnboarding'>;
 
@@ -51,11 +75,17 @@ export default function CoachOnboardingScreen() {
   const isPostAuth = flow === 'activation';
 
   const [step, setStep] = useState(0);
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const [sports, setSports] = useState<string[]>(['Hockey', 'Fotboll']);
+  const [focus, setFocus] = useState<string[]>(['Fysträning / S&C', 'Ungdomsutveckling']);
+  const [capacity, setCapacity] = useState(15);
 
-  const indicatorStep = step + 2;
-  const indicatorTotal = 4;
+  const activationFlow = isPostAuth;
+  const steps = activationFlow ? ACTIVATION_STEPS : STEPS;
+  const current = steps[step];
+  const isLast = step === steps.length - 1;
+
+  const indicatorStep = activationFlow ? step + 2 : step + 2;
+  const indicatorTotal = activationFlow ? 4 : 4;
 
   const ctaLabel = useMemo(() => {
     if (!isLast) return 'Fortsätt';
@@ -120,7 +150,7 @@ export default function CoachOnboardingScreen() {
         <StepIndicator
           current={indicatorStep}
           total={indicatorTotal}
-          labels={['Start', ...STEPS.map((s) => s.label)]}
+          labels={activationFlow ? ['Start', ...ACTIVATION_STEPS.map((s) => s.label)] : ['Start', ...STEPS.map((s) => s.label)]}
         />
 
         <ProgressBar
@@ -133,13 +163,80 @@ export default function CoachOnboardingScreen() {
           <SectionLabel>{current.label}</SectionLabel>
           <Text style={styles.title}>{current.title}</Text>
           <Text style={styles.body}>{current.body}</Text>
-          <View style={styles.projectionBox}>
-            <Text style={styles.projectionLabel}>Projektion</Text>
-            <Text style={styles.projectionValue}>{current.projection}</Text>
-          </View>
+          {!activationFlow && 'projection' in current ? (
+            <View style={styles.projectionBox}>
+              <Text style={styles.projectionLabel}>Projektion</Text>
+              <Text style={styles.projectionValue}>{current.projection}</Text>
+            </View>
+          ) : null}
         </GlassCard>
 
-        {step === 1 ? (
+        {activationFlow && step === 0 ? (
+          <>
+            <SectionLabel>Idrotter du coachar</SectionLabel>
+            <View style={styles.chips}>
+              {SPORT_OPTIONS.map((s) => {
+                const on = sports.includes(s);
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.chip, on && styles.chipOn]}
+                    onPress={() =>
+                      setSports((prev) => (on ? prev.filter((x) => x !== s) : [...prev, s]))
+                    }
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{s}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <SectionLabel>Din inriktning</SectionLabel>
+            <View style={styles.chips}>
+              {FOCUS_OPTIONS.map((f) => {
+                const on = focus.includes(f);
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    style={[styles.chip, on && styles.chipOn]}
+                    onPress={() =>
+                      setFocus((prev) => (on ? prev.filter((x) => x !== f) : [...prev, f]))
+                    }
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{f}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
+
+        {activationFlow && step === 1 ? (
+          <GlassCard padding={16}>
+            <View style={styles.capRow}>
+              <Text style={styles.capVal}>{capacity}</Text>
+              <View style={styles.capMid}>
+                <Text style={styles.capTitle}>Aktiva klienter samtidigt</Text>
+                <Text style={styles.capMeta}>STYR PÅMINNELSER OCH DASHBOARD-LAYOUT</Text>
+              </View>
+              <View style={styles.capBtns}>
+                <TouchableOpacity
+                  style={styles.capBtn}
+                  onPress={() => setCapacity((c) => Math.max(1, c - 1))}
+                >
+                  <Text style={styles.capBtnText}>−</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.capBtn}
+                  onPress={() => setCapacity((c) => Math.min(50, c + 1))}
+                >
+                  <Text style={styles.capBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </GlassCard>
+        ) : null}
+
+        {step === 1 && !activationFlow ? (
           <GlassCard padding={16}>
             <SectionLabel>M2M-appar</SectionLabel>
             <IntegrationRow name="Adapt" desc="Program och energisystem" active />
@@ -152,7 +249,7 @@ export default function CoachOnboardingScreen() {
           </GlassCard>
         ) : null}
 
-        {step === 0 ? (
+        {step === 0 && !activationFlow ? (
           <GlassCard padding={16}>
             <SectionLabel>Dagöversikt</SectionLabel>
             <PreviewRow label="Tränar idag" value="12" color={coachColors.coach} />
@@ -427,4 +524,60 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: coachColors.muted,
   },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  chipOn: {
+    backgroundColor: coachColors.accent,
+    borderColor: coachColors.accent,
+  },
+  chipText: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: coachColors.mutedHi,
+  },
+  chipTextOn: {
+    color: '#17191c',
+    fontFamily: fonts.bodySemiBold,
+  },
+  capRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  capVal: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    fontWeight: '700',
+    color: coachColors.accent,
+    width: 56,
+    textAlign: 'center',
+  },
+  capMid: { flex: 1 },
+  capTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: coachColors.fg,
+  },
+  capMeta: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.6,
+    color: coachColors.muted,
+    marginTop: 3,
+    textTransform: 'uppercase',
+  },
+  capBtns: { flexDirection: 'row', gap: 8 },
+  capBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  capBtnText: { fontSize: 15, color: coachColors.mutedHi },
 });

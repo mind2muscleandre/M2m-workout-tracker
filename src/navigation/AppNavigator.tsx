@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 // Using JS stack instead of native-stack to avoid font configuration issues
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { Platform, StyleSheet, View } from 'react-native';
 import type { RootStackParamList } from './types';
 import { colors } from '../lib/theme';
@@ -42,6 +42,9 @@ import AuthCallbackScreen from '../screens/AuthCallbackScreen';
 import UpdatePasswordScreen from '../screens/UpdatePasswordScreen';
 import { debugLog } from '../lib/debugLog';
 import { isCoachOnboardingComplete } from '../lib/coachOnboarding';
+import { webOnly } from '../lib/webStyles';
+import { HelhetsvyScreen } from '../screens/HelhetsvyScreen';
+import { AthleteRadarScreen } from '../screens/AthleteRadarScreen';
 
 // ============================================
 // Navigation Theme
@@ -78,7 +81,7 @@ const screenOptions = {
   cardStyle: {
     flex: 1,
     backgroundColor: colors.background,
-    ...(Platform.OS === 'web' ? ({ height: '100%', overflow: 'hidden' } as const) : null),
+    ...webOnly({ height: '100%', overflow: 'hidden' }),
   },
   detachInactiveScreens: false,
 };
@@ -157,11 +160,11 @@ function MainStackNavigator({ needsOnboarding }: { needsOnboarding: boolean }) {
         component={ExercisePickerScreen}
         options={{
           title: 'Välj övning',
-          cardStyleInterpolator: ({ current: { progress } }: { current: { progress: number } }) => ({
-            cardStyle: { opacity: progress },
-          }),
+          cardStyleInterpolator: CardStyleInterpolators.forFadeFromBottomAndroid,
         }}
       />
+      <Stack.Screen name="Helhetsvy" component={HelhetsvyScreen} options={{ title: 'Helhetsvy' }} />
+      <Stack.Screen name="AthleteRadar" component={AthleteRadarScreen} options={{ title: 'Atletradar' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Övningsdetaljer' }} />
       <Stack.Screen name="Progression" component={ProgressionScreen} options={{ title: 'Progression' }} />
     </Stack.Navigator>
@@ -256,6 +259,6 @@ export const AppNavigator: React.FC = () => {
 const navRootStyle = StyleSheet.create({
   root: {
     flex: 1,
-    ...(Platform.OS === 'web' ? ({ height: '100vh', overflow: 'hidden' } as const) : null),
+    ...webOnly({ height: '100vh', overflow: 'hidden' }),
   },
 }).root;

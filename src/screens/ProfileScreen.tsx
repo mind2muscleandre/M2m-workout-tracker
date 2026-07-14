@@ -173,12 +173,8 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     : '??';
 
   return (
-    <ScreenContainer title="Profil" scroll>
-      <GlassCard variant="coach" padding={20} style={styles.hero}>
-        <View style={styles.heroGlow} />
-        <TouchableOpacity style={styles.editBtn} onPress={handleEditProfile} activeOpacity={0.75}>
-          <Text style={styles.editBtnText}>✎ Redigera</Text>
-        </TouchableOpacity>
+    <ScreenContainer title="Mer" scroll>
+      <GlassCard variant="coach" padding={16} style={styles.hero}>
         <View style={styles.heroRow}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
@@ -186,76 +182,55 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.heroInfo}>
             <Text style={styles.profileName}>{user?.full_name ?? 'Okänd användare'}</Text>
             <Text style={styles.profileRole}>
-              {user?.role ? ROLE_LABELS[user.role] ?? user.role : '—'} · Mind2Muscle
+              {user?.role ? ROLE_LABELS[user.role] ?? user.role : '—'} · {activeClients.length} aktiva klienter
             </Text>
-            <Text style={styles.profileEmail}>{user?.email ?? 'Ingen e-post'}</Text>
           </View>
+          <TouchableOpacity onPress={handleEditProfile}>
+            <Text style={styles.editLink}>REDIGERA →</Text>
+          </TouchableOpacity>
         </View>
       </GlassCard>
 
-      <View style={styles.kpiRow}>
-        <GlassCard padding={14} style={styles.kpiCard}>
-          <Text style={[styles.kpiVal, { color: coachColors.coach }]}>{activeClients.length}</Text>
-          <Text style={styles.kpiLbl}>Aktiva atleter</Text>
-        </GlassCard>
-        <GlassCard padding={14} style={styles.kpiCard}>
-          <Text style={[styles.kpiVal, { color: coachColors.accent }]}>{sessionsThisMonth}</Text>
-          <Text style={styles.kpiLbl}>Sessioner / månad</Text>
-        </GlassCard>
-        <GlassCard padding={14} style={styles.kpiCard}>
-          <Text style={styles.kpiVal}>{avgGoal != null ? `${avgGoal}%` : '—'}</Text>
-          <Text style={styles.kpiLbl}>Snitt målstatus</Text>
-        </GlassCard>
-      </View>
+      <SectionLabel>Verktyg</SectionLabel>
+      <GlassCard padding={4}>
+        <MenuRow icon="▤" title="Mallbibliotek" meta="20 mallar" onPress={() => navigation.navigate('Programs')} />
+        <MenuRow icon="≡" title="Övningsbibliotek" meta="248 övn" onPress={() => navigation.navigate('Exercises')} />
+        <MenuRow icon="◫" title="Rapporter & export" onPress={() => navigation.navigate('Reports')} />
+        <MenuRow
+          icon="◈"
+          title="Arkiverade klienter"
+          meta={`${clients.filter((c) => !c.is_active).length}`}
+          onPress={() => stackNav.navigate('ClientManage')}
+          last
+        />
+      </GlassCard>
 
-      <GlassCard padding={0} style={styles.settingsSection}>
-        <View style={styles.settingsSectionHeader}>
-          <SectionLabel style={styles.settingsSectionTitle}>App-inställningar</SectionLabel>
-        </View>
+      <SectionLabel>Notiser</SectionLabel>
+      <GlassCard padding={4}>
         <SettingRow
-          label="Mörkt läge"
-          sub="Coach-appen är alltid i dark mode"
-          control={<ToggleSwitch value={darkMode} onValueChange={handleThemeToggle} />}
-          isLast={false}
-        />
-        <SettingRow
-          label="Push-notiser"
-          sub="Varningar, meddelanden och påminnelser"
-          control={<ToggleSwitch value={notifications} onValueChange={handleNotificationsToggle} />}
-          isLast={false}
-        />
-        <SettingRow
-          label="Sessionsvarning"
-          sub="Avisera när atleter missar sessioner"
+          label="Klientvarningar"
+          sub="Missade pass · inaktivitet · asymmetrifynd"
           control={<ToggleSwitch value={sessionAlerts} onValueChange={handleSessionAlertsToggle} />}
           isLast={false}
         />
         <SettingRow
-          label="Automatisk synk"
-          sub="Synka data från Adapt och Timer"
-          control={<ToggleSwitch value={autoSync} onValueChange={handleAutoSyncToggle} />}
+          label="Nya screeningresultat"
+          sub="När AI-analys är klar"
+          control={<ToggleSwitch value={notifications} onValueChange={handleNotificationsToggle} />}
           isLast={false}
         />
-        <TouchableOpacity style={styles.settingRow} onPress={handleLanguageToggle} activeOpacity={0.7}>
-          <Text style={styles.settingLabel}>Språk</Text>
-          <View style={styles.settingRight}>
-            <Text style={styles.settingVal}>
-              {selectedLanguage === 'sv' ? 'Svenska' : 'English'}
-            </Text>
-            <Text style={styles.settingArrow}>›</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.settingRow, styles.settingRowLast]}
-          onPress={handleUnitsToggle}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.settingLabel}>Enhet</Text>
-          <View style={styles.settingRight}>
-            <Text style={styles.settingVal}>Metrisk (kg, km)</Text>
-            <Text style={styles.settingArrow}>›</Text>
-          </View>
-        </TouchableOpacity>
+        <SettingRow
+          label="Chattmeddelanden"
+          sub="Push vid nya meddelanden"
+          control={<ToggleSwitch value={notifications} onValueChange={handleNotificationsToggle} />}
+          isLast={false}
+        />
+        <SettingRow
+          label="Veckosammanfattning"
+          sub="Söndag 18:00 · e-post"
+          control={<ToggleSwitch value={false} onValueChange={() => {}} />}
+          isLast
+        />
       </GlassCard>
 
       <GlassCard padding={0} style={styles.settingsSection}>
@@ -349,6 +324,35 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
+function MenuRow({
+  icon,
+  title,
+  meta,
+  onPress,
+  last,
+}: {
+  icon: string;
+  title: string;
+  meta?: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.menuRow, last && styles.menuRowLast]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      <View style={styles.menuIcon}>
+        <Text style={styles.menuIconText}>{icon}</Text>
+      </View>
+      <Text style={styles.menuTitle}>{title}</Text>
+      {meta ? <Text style={styles.menuMeta}>{meta}</Text> : null}
+      <Text style={styles.menuGo}>›</Text>
+    </TouchableOpacity>
+  );
+}
+
 function SettingRow({
   label,
   sub,
@@ -411,6 +415,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 20,
   },
+  editLink: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.8,
+    color: coachColors.accent,
+    textTransform: 'uppercase',
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  menuRowLast: { borderBottomWidth: 0 },
+  menuIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+  },
+  menuIconText: { fontSize: 13, color: coachColors.mutedHi },
+  menuTitle: {
+    flex: 1,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: coachColors.fg,
+  },
+  menuMeta: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    color: coachColors.muted,
+    marginRight: 4,
+  },
+  menuGo: { color: coachColors.muted, fontSize: 12 },
   avatar: {
     width: 72,
     height: 72,

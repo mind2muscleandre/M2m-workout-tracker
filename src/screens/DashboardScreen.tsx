@@ -27,6 +27,14 @@ import {
 } from '../components/ui';
 import { IconPlus, IconBell, IconSearch } from '../components/ui/icons';
 import { clientToAthleteCard, deriveAthleteStatus, deriveGoalPct } from '../lib/athleteStatus';
+import {
+  buildActivityFeed,
+  buildKpiDeltas,
+  buildNeedsYouQueue,
+  sparklineFromGoalPct,
+} from '../lib/dashboardInsights';
+import { NeedsYouQueue } from '../components/coach/NeedsYouQueue';
+import { ActivityFeed } from '../components/coach/ActivityFeed';
 import { weekScheduleForProgram } from '../services/platformAdapt';
 import { InlineEditButton } from '../components/athleteDetail/AthleteDetailUi';
 import { coachColors, fonts, borderRadius } from '../lib/theme';
@@ -90,13 +98,32 @@ export function DashboardScreen() {
     const statuses = activeClients.map((c) =>
       deriveAthleteStatus(c, workouts, getTimerSessions(c.client_user_id))
     );
+    const todaySessions = workouts.filter(
+      (w) => w.status === 'planned' || w.status === 'in_progress'
+    ).length;
     return {
       training: statuses.filter((s) => s === 'training').length,
       recovery: statuses.filter((s) => s === 'recovery').length,
       alert: statuses.filter((s) => s === 'alert').length,
       total: activeClients.length,
+      todaySessions,
     };
   }, [activeClients, workouts, getTimerSessions]);
+
+  const kpiDeltas = useMemo(
+    () => buildKpiDeltas(stats.total, stats.alert),
+    [stats.total, stats.alert]
+  );
+
+  const needsYou = useMemo(
+    () => buildNeedsYouQueue(activeClients, workouts, getTimerSessions, getAggregate),
+    [activeClients, workouts, getTimerSessions, getAggregate]
+  );
+
+  const activityFeed = useMemo(
+    () => buildActivityFeed(activeClients, workouts),
+    [activeClients, workouts]
+  );
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -248,13 +275,48 @@ export function DashboardScreen() {
           <SectionLabel>Status idag</SectionLabel>
           <StatsStrip
             items={[
-              { value: stats.training, label: 'Tränar idag', color: 'coach' },
-              { value: stats.recovery, label: 'Återhämtning', color: 'accent' },
-              { value: stats.alert, label: 'Varningar', color: 'orange' },
-              { value: stats.total, label: 'Totalt', color: 'muted' },
+              {
+                value: stats.total,
+                label: 'Aktiva klienter',
+                color: 'coach',
+                delta: kpiDeltas.clients?.label,
+                deltaTone: kpiDeltas.clients?.tone,
+              },
+              { value: stats.todaySessions, label: 'Sessioner idag', color: 'accent' },
+              {
+                value: stats.alert,
+                label: 'Varningar',
+                color: 'orange',
+                delta: kpiDeltas.alerts?.label,
+                deltaTone: kpiDeltas.alerts?.tone,
+              },
+              {
+                value: 7,
+                label: 'Screenings v.',
+                color: 'muted',
+                delta: kpiDeltas.screenings?.label,
+                deltaTone: kpiDeltas.screenings?.tone,
+              },
             ]}
           />
         </GlassCard>
+
+        <NeedsYouQueue
+          items={needsYou}
+          onPressItem={(id) => {
+            setSelectedId(id);
+            setPanelTab('goals');
+          }}
+        />
+
+        <ActivityFeed items={activityFeed} />
+
+        <TouchableOpacity onPress={() => navigation.navigate('Helhetsvy')}>
+          <GlassCard padding={14} style={styles.helhetLink}>
+            <Text style={styles.helhetTitle}>Öppna helhetsvy</Text>
+            <Text style={styles.helhetSub}>SQUAD COMMAND CENTER · KPI · RADAR · TRIAGE</Text>
+          </GlassCard>
+        </TouchableOpacity>
         <SectionLabel>Filtrera trupp</SectionLabel>
         <FilterTabs tabs={filterTabs} activeId={filter} onChange={setFilter} />
         <SectionLabel>Atleter</SectionLabel>
@@ -265,11 +327,17 @@ export function DashboardScreen() {
             filtered.map((item) => (
               <AthleteCard
                 key={item.id}
-                athlete={clientToAthleteCard(item, workouts, {
-                  selected: selectedId === item.id,
-                  timerSessions: getTimerSessions(item.client_user_id),
-                  aggregate: getAggregate(item.id),
-                })}
+                athlete={{
+                  ...clientToAthleteCard(item, workouts, {
+                    selected: selectedId === item.id,
+                    timerSessions: getTimerSessions(item.client_user_id),
+                    aggregate: getAggregate(item.id),
+                  }),
+                  sparkline: sparklineFromGoalPct(
+                    deriveGoalPct(getAggregate(item.id))
+                  ),
+                  apps: getAggregate(item.id)?.apps ?? null,
+                }}
                 onPress={() => handleSelect(item.id)}
               />
             ))
@@ -681,6 +749,23 @@ function NutritionTab({
 
 const styles = StyleSheet.create({
   statsCard: { marginBottom: 4 },
+  helhetLink: { marginBottom: 12, borderColor: 'rgba(247,233,40,0.25)' },
+  helhetTitle: {
+    fontFamily: fonts.display,
+    fontSize: 14,
+    fontWeight: '600',
+    color: coachColors.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  helhetSub: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 1,
+    color: coachColors.muted,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
   overviewCard: { marginBottom: 8 },
   athHeroCard: { marginBottom: 4 },
   list: { gap: 8 },

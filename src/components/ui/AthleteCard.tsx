@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { coachColors, borderRadius, fonts, AthleteStatus, statusColors } from '../../lib/theme';
 import { StatusPill } from './StatusPill';
 import { ProgressBar } from './ProgressBar';
+import { Sparkline } from './Sparkline';
+import type { AppBadges as AppBadgesType } from '../../types/platform';
 
 export interface AthleteCardData {
   id: string;
@@ -15,6 +17,8 @@ export interface AthleteCardData {
   lastSession?: string;
   color?: string;
   selected?: boolean;
+  sparkline?: number[];
+  apps?: AppBadgesType | null;
 }
 
 interface AthleteCardProps {
@@ -69,8 +73,26 @@ export function AthleteCard({ athlete, onPress }: AthleteCardProps) {
         {athlete.goalPct !== undefined ? (
           <ProgressBar value={athlete.goalPct} color={barColor} style={styles.bar} />
         ) : null}
+        {athlete.sparkline?.length ? (
+          <Sparkline values={athlete.sparkline} height={18} />
+        ) : null}
       </View>
       <View style={styles.meta}>
+        {athlete.apps ? (
+          <View style={styles.apps}>
+            {(['perform', 'tracker', 'macro', 'goalsetter'] as const).map((key) => {
+              const labels = { perform: 'P', tracker: 'T', macro: 'M', goalsetter: 'G' };
+              const on = athlete.apps?.[key];
+              return (
+                <View key={key} style={[styles.appBadge, !on && styles.appBadgeOff]}>
+                  <Text style={[styles.appBadgeText, !on && styles.appBadgeTextOff]}>
+                    {labels[key]}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
         {athlete.goalPct !== undefined ? (
           <Text style={[styles.pct, { color: pctColor }]}>
             {athlete.goalPct}
@@ -155,4 +177,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: coachColors.muted,
   },
+  apps: { flexDirection: 'row', gap: 3, marginBottom: 4 },
+  appBadge: {
+    width: 15,
+    height: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+  },
+  appBadgeOff: { opacity: 0.25 },
+  appBadgeText: {
+    fontFamily: fonts.mono,
+    fontSize: 7.5,
+    color: coachColors.mutedHi,
+  },
+  appBadgeTextOff: { color: coachColors.muted },
 });

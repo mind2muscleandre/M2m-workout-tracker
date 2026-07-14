@@ -23,6 +23,8 @@ import { listImageScreeningsForClient } from '../services/clientScreenings';
 import { getClientAvatarColor, getClientInitials } from '../lib/athleteStatus';
 import type { MovementAssessmentSummary } from '../types/athlete';
 import { coachColors, fonts, borderRadius, shadows } from '../lib/theme';
+import { FilterTabs } from '../components/ui/FilterTabs';
+import { TriageStatusChip, type TriageStatus } from '../components/coach/TriageStatusChip';
 
 type StackProps = StackScreenProps<RootStackParamList, 'ScreeningHub'>;
 
@@ -34,7 +36,27 @@ type RecentItem = {
   date: string;
   score: number | null;
   assessment?: MovementAssessmentSummary;
+  triage: TriageStatus;
 };
+
+const TRIAGE_TABS = [
+  { id: 'alla', label: 'Alla' },
+  { id: 'nytt', label: 'Nya resultat' },
+  { id: 'granskas', label: 'Granskas' },
+  { id: 'klar', label: 'Klar' },
+  { id: 'saknas', label: 'Saknar screening' },
+];
+
+function deriveTriage(
+  item: Omit<RecentItem, 'triage'>,
+  assessedIds: Set<string>
+): TriageStatus {
+  if (!assessedIds.has(item.clientId) && item.score == null) return 'saknas';
+  if (item.score == null) return 'granskas';
+  const days = (Date.now() - new Date(item.date).getTime()) / (1000 * 60 * 60 * 24);
+  if (days <= 7) return 'nytt';
+  return 'klar';
+}
 
 function useRootStackNavigation(): StackNavigationProp<RootStackParamList> {
   const navigation = useNavigation();
@@ -74,6 +96,7 @@ export function ScreeningHubContent({
   const [assessedIds, setAssessedIds] = useState<Set<string>>(new Set());
   const [actionCount, setActionCount] = useState(0);
   const [loadingRecent, setLoadingRecent] = useState(true);
+  const [triageFilter, setTriageFilter] = useState('alla');
 
   const activeClients = useMemo(
     () => clients.filter((c) => c.is_active),
@@ -113,6 +136,7 @@ export function ScreeningHubContent({
               date: a.assessment_date || a.created_at.slice(0, 10),
               score: totalOnFive,
               assessment: a,
+              triage: 'klar',
             });
           }
 
@@ -124,14 +148,19 @@ export function ScreeningHubContent({
               type: 'image',
               date: s.uploaded_at.slice(0, 10),
               score: null,
+              triage: 'granskas',
             });
           }
         })
       );
 
       if (!alive) return;
-      merged.sort((a, b) => b.date.localeCompare(a.date));
-      setRecent(merged.slice(0, 8));
+      const withTriage = merged.map((item) => ({
+        ...item,
+        triage: deriveTriage(item, assessed),
+      }));
+      withTriage.sort((a, b) => b.date.localeCompare(a.date));
+      setRecent(withTriage.slice(0, 12));
       setAssessedIds(assessed);
       setActionCount(actions);
       setLoadingRecent(false);
@@ -142,6 +171,25 @@ export function ScreeningHubContent({
       alive = false;
     };
   }, [activeClients]);
+
+  const filteredRecent = useMemo(() => {
+    if (triageFilter === 'alla') return recent;
+    if (triageFilter === 'saknas') {
+      const missing = activeClients
+        .filter((c) => !assessedIds.has(c.id))
+        .map((c) => ({
+          key: `missing-${c.id}`,
+          clientId: c.id,
+          name: c.name,
+          type: 'movement' as const,
+          date: '—',
+          score: null,
+          triage: 'saknas' as TriageStatus,
+        }));
+      return missing;
+    }
+    return recent.filter((r) => r.triage === triageFilter);
+  }, [recent, triageFilter, activeClients, assessedIds]);
 
   const stats = useMemo(
     () => ({
@@ -219,14 +267,15 @@ export function ScreeningHubContent({
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.recentSectionLabel}>Senaste screeningar</Text>
+      <Text style={styles.recentSectionLabel}>Senaste bedömningar</Text>
+      <FilterTabs tabs={TRIAGE_TABS} activeId={triageFilter} onChange={setTriageFilter} />
 
       {loadingRecent ? (
         <ActivityIndicator color={coachColors.coach} style={styles.loader} />
-      ) : recent.length === 0 ? (
-        <Text style={styles.emptyRecent}>Inga screeningar ännu. Starta med ett av alternativen ovan.</Text>
+      ) : filteredRecent.length === 0 ? (
+        <Text style={styles.emptyRecent}>Inga screeningar matchar filtret.</Text>
       ) : (
-        recent.map((item) => {
+        filteredRecent.map((item) => {
           const tone = scoreTone(item.score);
           const avatarColor = getClientAvatarColor(item.clientId);
           return (
@@ -250,12 +299,19 @@ export function ScreeningHubContent({
                   <Text style={styles.recentMetaText}>{item.date}</Text>
                 </View>
               </View>
+              <TriageStatusChip status={item.triage} />
               {item.score != null ? (
-                <Text style={[styles.recentScore, { color: scoreColors[tone] }]}>
-                  {Math.round(item.score * 10) / 10}/5
-                </Text>
+                <View style={styles.scoreCol}>
+                  <Text style={[styles.recentScore, { color: scoreColors[tone] }]}>
+                    {Math.round(item.score * 20)}
+                  </Text>
+                  <Text style={styles.scoreK}>SCORE</Text>
+                </View>
               ) : (
-                <Text style={styles.recentPending}>—</Text>
+                <View style={styles.scoreCol}>
+                  <Text style={styles.recentPending}>–</Text>
+                  <Text style={styles.scoreK}>SCORE</Text>
+                </View>
               )}
             </TouchableOpacity>
           );
@@ -460,8 +516,18 @@ const styles = StyleSheet.create({
   },
   recentPending: {
     fontFamily: fonts.mono,
-    fontSize: 14,
+    fontSize: 18,
     color: coachColors.muted,
+    fontWeight: '700',
+  },
+  scoreCol: { alignItems: 'flex-end' },
+  scoreK: {
+    fontFamily: fonts.mono,
+    fontSize: 7,
+    letterSpacing: 0.6,
+    color: 'rgba(255,255,255,0.24)',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
 });
 

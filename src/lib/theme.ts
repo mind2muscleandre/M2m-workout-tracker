@@ -4,8 +4,8 @@
 // ============================================
 
 export const coachColors = {
-  bg: '#1A1E24',
-  screenBg: '#1E2228',
+  bg: '#1a1d21',
+  screenBg: '#22262b',
   surface: 'rgba(56,62,69,0.78)',
   surfaceHi: 'rgba(68,75,84,0.82)',
   surfaceSolid: '#3A4048',

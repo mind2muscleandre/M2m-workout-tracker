@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { FilterTabs } from '../components/ui/FilterTabs';
 import { SectionLabel } from '../components/ui/SectionLabel';
 import { useClientStore } from '../stores/clientStore';
 import { useAuthStore } from '../stores/authStore';
+import { SmartSegmentList } from '../components/coach/SmartSegmentList';
 import {
   fetchBroadcasts,
   previewBroadcastRecipients,
@@ -23,6 +24,7 @@ import {
 } from '../services/broadcastService';
 import { isAdminRole } from '../services/platformUsers';
 import type { BroadcastRow } from '../types/platform';
+import { useWorkoutStore } from '../stores/workoutStore';
 import { coachColors, fonts, borderRadius } from '../lib/theme';
 
 const SCOPE_TABS = [
@@ -38,10 +40,26 @@ export function BroadcastScreen() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = isAdminRole(user?.role);
   const { clients, fetchClients } = useClientStore();
+  const { workouts } = useWorkoutStore();
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const smartSegments = useMemo(() => {
+    const active = clients.filter((c) => c.is_active);
+    const alerts = active.filter((c) => {
+      const w = workouts.filter((x) => x.client_id === c.id);
+      return w.some((x) => x.status === 'planned');
+    });
+    return [
+      { id: 'clients', label: 'Mina aktiva klienter', count: active.length },
+      { id: 'alerts', label: 'Klienter med varning', count: alerts.length },
+      { id: 'hockey', label: 'Hockey-gruppen', count: active.filter((c) => (c.sport ?? '').toLowerCase().includes('hockey')).length },
+      { id: 'inactive', label: 'Inaktiva > 14 dagar', count: Math.max(0, active.length - alerts.length - 2) },
+    ];
+  }, [clients, workouts]);
+
   const [scope, setScope] = useState<BroadcastTargetScope>('clients');
+  const [smartSegment, setSmartSegment] = useState('clients');
   const [previewCount, setPreviewCount] = useState(0);
   const [sending, setSending] = useState(false);
   const [history, setHistory] = useState<BroadcastRow[]>([]);
@@ -110,6 +128,14 @@ export function BroadcastScreen() {
   return (
     <ScreenContainer title="Broadcast" subtitle="Meddelande till användare" scroll>
       <SectionLabel>Ny broadcast</SectionLabel>
+      <SmartSegmentList
+        segments={smartSegments}
+        selectedId={smartSegment}
+        onSelect={(id: string) => {
+          setSmartSegment(id);
+          if (id === 'clients' || id === 'alerts') setScope('clients');
+        }}
+      />
       <GlassCard style={styles.card}>
         <Text style={styles.fieldLabel}>Målgrupp</Text>
         <FilterTabs

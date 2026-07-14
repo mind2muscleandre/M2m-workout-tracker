@@ -46,6 +46,8 @@ export type RootStackParamList = {
   ExercisePicker: { workoutId: string };
   ExerciseDetail: { exerciseId: string };
   Progression: { clientId: string; exerciseId?: string };
+  Helhetsvy: undefined;
+  AthleteRadar: undefined;
 };
 
 export type MainTabParamList = {

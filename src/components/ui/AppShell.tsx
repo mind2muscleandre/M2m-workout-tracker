@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { coachColors } from '../../lib/theme';
+import { webOnly } from '../../lib/webStyles';
 import { useLayout } from '../../lib/useLayout';
 import { Topbar } from './Topbar';
 
@@ -72,7 +73,12 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: coachColors.screenBg,
-    ...(Platform.OS === 'web' ? ({ height: '100vh', minHeight: '100vh' } as const) : null),
+    ...webOnly({
+      height: '100vh',
+      minHeight: '100vh',
+      backgroundImage:
+        'radial-gradient(90% 40% at 80% -5%, rgba(247,233,40,0.08), transparent 60%), linear-gradient(180deg, #22262b 0%, #1a1d21 50%, #17191d 100%)',
+    }),
   },
   row: {
     flex: 1,

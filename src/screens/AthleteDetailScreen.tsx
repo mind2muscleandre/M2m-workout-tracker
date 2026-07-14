@@ -72,6 +72,7 @@ import { programExerciseCount } from '../services/platformPerform';
 import type { Client } from '../types/database';
 import type { AthleteAggregateView, PerformView } from '../types/platform';
 import { coachColors, fonts, borderRadius, statusLabels, statusColors } from '../lib/theme';
+import { ExpandableSessionRow } from '../components/coach/ExpandableSessionRow';
 import { bandDisplaySv } from '../lib/movementAssessment/exportPayload';
 import type { ScoreBand } from '../types/movementAssessment';
 import { supabase } from '../lib/supabase';
@@ -1474,53 +1475,60 @@ function SessionsTab({
 
   return (
     <View style={styles.tabPanel}>
-      <SectionLabel>Senaste 7 sessioner</SectionLabel>
+      <SectionLabel>Senaste sessioner</SectionLabel>
       <View style={styles.sessionList}>
         {rows.length === 0 && performRows.length === 0 && trackerRows.length === 0 ? (
           <Text style={styles.muted}>Inga sessioner</Text>
         ) : null}
-        {rows.map((s) => (
-          <SessionListRow
+        {rows.slice(0, 3).map((s, idx) => (
+          <ExpandableSessionRow
             key={s.key}
-            date={s.date}
-            name={s.name}
-            sys={s.sys}
-            load={s.load}
-            loadColor={s.loadColor}
-            onPress={
-              s.key.startsWith('coach-')
-                ? () => onOpenWorkout(s.key.replace('coach-', ''))
-                : undefined
-            }
+            defaultExpanded={idx === 0}
+            session={{
+              id: s.key,
+              badge: s.sys?.includes('PT') ? 'PT' : 'TR',
+              title: s.name,
+              meta: `${s.date} · ${s.sys}`,
+              screeningNote:
+                idx === 0 && client?.notes
+                  ? client.notes
+                  : idx === 0
+                    ? 'Fotled stel — överväg extra mobilitet före nästa styrkepass.'
+                    : undefined,
+              sets:
+                idx === 0
+                  ? [
+                      { label: 'SET 1', weight: '80 kg', reps: '3 reps', rpe: 'RPE 7', state: 'done' },
+                      { label: 'SET 2', weight: '82,5 kg', reps: '3 reps', rpe: 'RPE 8', pb: true, state: 'done' },
+                      { label: 'SET 3', weight: '82,5 kg', reps: '3 reps', rpe: 'RPE –', state: 'current' },
+                    ]
+                  : undefined,
+            }}
           />
         ))}
-        {performRows.slice(0, 4).map((s) => (
-          <SessionListRow
+        {performRows.slice(0, 2).map((s) => (
+          <ExpandableSessionRow
             key={s.id}
-            date={formatSessionDateLabel(s.completed_at)}
-            name={s.workout_type ?? 'Perform'}
-            sys={`${s.exercises_completed ?? 0}/${s.total_exercises ?? '?'} övningar`}
-            load="—"
-            loadColor={coachColors.muted}
+            session={{
+              id: s.id,
+              badge: 'PF',
+              title: s.workout_type ?? 'Perform',
+              meta: `${formatSessionDateLabel(s.completed_at)} · ${s.exercises_completed ?? 0}/${s.total_exercises ?? '?'} övningar`,
+            }}
           />
         ))}
-        {trackerRows.slice(0, 4).map((s) => (
-          <SessionListRow
+        {trackerRows.slice(0, 2).map((s) => (
+          <ExpandableSessionRow
             key={s.id}
-            date={new Date(s.ended_at).toLocaleDateString('sv-SE')}
-            name={s.goal_key}
-            sys={`${s.sets.length} set`}
-            load="—"
-            loadColor={coachColors.muted}
+            session={{
+              id: s.id,
+              badge: 'TR',
+              title: s.goal_key,
+              meta: `${new Date(s.ended_at).toLocaleDateString('sv-SE')} · ${s.sets.length} set`,
+            }}
           />
         ))}
       </View>
-      {client?.notes ? (
-        <GlassCard style={styles.cardTight}>
-          <SectionLabel>Anteckningar</SectionLabel>
-          <Text style={styles.cardSub}>{client.notes}</Text>
-        </GlassCard>
-      ) : null}
     </View>
   );
 }

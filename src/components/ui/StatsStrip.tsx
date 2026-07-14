@@ -7,6 +7,8 @@ export interface StatItem {
   value: string | number;
   label: string;
   color?: 'coach' | 'accent' | 'orange' | 'muted';
+  delta?: string;
+  deltaTone?: 'up' | 'down' | 'flat';
 }
 
 interface StatsStripProps {
@@ -18,6 +20,12 @@ const valueColors = {
   accent: coachColors.accent,
   orange: coachColors.orange,
   muted: coachColors.mutedHi,
+};
+
+const deltaColors = {
+  up: '#4ADE80',
+  down: '#F87171',
+  flat: coachColors.muted,
 };
 
 export function StatsStrip({ items }: StatsStripProps) {
@@ -37,6 +45,16 @@ export function StatsStrip({ items }: StatsStripProps) {
             {item.value}
           </Text>
           <Text style={styles.label}>{item.label}</Text>
+          {item.delta ? (
+            <Text
+              style={[
+                styles.delta,
+                { color: deltaColors[item.deltaTone ?? 'flat'] },
+              ]}
+            >
+              {item.delta}
+            </Text>
+          ) : null}
         </View>
       ))}
     </GlassCard>
@@ -73,5 +91,13 @@ const styles = StyleSheet.create({
     color: coachColors.muted,
     marginTop: 4,
     textAlign: 'center',
+  },
+  delta: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.3,
+    marginTop: 5,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
 });

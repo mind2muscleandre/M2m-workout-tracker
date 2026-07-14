@@ -5,6 +5,7 @@ import { StyleSheet, Platform, View, ActivityIndicator } from 'react-native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useCoachFonts } from './src/lib/useCoachFonts';
 import { coachColors } from './src/lib/theme';
+import { webOnly } from './src/lib/webStyles';
 
 if (Platform.OS === 'web') {
   require('./web.css');
@@ -65,7 +66,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: coachColors.bg,
-    ...(Platform.OS === 'web' ? ({ height: '100vh', overflow: 'hidden' } as const) : null),
+    ...webOnly({ height: '100vh', overflow: 'hidden' }),
   },
   loading: {
     flex: 1,

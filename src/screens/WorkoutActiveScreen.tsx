@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,13 @@ import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { SectionLabel } from '../components/ui/SectionLabel';
+import { SessionSummaryView } from '../components/coach/SessionSummaryView';
+import { ExerciseSwapSheet } from '../components/coach/CoachModals';
+import {
+  SessionProgressBar,
+  CurrentExerciseCard,
+  NextExercisePreview,
+} from '../components/coach/LiveSessionChrome';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useExerciseStore } from '../stores/exerciseStore';
 import { WorkoutExercise, WorkoutSet, Exercise } from '../types/database';
@@ -56,6 +63,12 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   const [workoutStartTime, setWorkoutStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryRpe, setSummaryRpe] = useState<number | null>(8);
+  const [summaryNote, setSummaryNote] = useState('');
+  const [swapVisible, setSwapVisible] = useState(false);
+  const [swapTargetId, setSwapTargetId] = useState<string | null>(null);
+  const [keepSetsOnSwap, setKeepSetsOnSwap] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -108,13 +121,18 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
           try {
             if (timerRef.current) clearInterval(timerRef.current);
             await completeWorkout(workoutId);
-            navigation.goBack();
+            setShowSummary(true);
           } catch {
             Alert.alert('Fel', 'Kunde inte avsluta passet');
           }
         },
       },
     ]);
+  };
+
+  const finishSummary = () => {
+    setShowSummary(false);
+    navigation.goBack();
   };
 
   const handleAddSet = async (workoutExerciseId: string, existingSetsCount: number, trackingType?: string) => {
@@ -139,6 +157,26 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
   const handleAddExercise = () => {
     navigation.navigate('ExercisePicker', { workoutId });
   };
+
+  const openSwapForExercise = (workoutExerciseId: string) => {
+    setSwapTargetId(workoutExerciseId);
+    setSwapVisible(true);
+  };
+
+  const handleSwapSelect = (exerciseId: string) => {
+    setSwapVisible(false);
+    setSwapTargetId(null);
+    navigation.navigate('ExercisePicker', { workoutId });
+  };
+
+  const swapSuggestions = useMemo(() => {
+    return exercises.slice(0, 8).map((ex, i) => ({
+      id: ex.id,
+      name: ex.name,
+      meta: ex.muscle_group ?? 'Övning',
+      screeningMatch: i < 2,
+    }));
+  }, [exercises]);
 
   const handleRemoveExercise = (workoutExerciseId: string, exerciseName: string) => {
     Alert.alert('Ta bort övning', `Är du säker att du vill ta bort "${exerciseName}"?`, [
@@ -215,6 +253,44 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
         ? 'Utkast'
         : 'Planerat';
 
+  const currentExerciseIndex = useMemo(() => {
+    if (!isActive) return 0;
+    const idx = activeWorkout.workout_exercises.findIndex((we) =>
+      we.sets.some((s) => !s.completed_at)
+    );
+    return idx >= 0 ? idx : activeWorkout.workout_exercises.length - 1;
+  }, [activeWorkout.workout_exercises, isActive]);
+
+  const currentWe = activeWorkout.workout_exercises[currentExerciseIndex];
+  const nextWe = activeWorkout.workout_exercises[currentExerciseIndex + 1];
+
+  if (showSummary && activeWorkout) {
+    const totalSets = activeWorkout.workout_exercises.reduce((s, we) => s + we.sets.length, 0);
+    return (
+      <ScreenContainer title="Sammanfattning" scroll>
+        <SessionSummaryView
+          athleteName="Atlet"
+          sessionName={activeWorkout.title || 'PT-pass'}
+          duration={formatTime(elapsedTime)}
+          stats={[
+            { label: 'Set', value: totalSets, accent: true },
+            { label: 'Övningar', value: activeWorkout.workout_exercises.length },
+            { label: 'Tid', value: formatTime(elapsedTime) },
+          ]}
+          exercises={activeWorkout.workout_exercises.map((we) => ({
+            name: we.exercise?.name ?? 'Övning',
+            sets: `${we.sets.filter((s) => s.completed_at).length}/${we.sets.length} set`,
+          }))}
+          note={summaryNote}
+          onNoteChange={setSummaryNote}
+          selectedRpe={summaryRpe}
+          onRpeSelect={setSummaryRpe}
+          onDone={finishSummary}
+        />
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer
       title={activeWorkout.title || 'Aktivt pass'}
@@ -274,7 +350,10 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
 
       <View style={styles.footer}>
         {isActive ? (
-          <Button label="Lägg till övning" variant="secondary" onPress={handleAddExercise} />
+          <>
+            <Button label="Byt övning" variant="secondary" onPress={handleAddExercise} />
+            <Button label="Lägg till övning" variant="secondary" onPress={handleAddExercise} />
+          </>
         ) : null}
         {activeWorkout.status === 'planned' || activeWorkout.status === 'draft' ? (
           <Button
