@@ -1,5 +1,7 @@
 /** Platform table row shapes (read-model for coach aggregation). */
 
+import type { SharedScopes } from '../lib/consent';
+
 export type AppId = 'perform' | 'tracker' | 'macro' | 'goalsetter';
 
 export type AppBadges = Record<AppId, boolean>;
@@ -358,6 +360,8 @@ export type AthleteAggregateView = {
   tracker: TrackerProgramView | null;
   macro: MacroView | null;
   goalsetter: GoalsetterView;
+  /** Athlete consent per data domain — controls whether tracker/macro/goalsetter data was fetched. */
+  sharedScopes: SharedScopes;
   lastActivityAt: string | null;
   loadWarnings: string[];
 };

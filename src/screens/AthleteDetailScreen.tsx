@@ -49,7 +49,10 @@ import {
   VitalTrendsCard,
   ConnectedAppsCard,
   deriveTodayStats,
+  NotSharedEmptyState,
+  SourceFilterPills,
 } from '../components/athleteDetail/AthleteDetailUi';
+import type { SharedScopes } from '../lib/consent';
 import {
   fetchAthleteAggregate,
   fetchAthleteAggregateByUserId,
@@ -87,6 +90,8 @@ import type { MovementAssessmentRow } from '../types/platform';
 
 type Props = StackScreenProps<RootStackParamList, 'AthleteDetail'>;
 type TabId = 'overview' | 'sessions' | 'program' | 'perform' | 'goalsetter';
+
+const DEFAULT_SHARED_SCOPES: SharedScopes = { nutrition: false, training: false, goals: false };
 
 const TABS = [
   { id: 'overview', label: 'Översikt' },
@@ -718,6 +723,8 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
         : 'Aerob'
     : undefined;
 
+  const sharedScopes = aggregate?.sharedScopes ?? DEFAULT_SHARED_SCOPES;
+
   const heroSummary = (() => {
     const recovery = deriveRecoveryScore(aggregate);
     if (recovery == null) return undefined;
@@ -751,6 +758,8 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
         strainScore={deriveStrainScore(aggregate)}
         nutritionScore={deriveNutritionScore(aggregate)}
         sleepScore={deriveSleepScore(aggregate)}
+        nutritionShared={sharedScopes.nutrition}
+        goalsShared={sharedScopes.goals}
         sessions={aggregate?.timerSessions ?? []}
         apps={aggregate?.apps ?? { perform: false, tracker: false, macro: false, goalsetter: false }}
         backButton={
@@ -823,6 +832,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
       {tab === 'overview' && (
         <OverviewTab
           aggregate={aggregate}
+          sharedScopes={sharedScopes}
           client={client}
           goalPct={goalPct}
           weekSchedule={weekSchedule}
@@ -862,7 +872,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
         />
       )}
       {tab === 'sessions' && (
-        <SessionsTab aggregate={aggregate} client={client} />
+        <SessionsTab aggregate={aggregate} client={client} sharedScopes={sharedScopes} />
       )}
       {tab === 'perform' && (
         <PerformTab
@@ -899,7 +909,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
         />
       )}
       {tab === 'goalsetter' && (
-        <GoalsetterTab aggregate={aggregate} userId={userId} onSaved={load} />
+        <GoalsetterTab aggregate={aggregate} userId={userId} onSaved={load} sharedScopes={sharedScopes} />
       )}
     </ScreenContainer>
     <CoachPickerModal
@@ -941,7 +951,7 @@ export function AthleteDetailScreen({ route, navigation }: Props) {
 
         {isLoadingProfile ? (
           <View style={athleteInfoStyles.center}>
-            <ActivityIndicator color="#00D4AA" size="large" />
+            <ActivityIndicator color={coachColors.coach} size="large" />
           </View>
         ) : !userProfile ? (
           <View style={athleteInfoStyles.center}>
@@ -1046,58 +1056,59 @@ function AthleteInfoRow({ label, value, mono }: { label: string; value: string |
 }
 
 const athleteInfoStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1A1E24' },
+  container: { flex: 1, backgroundColor: coachColors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: coachColors.border,
   },
-  closeBtn: { fontSize: 15, color: '#00D4AA' },
-  title: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  closeBtn: { fontSize: 15, color: coachColors.coach, fontFamily: fonts.bodyMedium },
+  title: { fontSize: 16, fontWeight: '600', color: coachColors.fg, fontFamily: fonts.bodySemiBold },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   emptyIcon: { fontSize: 40 },
-  emptyText: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 20 },
+  emptyText: { fontSize: 14, color: coachColors.muted, textAlign: 'center', lineHeight: 20, fontFamily: fonts.body },
   inviteForm: {
     marginTop: 20, width: '100%', maxWidth: 320, gap: 12, alignItems: 'center',
   },
   emailInput: {
-    width: '100%', backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12,
-    fontSize: 15, color: '#fff',
+    width: '100%', backgroundColor: coachColors.glassBg,
+    borderWidth: 1, borderColor: coachColors.glassBorder,
+    borderRadius: borderRadius.md, paddingHorizontal: 16, paddingVertical: 12,
+    fontSize: 15, color: coachColors.fg, fontFamily: fonts.body,
   },
   emailInputError: {
-    borderColor: '#ff4d4d',
-    backgroundColor: 'rgba(255,77,77,0.08)',
+    borderColor: coachColors.danger,
+    backgroundColor: coachColors.dangerDim,
   },
   emailErrorTxt: {
-    fontSize: 12, color: '#ff4d4d', alignSelf: 'flex-start',
+    fontSize: 12, color: coachColors.danger, alignSelf: 'flex-start', fontFamily: fonts.body,
   },
   inviteHint: {
-    fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 16,
+    fontSize: 12, color: coachColors.muted, textAlign: 'center', lineHeight: 16, fontFamily: fonts.body,
   },
   inviteBtn: {
     width: '100%', paddingVertical: 13,
-    borderRadius: 10, backgroundColor: '#00D4AA', alignItems: 'center',
+    borderRadius: borderRadius.md, backgroundColor: coachColors.coach, alignItems: 'center',
   },
-  inviteBtnTxt: { fontSize: 15, fontWeight: '600', color: '#000' },
+  inviteBtnTxt: { fontSize: 15, fontWeight: '600', color: '#000', fontFamily: fonts.bodySemiBold },
   scroll: { padding: 20, gap: 24 },
   section: { gap: 0 },
   sectionTitle: {
     fontSize: 11, fontWeight: '700', letterSpacing: 1,
-    textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 8,
+    textTransform: 'uppercase', color: coachColors.muted, marginBottom: 8, fontFamily: fonts.bodyMedium,
   },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.07)',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: coachColors.border,
   },
-  rowLabel: { width: 140, fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
-  rowValue: { flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.88)' },
-  rowValueMono: { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
+  rowLabel: { width: 140, fontSize: 13, color: coachColors.muted, fontWeight: '500', fontFamily: fonts.bodyMedium },
+  rowValue: { flex: 1, fontSize: 14, color: coachColors.mutedHi, fontFamily: fonts.body },
+  rowValueMono: { fontSize: 11, color: coachColors.muted, fontFamily: fonts.mono },
 });
 
 function OverviewTab({
   aggregate,
+  sharedScopes,
   client,
   goalPct,
   weekSchedule,
@@ -1117,6 +1128,7 @@ function OverviewTab({
   autoGenerating,
 }: {
   aggregate: AthleteAggregateView | null;
+  sharedScopes: SharedScopes;
   client: Client | null;
   goalPct: number | null;
   weekSchedule: ReturnType<typeof weekScheduleForProgram>;
@@ -1214,11 +1226,17 @@ function OverviewTab({
       </View>
 
       <PrimaryGoalCard
-        title={primaryGoal?.title ?? aggregate?.adapt?.program.name ?? 'Inget mål'}
+        title={
+          primaryGoal?.title ??
+          aggregate?.adapt?.program.name ??
+          (!sharedScopes.goals ? 'Inget delat mål' : 'Inget mål')
+        }
         subtitle={
           primaryGoal?.deadline
             ? `Deadline: ${primaryGoal.deadline}`
-            : nutritionGoalSummary(aggregate?.goalsetter.nutritionGoal ?? null)
+            : !sharedScopes.goals
+              ? 'Atleten har inte delat mål (Goalsetter) med dig.'
+              : nutritionGoalSummary(aggregate?.goalsetter.nutritionGoal ?? null)
         }
         pct={goalPct ?? 0}
         startLabel={aggregate?.lastActivityAt ? `Senast aktiv: ${new Date(aggregate.lastActivityAt).toLocaleDateString('sv-SE')}` : undefined}
@@ -1430,25 +1448,33 @@ function OverviewTab({
           title="Goalsetter"
           titleColor={coachColors.coach}
           subtitle={
-            routines.length > 0
-              ? `Dagliga rutiner · ${doneRoutines} av ${routines.length} klara`
-              : 'Dagliga rutiner · —'
+            !sharedScopes.goals
+              ? 'Dagliga rutiner · ej delat'
+              : routines.length > 0
+                ? `Dagliga rutiner · ${doneRoutines} av ${routines.length} klara`
+                : 'Dagliga rutiner · —'
           }
           linkLabel="Se alla"
           onLinkPress={onOpenGoalsetter}
         />
-        <RoutineList items={routines.slice(0, 4)} />
-        {aggregate?.goalsetter.activityStreak ? (
-          <GlassCard variant="accent" style={styles.cardTight}>
-            <SectionLabel>Season Mode — Aktiv</SectionLabel>
-            <Text style={styles.seasonTitle}>
-              Streak: {aggregate.goalsetter.activityStreak.current_streak} dagar
-            </Text>
-            <Text style={styles.seasonSub}>
-              Längsta: {aggregate.goalsetter.activityStreak.longest_streak} · SM-säsong
-            </Text>
-          </GlassCard>
-        ) : null}
+        {!sharedScopes.goals ? (
+          <NotSharedEmptyState text="Atleten har inte delat mål/rutiner (Goalsetter) med dig." />
+        ) : (
+          <>
+            <RoutineList items={routines.slice(0, 4)} />
+            {aggregate?.goalsetter.activityStreak ? (
+              <GlassCard variant="accent" style={styles.cardTight}>
+                <SectionLabel>Season Mode — Aktiv</SectionLabel>
+                <Text style={styles.seasonTitle}>
+                  Streak: {aggregate.goalsetter.activityStreak.current_streak} dagar
+                </Text>
+                <Text style={styles.seasonSub}>
+                  Längsta: {aggregate.goalsetter.activityStreak.longest_streak} · SM-säsong
+                </Text>
+              </GlassCard>
+            ) : null}
+          </>
+        )}
       </View>
 
       <View style={styles.appSection}>
@@ -1480,29 +1506,60 @@ function OverviewTab({
   );
 }
 
+type SessionSource = 'all' | 'coach' | 'tracker' | 'perform';
+
 function SessionsTab({
   aggregate,
   client,
+  sharedScopes,
 }: {
   aggregate: AthleteAggregateView | null;
   client: Client | null;
+  sharedScopes: SharedScopes;
 }) {
+  const [source, setSource] = useState<SessionSource>('all');
   const rows = buildRecentSessions(aggregate);
   const performRows = aggregate?.perform?.workoutHistory ?? [];
   const trackerRows = aggregate?.tracker?.sessions ?? [];
 
+  const coachRows = rows.filter((r) => r.workoutId);
+  const timerRows = rows.filter((r) => !r.workoutId);
+  const totalCount = coachRows.length + timerRows.length + trackerRows.length + performRows.length;
+
+  const showCoach = source === 'all' || source === 'coach';
+  const showTracker = source === 'all' || source === 'tracker';
+  const showPerform = source === 'all' || source === 'perform';
+
+  const nothingToShow =
+    (!showCoach || coachRows.length === 0) &&
+    (!showTracker || (timerRows.length === 0 && trackerRows.length === 0)) &&
+    (!showPerform || performRows.length === 0);
+
   return (
     <View style={styles.tabPanel}>
       <SectionLabel>Senaste sessioner</SectionLabel>
+      <SourceFilterPills
+        options={[
+          { id: 'all', label: `Alla · ${totalCount}` },
+          { id: 'coach', label: 'Coach-pass' },
+          { id: 'tracker', label: 'Tracker' },
+          { id: 'perform', label: 'Perform' },
+        ]}
+        activeId={source}
+        onChange={(id) => setSource(id as SessionSource)}
+      />
       <View style={styles.sessionList}>
-        {rows.length === 0 && performRows.length === 0 && trackerRows.length === 0 ? (
+        {nothingToShow && sharedScopes.training ? (
           <Text style={styles.muted}>Inga sessioner</Text>
         ) : null}
-        {rows.slice(0, 3).map((s, idx) =>
-          s.workoutId ? (
+        {showTracker && !sharedScopes.training ? (
+          <NotSharedEmptyState text="Atleten har inte delat träning (M2M Tracker) med dig. Coach-pass och Perform-data visas som vanligt." />
+        ) : null}
+        {showCoach &&
+          coachRows.slice(0, 3).map((s, idx) => (
             <CoachWorkoutSessionRow
               key={s.key}
-              workoutId={s.workoutId}
+              workoutId={s.workoutId!}
               defaultExpanded={idx === 0}
               session={{
                 id: s.key,
@@ -1512,10 +1569,12 @@ function SessionsTab({
                 screeningNote: client?.notes ?? undefined,
               }}
             />
-          ) : (
+          ))}
+        {showTracker &&
+          timerRows.slice(0, 3).map((s, idx) => (
             <ExpandableSessionRow
               key={s.key}
-              defaultExpanded={idx === 0}
+              defaultExpanded={idx === 0 && coachRows.length === 0}
               session={{
                 id: s.key,
                 badge: 'TR',
@@ -1523,37 +1582,38 @@ function SessionsTab({
                 meta: `${s.date} · ${s.sys}`,
               }}
             />
-          )
-        )}
-        {performRows.slice(0, 2).map((s) => (
-          <ExpandableSessionRow
-            key={s.id}
-            session={{
-              id: s.id,
-              badge: 'PF',
-              title: s.workout_type ?? 'Perform',
-              meta: `${formatSessionDateLabel(s.completed_at)} · ${s.exercises_completed ?? 0}/${s.total_exercises ?? '?'} övningar`,
-            }}
-          />
-        ))}
-        {trackerRows.slice(0, 2).map((s) => (
-          <ExpandableSessionRow
-            key={s.id}
-            session={{
-              id: s.id,
-              badge: 'TR',
-              title: s.goal_key,
-              meta: `${new Date(s.ended_at).toLocaleDateString('sv-SE')} · ${s.sets.length} set`,
-              sets: s.sets.map((set, setIdx) => ({
-                label: `SET ${setIdx + 1}`,
-                weight: set.weight != null ? `${set.weight} kg` : '—',
-                reps: set.reps != null ? `${set.reps} reps` : '—',
-                rpe: undefined,
-                state: 'done' as const,
-              })),
-            }}
-          />
-        ))}
+          ))}
+        {showPerform &&
+          performRows.slice(0, 2).map((s) => (
+            <ExpandableSessionRow
+              key={s.id}
+              session={{
+                id: s.id,
+                badge: 'PF',
+                title: s.workout_type ?? 'Perform',
+                meta: `${formatSessionDateLabel(s.completed_at)} · ${s.exercises_completed ?? 0}/${s.total_exercises ?? '?'} övningar`,
+              }}
+            />
+          ))}
+        {showTracker &&
+          trackerRows.slice(0, 2).map((s) => (
+            <ExpandableSessionRow
+              key={s.id}
+              session={{
+                id: s.id,
+                badge: 'TR',
+                title: s.goal_key,
+                meta: `${new Date(s.ended_at).toLocaleDateString('sv-SE')} · ${s.sets.length} set`,
+                sets: s.sets.map((set, setIdx) => ({
+                  label: `SET ${setIdx + 1}`,
+                  weight: set.weight != null ? `${set.weight} kg` : '—',
+                  reps: set.reps != null ? `${set.reps} reps` : '—',
+                  rpe: undefined,
+                  state: 'done' as const,
+                })),
+              }}
+            />
+          ))}
       </View>
     </View>
   );
@@ -1858,10 +1918,12 @@ function GoalsetterTab({
   aggregate,
   userId,
   onSaved,
+  sharedScopes,
 }: {
   aggregate: AthleteAggregateView | null;
   userId: string | null | undefined;
   onSaved: () => void;
+  sharedScopes: SharedScopes;
 }) {
   const gs = aggregate?.goalsetter;
   const [newGoal, setNewGoal] = useState('');
@@ -1909,6 +1971,14 @@ function GoalsetterTab({
       onToggle: undefined,
     })),
   ];
+
+  if (!sharedScopes.goals) {
+    return (
+      <View style={styles.tabPanel}>
+        <NotSharedEmptyState text="Atleten har inte delat mål/rutiner (Goalsetter) med dig. Be atleten aktivera delning i Goalsetter-appens integritetsinställningar." />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.tabPanel}>

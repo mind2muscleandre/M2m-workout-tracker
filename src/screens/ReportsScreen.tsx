@@ -8,6 +8,8 @@ import { useWorkoutStore } from '../stores/workoutStore';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { FilterTabs } from '../components/ui/FilterTabs';
 import { GlassCard } from '../components/ui/GlassCard';
+import { KpiCard, KpiGrid } from '../components/ui/KpiCard';
+import { SectionLabel } from '../components/ui/SectionLabel';
 import { StatusPill } from '../components/ui/StatusPill';
 import { Button } from '../components/ui/Button';
 import { BarChart } from '../components/ui/BarChart';
@@ -302,31 +304,15 @@ export function ReportsScreen() {
       refreshing={refreshing}
       onRefresh={onRefresh}
     >
-      <View style={styles.kpiGrid}>
-        <View style={[styles.kpiCard, styles.kpiCardCoach]}>
-          <Text style={[styles.kpiVal, { color: coachColors.coach }]}>{sessionsThisWeek}</Text>
-          <Text style={styles.kpiLabel}>Sessioner {periodLabel}</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiVal}>
-            {avgGoal}
-            <Text style={styles.kpiSuffix}>%</Text>
-          </Text>
-          <Text style={styles.kpiLabel}>Genomsnittlig målstatus</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiVal}>
-            {attendancePct}
-            <Text style={styles.kpiSuffix}>%</Text>
-          </Text>
-          <Text style={styles.kpiLabel}>Närvaro (truppen)</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={[styles.kpiVal, { color: coachColors.orange }]}>{alerts}</Text>
-          <Text style={styles.kpiLabel}>Aktiva varningar</Text>
-        </View>
-      </View>
+      <SectionLabel>Nyckeltal</SectionLabel>
+      <KpiGrid>
+        <KpiCard value={sessionsThisWeek} label={`Sessioner ${periodLabel}`} color="coach" />
+        <KpiCard value={`${avgGoal}%`} label="Genomsnittlig målstatus" color="muted" />
+        <KpiCard value={`${attendancePct}%`} label="Närvaro (truppen)" color="muted" />
+        <KpiCard value={alerts} label="Aktiva varningar" color="orange" />
+      </KpiGrid>
 
+      <SectionLabel>Trender</SectionLabel>
       <View style={styles.chartsRow}>
         <View style={styles.chartCol}>
           <BarChart title={`Sessioner per dag — ${periodLabel}`} data={barChartData} />
@@ -342,6 +328,7 @@ export function ReportsScreen() {
         </View>
       </View>
 
+      <SectionLabel>Störst förändring</SectionLabel>
       <GlassCard padding={0} style={styles.tableCard}>
         <View style={styles.tableHeader}>
           <Text style={styles.tableTitle}>Atlet-ranking — målframsteg</Text>
@@ -412,48 +399,6 @@ const styles = StyleSheet.create({
   },
   headerTabs: {
     marginBottom: -16,
-  },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
-  },
-  kpiCard: {
-    flexGrow: 1,
-    flexBasis: '46%',
-    minWidth: 140,
-    padding: 16,
-    borderRadius: borderRadius.lg,
-    backgroundColor: coachColors.glassBg,
-    borderWidth: 1,
-    borderColor: coachColors.glassBorder,
-  },
-  kpiCardCoach: {
-    backgroundColor: coachColors.glassBgCoach,
-    borderColor: 'rgba(0,212,170,0.18)',
-  },
-  kpiVal: {
-    fontFamily: fonts.display,
-    fontSize: 36,
-    fontWeight: '700',
-    lineHeight: 36,
-    color: coachColors.fg,
-  },
-  kpiSuffix: {
-    fontFamily: fonts.body,
-    fontSize: 18,
-    fontWeight: '400',
-    color: coachColors.muted,
-  },
-  kpiLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 8,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.72,
-    color: coachColors.muted,
-    marginTop: 4,
   },
   chartsRow: {
     flexDirection: 'row',

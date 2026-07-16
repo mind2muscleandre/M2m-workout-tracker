@@ -21,6 +21,8 @@ export type LibraryExercise = {
   area: string | null;
   description: string | null;
   videoUrl: string | null;
+  imageUrl: string | null;
+  gifUrl: string | null;
   isFavorite?: boolean;
   isMine?: boolean;
   raw?: unknown;
@@ -53,6 +55,9 @@ type PlatformExerciseRow = {
   movement_type: string | null;
   description: string | null;
   video_url: string | null;
+  image_url: string | null;
+  gif_url: string | null;
+  name_i18n: Record<string, string> | null;
   is_system: boolean;
 };
 
@@ -147,6 +152,8 @@ function mapPtExercise(exercise: Exercise): LibraryExercise {
     area: null,
     description: exercise.description,
     videoUrl: exercise.video_url,
+    imageUrl: null,
+    gifUrl: null,
     isFavorite: exercise.is_favorite,
     isMine: true,
     raw: exercise,
@@ -170,9 +177,15 @@ function mapBankRow(row: ExerciseBankRow): LibraryExercise {
     area: row.area,
     description: row.Description,
     videoUrl: row.URL,
+    imageUrl: null,
+    gifUrl: null,
     isMine: false,
     raw: row,
   };
+}
+
+function resolvePlatformDisplayName(row: PlatformExerciseRow): string {
+  return row.name_i18n?.sv?.trim() || row.name_i18n?.en?.trim() || row.name;
 }
 
 function mapPlatformRow(row: PlatformExerciseRow): LibraryExercise {
@@ -182,7 +195,7 @@ function mapPlatformRow(row: PlatformExerciseRow): LibraryExercise {
 
   return {
     id: row.id,
-    name: row.name,
+    name: resolvePlatformDisplayName(row),
     source: 'exercises',
     category,
     muscleLabel,
@@ -192,6 +205,8 @@ function mapPlatformRow(row: PlatformExerciseRow): LibraryExercise {
     area: null,
     description: row.description,
     videoUrl: row.video_url,
+    imageUrl: row.image_url,
+    gifUrl: row.gif_url,
     isMine: false,
     raw: row,
   };
@@ -225,7 +240,9 @@ async function fetchSystemPlatformExercises(): Promise<PlatformExerciseRow[]> {
   while (true) {
     const { data, error } = await supabase
       .from(PLATFORM_DB.platformExercises)
-      .select('id, name, muscle_groups, movement_type, description, video_url, is_system')
+      .select(
+        'id, name, muscle_groups, movement_type, description, video_url, image_url, gif_url, name_i18n, is_system'
+      )
       .eq('is_system', true)
       .order('name', { ascending: true })
       .range(from, from + BANK_BATCH_SIZE - 1);

@@ -39,7 +39,7 @@ import { ActivityFeed } from '../components/coach/ActivityFeed';
 import { weekScheduleForProgram } from '../services/platformAdapt';
 import { InlineEditButton } from '../components/athleteDetail/AthleteDetailUi';
 import { coachColors, fonts, borderRadius } from '../lib/theme';
-import type { Client } from '../types/database';
+import type { Client, User, Workout } from '../types/database';
 import type { AthleteAggregateView } from '../types/platform';
 import { usePlatformStore } from '../stores/platformStore';
 import { useLayout } from '../lib/useLayout';
@@ -59,7 +59,7 @@ const PANEL_TABS = [
 
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  const { showDetailPanel } = useLayout();
+  const { showDetailPanel, isMobile } = useLayout();
   const { clients, fetchClients, assignAthlete, fetchAssignableAthletes } = useClientStore();
   const { workouts, fetchAllWorkouts } = useWorkoutStore();
   const { loadForClients, getTimerSessions, getAggregate } = usePlatformStore();
@@ -106,10 +106,28 @@ export function DashboardScreen() {
       training: statuses.filter((s) => s === 'training').length,
       recovery: statuses.filter((s) => s === 'recovery').length,
       alert: statuses.filter((s) => s === 'alert').length,
+      rest: statuses.filter((s) => s === 'rest').length,
+      inactive: statuses.filter((s) => s === 'inactive').length,
       total: activeClients.length,
       todaySessions,
     };
   }, [activeClients, workouts, getTimerSessions]);
+
+  const nextSession = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const upcoming = workouts
+      .filter(
+        (w) =>
+          (w.status === 'planned' || w.status === 'in_progress') &&
+          (w.date?.slice(0, 10) ?? '') === todayStr
+      )
+      .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    const workout = upcoming[0];
+    if (!workout) return null;
+    const client = activeClients.find((c) => c.id === workout.client_id);
+    if (!client) return null;
+    return { workout, client };
+  }, [workouts, activeClients]);
 
   const kpiDeltas = useMemo(() => {
     const thisWeek = countScreeningsForWeek(activeClients, getAggregate, 0);
@@ -201,11 +219,11 @@ export function DashboardScreen() {
 
   const filterTabs = [
     { id: 'all', label: 'Alla', count: stats.total },
-    { id: 'training', label: 'Tränar', dotColor: coachColors.coach },
-    { id: 'recovery', label: 'Återhämtning', dotColor: coachColors.accent },
-    { id: 'alert', label: 'Varning', dotColor: coachColors.orange },
-    { id: 'rest', label: 'Vila', dotColor: coachColors.muted },
-    { id: 'inactive', label: 'Inaktiv' },
+    { id: 'training', label: 'Tränar', count: stats.training, dotColor: coachColors.coach },
+    { id: 'recovery', label: 'Återhämtning', count: stats.recovery, dotColor: coachColors.accent },
+    { id: 'alert', label: 'Varning', count: stats.alert, dotColor: coachColors.orange },
+    { id: 'rest', label: 'Vila', count: stats.rest, dotColor: coachColors.muted },
+    { id: 'inactive', label: 'Inaktiv', count: stats.inactive },
   ];
 
   const athletePanelContent = selectedClient ? (
@@ -214,6 +232,8 @@ export function DashboardScreen() {
       workouts={workouts}
       navigation={navigation}
       tab={panelTab}
+      showActions={showDetailPanel}
+      onMessage={() => setPanelTab('chat')}
     />
   ) : null;
 
@@ -279,6 +299,8 @@ export function DashboardScreen() {
         onRefresh={onRefresh}
         detailPanel={detailPanel}
       >
+        {isMobile ? <GreetingHeader user={user} /> : null}
+
         <GlassCard variant="coach" padding={14} style={styles.statsCard}>
           <SectionLabel>Status idag</SectionLabel>
           <StatsStrip
@@ -309,6 +331,47 @@ export function DashboardScreen() {
           />
         </GlassCard>
 
+        {nextSession ? (
+          <NextSessionCard
+            workout={nextSession.workout}
+            client={nextSession.client}
+            onStart={() =>
+              navigation.navigate('SessionTimer', {
+                clientId: nextSession.client.id,
+                workoutId: nextSession.workout.id,
+              })
+            }
+          />
+        ) : null}
+
+        <SectionLabel>Klienter</SectionLabel>
+        <FilterTabs tabs={filterTabs} activeId={filter} onChange={setFilter} />
+        <View style={styles.list}>
+          {filtered.length === 0 ? (
+            <Text style={styles.empty}>Inga atleter matchar filtret</Text>
+          ) : (
+            filtered.map((item) => (
+              <AthleteCard
+                key={item.id}
+                athlete={{
+                  ...clientToAthleteCard(item, workouts, {
+                    selected: selectedId === item.id,
+                    timerSessions: getTimerSessions(item.client_user_id),
+                    aggregate: getAggregate(item.id),
+                  }),
+                  selectedAccent: showDetailPanel,
+                  sparkline: sparklineFromGoalPct(
+                    deriveGoalPct(getAggregate(item.id)),
+                    getAggregate(item.id)?.tracker?.trends
+                  ),
+                  apps: getAggregate(item.id)?.apps ?? null,
+                }}
+                onPress={() => handleSelect(item.id)}
+              />
+            ))
+          )}
+        </View>
+
         <NeedsYouQueue
           items={needsYou}
           onPressItem={(id) => {
@@ -325,33 +388,6 @@ export function DashboardScreen() {
             <Text style={styles.helhetSub}>HELHETSVY · KPI · RADAR · TRIAGE</Text>
           </GlassCard>
         </TouchableOpacity>
-        <SectionLabel>Filtrera trupp</SectionLabel>
-        <FilterTabs tabs={filterTabs} activeId={filter} onChange={setFilter} />
-        <SectionLabel>Atleter</SectionLabel>
-        <View style={styles.list}>
-          {filtered.length === 0 ? (
-            <Text style={styles.empty}>Inga atleter matchar filtret</Text>
-          ) : (
-            filtered.map((item) => (
-              <AthleteCard
-                key={item.id}
-                athlete={{
-                  ...clientToAthleteCard(item, workouts, {
-                    selected: selectedId === item.id,
-                    timerSessions: getTimerSessions(item.client_user_id),
-                    aggregate: getAggregate(item.id),
-                  }),
-                  sparkline: sparklineFromGoalPct(
-                    deriveGoalPct(getAggregate(item.id)),
-                    getAggregate(item.id)?.tracker?.trends
-                  ),
-                  apps: getAggregate(item.id)?.apps ?? null,
-                }}
-                onPress={() => handleSelect(item.id)}
-              />
-            ))
-          )}
-        </View>
       </ScreenContainer>
 
       {!showDetailPanel && selectedClient ? (
@@ -388,6 +424,73 @@ export function DashboardScreen() {
         title="Lägg till atlet"
       />
     </>
+  );
+}
+
+function greetingWord(hour: number): string {
+  if (hour >= 5 && hour < 10) return 'God morgon';
+  if (hour >= 10 && hour < 17) return 'God eftermiddag';
+  return 'God kväll';
+}
+
+function firstNameFromUser(user: Pick<User, 'full_name' | 'email'> | null): string {
+  const fromName = user?.full_name?.trim().split(/\s+/)[0];
+  if (fromName) return fromName;
+  const fromEmail = user?.email?.split('@')[0];
+  return fromEmail || 'Coach';
+}
+
+function formatGreetingDate(d: Date): string {
+  const weekday = d.toLocaleDateString('sv-SE', { weekday: 'long' }).toUpperCase();
+  const month = d.toLocaleDateString('sv-SE', { month: 'long' }).toUpperCase();
+  return `${weekday} · ${d.getDate()} ${month} ${d.getFullYear()}`;
+}
+
+function GreetingHeader({ user }: { user: Pick<User, 'full_name' | 'email'> | null }) {
+  const now = new Date();
+  return (
+    <View style={styles.greeting}>
+      <Text style={styles.greetingTitle}>
+        {greetingWord(now.getHours())}, {firstNameFromUser(user)}
+      </Text>
+      <Text style={styles.greetingDate}>{formatGreetingDate(now)}</Text>
+    </View>
+  );
+}
+
+function NextSessionCard({
+  workout,
+  client,
+  onStart,
+}: {
+  workout: Workout;
+  client: Client;
+  onStart: () => void;
+}) {
+  const time = workout.date
+    ? new Date(workout.date).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+    : '--:--';
+  const workoutLabel = workout.title ?? 'Pass';
+  return (
+    <TouchableOpacity onPress={onStart} activeOpacity={0.8}>
+      <SectionLabel>Nästa session</SectionLabel>
+      <GlassCard variant="accent" padding={14} style={styles.nextSessionCard}>
+        <View style={styles.nextSessionRow}>
+          <View style={styles.nextSessionIcon}>
+            <Text style={styles.nextSessionIconText}>▶</Text>
+          </View>
+          <View style={styles.nextSessionMid}>
+            <Text style={styles.nextSessionTitle} numberOfLines={1}>
+              {client.name} · {workoutLabel}
+            </Text>
+            <Text style={styles.nextSessionMeta} numberOfLines={1}>
+              {time} · {workoutLabel.toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.nextSessionGo}>STARTA →</Text>
+        </View>
+      </GlassCard>
+    </TouchableOpacity>
   );
 }
 
@@ -475,11 +578,15 @@ function AthletePanelContent({
   workouts,
   navigation,
   tab,
+  showActions,
+  onMessage,
 }: {
   client: Client;
   workouts: ReturnType<typeof useWorkoutStore.getState>['workouts'];
   navigation: Nav;
   tab: PanelTab;
+  showActions?: boolean;
+  onMessage?: () => void;
 }) {
   const { getTimerSessions, getAggregate } = usePlatformStore();
   const { openConversation, fetchMessages, sendMessage, messages, activeConversationId } =
@@ -534,6 +641,28 @@ function AthletePanelContent({
         </View>
         </View>
       </GlassCard>
+
+      {showActions ? (
+        <View style={styles.panelActions}>
+          <TouchableOpacity
+            style={styles.panelActionBtn}
+            onPress={() => navigation.navigate('AthleteDetail', { clientId: client.id })}
+          >
+            <Text style={styles.panelActionText}>Info</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.panelActionBtn} onPress={onMessage}>
+            <Text style={styles.panelActionText}>Meddelande</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.panelActionBtn, styles.panelActionPrimary]}
+            onPress={() => navigation.navigate('SessionTimer', { clientId: client.id })}
+          >
+            <Text style={[styles.panelActionText, styles.panelActionTextPrimary]}>
+              Starta session
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {tab === 'goals' ? <GoalsTab aggregate={aggregate} fallbackGoal={card.goal} goalPct={card.goalPct} /> : null}
       {tab === 'program' ? (
@@ -757,6 +886,87 @@ function NutritionTab({
 }
 
 const styles = StyleSheet.create({
+  greeting: { marginBottom: 14 },
+  greetingTitle: {
+    fontFamily: fonts.display,
+    fontSize: 24,
+    fontWeight: '700',
+    color: coachColors.fg,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  greetingDate: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.6,
+    color: coachColors.muted,
+    marginTop: 5,
+    textTransform: 'uppercase',
+  },
+  nextSessionCard: { marginBottom: 16, borderColor: 'rgba(247,233,40,0.25)' },
+  nextSessionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  nextSessionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: coachColors.accentDim,
+    borderWidth: 1,
+    borderColor: 'rgba(247,233,40,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextSessionIconText: { color: coachColors.accent, fontSize: 15 },
+  nextSessionMid: { flex: 1, minWidth: 0 },
+  nextSessionTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: coachColors.fg,
+  },
+  nextSessionMeta: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.6,
+    color: coachColors.muted,
+    marginTop: 3,
+    textTransform: 'uppercase',
+  },
+  nextSessionGo: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    color: coachColors.accent,
+    flexShrink: 0,
+  },
+  panelActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+  },
+  panelActionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    backgroundColor: coachColors.glassBg,
+  },
+  panelActionText: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: coachColors.mutedHi,
+  },
+  panelActionPrimary: {
+    backgroundColor: coachColors.accent,
+    borderColor: coachColors.accent,
+  },
+  panelActionTextPrimary: {
+    color: '#17191c',
+    fontWeight: '600',
+  },
   statsCard: { marginBottom: 4 },
   helhetLink: { marginBottom: 12, borderColor: 'rgba(247,233,40,0.25)' },
   helhetTitle: {

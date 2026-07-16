@@ -1,7 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { GlassCard } from '../ui/GlassCard';
 import { coachColors, fonts, borderRadius } from '../../lib/theme';
+
+const REST_RING_SIZE = 64;
+const REST_RING_RADIUS = 26;
+const REST_RING_STROKE = 5;
+const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 
 export function SessionProgressBar({
   total,
@@ -58,22 +64,56 @@ export function RestTimerRing({
   secondsRemaining,
   totalSeconds = 90,
   label,
+  meta,
   onSkip,
 }: {
   secondsRemaining: number;
   totalSeconds?: number;
   label: string;
+  meta?: string;
   onSkip?: () => void;
 }) {
-  const pct = Math.min(100, Math.max(0, (secondsRemaining / totalSeconds) * 100));
+  const pct = Math.min(1, Math.max(0, secondsRemaining / totalSeconds));
+  const dashOffset = REST_RING_CIRCUMFERENCE * (1 - pct);
   return (
     <GlassCard style={styles.rest}>
-      <View style={[styles.rring, { borderColor: coachColors.accent, opacity: 0.4 + pct / 200 }]}>
-        <Text style={styles.rringVal}>{secondsRemaining}s</Text>
+      <View style={styles.rringWrap}>
+        <Svg
+          width={REST_RING_SIZE}
+          height={REST_RING_SIZE}
+          viewBox={`0 0 ${REST_RING_SIZE} ${REST_RING_SIZE}`}
+        >
+          <Circle
+            cx={REST_RING_SIZE / 2}
+            cy={REST_RING_SIZE / 2}
+            r={REST_RING_RADIUS}
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth={REST_RING_STROKE}
+            fill="none"
+          />
+          <Circle
+            cx={REST_RING_SIZE / 2}
+            cy={REST_RING_SIZE / 2}
+            r={REST_RING_RADIUS}
+            stroke={coachColors.accent}
+            strokeWidth={REST_RING_STROKE}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${REST_RING_CIRCUMFERENCE}`}
+            strokeDashoffset={dashOffset}
+            rotation={-90}
+            origin={`${REST_RING_SIZE / 2}, ${REST_RING_SIZE / 2}`}
+          />
+        </Svg>
+        <View style={styles.rringInner}>
+          <Text style={styles.rringVal}>{secondsRemaining}s</Text>
+        </View>
       </View>
       <View style={styles.restBody}>
         <Text style={styles.restTitle}>{label}</Text>
-        <Text style={styles.restMeta}>Nästa set · vila {pct.toFixed(0)}% kvar</Text>
+        <Text style={styles.restMeta}>
+          {meta ?? `Nästa set · vila ${(pct * 100).toFixed(0)}% kvar`}
+        </Text>
       </View>
       {onSkip ? (
         <Text style={styles.restSkip} onPress={onSkip}>
@@ -168,15 +208,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  rring: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 3,
-    borderColor: coachColors.accent,
+  rringWrap: {
+    width: REST_RING_SIZE,
+    height: REST_RING_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  rringInner: {
+    position: 'absolute',
+    width: REST_RING_SIZE - REST_RING_STROKE * 2,
+    height: REST_RING_SIZE - REST_RING_STROKE * 2,
+    borderRadius: (REST_RING_SIZE - REST_RING_STROKE * 2) / 2,
     backgroundColor: '#1d2024',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: coachColors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   rringVal: {
     fontFamily: fonts.display,

@@ -99,7 +99,7 @@ function bandColor(band: ScoreBand): string {
     case 'poor':
       return colors.warning;
     default:
-      return colors.danger;
+      return coachColors.danger;
   }
 }
 
@@ -487,7 +487,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
             value={posturalNotes}
             onChangeText={setPosturalNotes}
             placeholder="Observationer om hållning…"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={coachColors.muted}
             multiline
           />
         </AccordionSection>
@@ -515,7 +515,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
                       style={styles.input}
                       keyboardType="decimal-pad"
                       placeholder={mobilityTestPlaceholder(t)}
-                      placeholderTextColor={colors.textSecondary}
+                      placeholderTextColor={coachColors.muted}
                       value={mobility[t.leftKey] != null ? String(mobility[t.leftKey]) : ''}
                       onChangeText={(s) => setMobilityField(t.leftKey, parseNum(s))}
                     />
@@ -526,7 +526,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
                       style={styles.input}
                       keyboardType="decimal-pad"
                       placeholder={mobilityTestPlaceholder(t)}
-                      placeholderTextColor={colors.textSecondary}
+                      placeholderTextColor={coachColors.muted}
                       value={mobility[t.rightKey] != null ? String(mobility[t.rightKey]) : ''}
                       onChangeText={(s) => setMobilityField(t.rightKey, parseNum(s))}
                     />
@@ -550,7 +550,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
               style={styles.input}
               keyboardType="decimal-pad"
               placeholder="80–90"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={coachColors.muted}
               value={mobility.overheadSquat != null ? String(mobility.overheadSquat) : ''}
               onChangeText={(s) => setMobilityField('overheadSquat', parseNum(s))}
             />
@@ -585,7 +585,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
           <TextInput
             style={styles.notes}
             placeholder="Observationer om rörlighet…"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={coachColors.muted}
             multiline
           />
         </AccordionSection>
@@ -672,7 +672,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
                 style={styles.input}
                 keyboardType="number-pad"
                 placeholder="1–16+"
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={coachColors.muted}
                 value={core.lumbarPelvicReps != null ? String(core.lumbarPelvicReps) : ''}
                 onChangeText={(s) => {
                   const n = parseInt(s.replace(/\D/g, ''), 10);
@@ -740,7 +740,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
             value={stick.notes}
             onChangeText={(t) => setStick((s) => ({ ...s, notes: t }))}
             placeholder="Anteckningar pinnetest"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={coachColors.muted}
             multiline
           />
 
@@ -778,7 +778,7 @@ function MovementAssessmentScreen({ navigation, route }: Props) {
             value={lunge.notes}
             onChangeText={(t) => setLunge((s) => ({ ...s, notes: t }))}
             placeholder="Anteckningar utfall"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={coachColors.muted}
             multiline
           />
         </AccordionSection>
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
   },
   sectionBody: { paddingVertical: 14, paddingHorizontal: 16 },
   card: { marginBottom: 16 },
-  cardTitle: { color: colors.text, fontSize: 17, fontWeight: '600', marginBottom: 12 },
+  cardTitle: { color: coachColors.fg, fontSize: 17, fontWeight: '600', marginBottom: 12 },
   criteriaLabel: {
     fontSize: 12,
     fontWeight: '500',
@@ -911,15 +911,15 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: colors.danger,
-    backgroundColor: colors.danger + '22',
+    borderColor: coachColors.danger,
+    backgroundColor: coachColors.danger + '22',
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkMark: { color: coachColors.coach, fontSize: 14, fontWeight: '700' },
   checkMarkOk: { color: colors.success, fontSize: 14, fontWeight: '700' },
-  checkMarkIssue: { color: colors.danger, fontSize: 14, fontWeight: '700' },
+  checkMarkIssue: { color: coachColors.danger, fontSize: 14, fontWeight: '700' },
   stabilityHint: {
     color: coachColors.muted,
     fontSize: 12,
@@ -1012,18 +1012,18 @@ const styles = StyleSheet.create({
   submitPrimary: { flex: 2, height: 48, justifyContent: 'center' },
   totalScore: { fontSize: 48, fontWeight: '800', textAlign: 'center', fontFamily: fonts.display },
   bandLabel: { fontSize: 18, textAlign: 'center', marginBottom: 16, fontFamily: fonts.bodySemiBold },
-  breakdown: { color: colors.text, fontSize: 15, marginBottom: 6, fontFamily: fonts.body },
-  muted: { color: colors.textSecondary, fontSize: 14 },
+  breakdown: { color: coachColors.fg, fontSize: 15, marginBottom: 6, fontFamily: fonts.body },
+  muted: { color: coachColors.muted, fontSize: 14 },
   flagRow: {
     marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: coachColors.border,
   },
-  flagLabel: { color: colors.text, fontSize: 15 },
-  flagHint: { color: colors.textSecondary, fontSize: 13, marginTop: 4 },
-  errorText: { color: colors.text, textAlign: 'center', margin: 24 },
-  link: { color: colors.primary, textAlign: 'center' },
+  flagLabel: { color: coachColors.fg, fontSize: 15 },
+  flagHint: { color: coachColors.muted, fontSize: 13, marginTop: 4 },
+  errorText: { color: coachColors.fg, textAlign: 'center', margin: 24 },
+  link: { color: coachColors.accent, textAlign: 'center' },
 });
 
 export default MovementAssessmentScreen;

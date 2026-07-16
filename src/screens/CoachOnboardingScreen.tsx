@@ -18,6 +18,7 @@ import { markCoachOnboardingComplete } from '../lib/coachOnboarding';
 import { coachColors, fonts, borderRadius } from '../lib/theme';
 
 const SPORT_OPTIONS = ['Hockey', 'Fotboll', 'Basket', 'Löpning', 'Golf', 'Friidrott'];
+const OTHER_SPORT = 'Annan';
 const FOCUS_OPTIONS = ['Fysträning / S&C', 'Rehab', 'Ungdomsutveckling', 'Elit / senior'];
 
 const ACTIVATION_STEPS = [
@@ -26,12 +27,6 @@ const ACTIVATION_STEPS = [
     label: 'Coachprofil',
     title: 'Din coachprofil',
     body: 'Vi anpassar kravprofiler, mallar och rekommendationer efter hur du tränar dina atleter.',
-  },
-  {
-    key: 'capacity',
-    label: 'Kapacitet',
-    title: 'Klientkapacitet',
-    body: 'Styr påminnelser och dashboard-layout utifrån hur många atleter du coachar samtidigt.',
   },
   {
     key: 'ready',
@@ -84,8 +79,8 @@ export default function CoachOnboardingScreen() {
   const current = steps[step];
   const isLast = step === steps.length - 1;
 
-  const indicatorStep = activationFlow ? step + 2 : step + 2;
-  const indicatorTotal = activationFlow ? 4 : 4;
+  const indicatorStep = step + 2;
+  const indicatorTotal = activationFlow ? 3 : 4;
 
   const ctaLabel = useMemo(() => {
     if (!isLast) return 'Fortsätt';
@@ -147,17 +142,32 @@ export default function CoachOnboardingScreen() {
           <Text style={styles.kicker}>Coach Platform</Text>
         </View>
 
-        <StepIndicator
-          current={indicatorStep}
-          total={indicatorTotal}
-          labels={activationFlow ? ['Start', ...ACTIVATION_STEPS.map((s) => s.label)] : ['Start', ...STEPS.map((s) => s.label)]}
-        />
+        {activationFlow ? (
+          <View style={styles.stepBarsWrap}>
+            <View style={styles.stepBars}>
+              {Array.from({ length: indicatorTotal }, (_, i) => (
+                <View key={i} style={[styles.stepBar, i < indicatorStep && styles.stepBarOn]} />
+              ))}
+            </View>
+            <Text style={styles.stepBarLabel}>
+              STEG {indicatorStep} AV {indicatorTotal}
+            </Text>
+          </View>
+        ) : (
+          <>
+            <StepIndicator
+              current={indicatorStep}
+              total={indicatorTotal}
+              labels={['Start', ...STEPS.map((s) => s.label)]}
+            />
 
-        <ProgressBar
-          value={progressPct}
-          label={`Steg ${indicatorStep} av ${indicatorTotal}`}
-          variant="coach"
-        />
+            <ProgressBar
+              value={progressPct}
+              label={`Steg ${indicatorStep} av ${indicatorTotal}`}
+              variant="coach"
+            />
+          </>
+        )}
 
         <GlassCard variant="coach" padding={18}>
           <SectionLabel>{current.label}</SectionLabel>
@@ -189,6 +199,23 @@ export default function CoachOnboardingScreen() {
                   </TouchableOpacity>
                 );
               })}
+              {(() => {
+                const otherOn = sports.includes(OTHER_SPORT);
+                return (
+                  <TouchableOpacity
+                    style={[styles.chip, otherOn && styles.chipOn]}
+                    onPress={() =>
+                      setSports((prev) =>
+                        otherOn ? prev.filter((x) => x !== OTHER_SPORT) : [...prev, OTHER_SPORT]
+                      )
+                    }
+                  >
+                    <Text style={[styles.chipText, otherOn && styles.chipTextOn]}>
+                      {otherOn ? OTHER_SPORT : `+ ${OTHER_SPORT}`}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
             <SectionLabel>Din inriktning</SectionLabel>
             <View style={styles.chips}>
@@ -207,33 +234,31 @@ export default function CoachOnboardingScreen() {
                 );
               })}
             </View>
+            <SectionLabel>Klientkapacitet</SectionLabel>
+            <GlassCard padding={16}>
+              <View style={styles.capRow}>
+                <Text style={styles.capVal}>{capacity}</Text>
+                <View style={styles.capMid}>
+                  <Text style={styles.capTitle}>Aktiva klienter samtidigt</Text>
+                  <Text style={styles.capMeta}>STYR PÅMINNELSER OCH DASHBOARD-LAYOUT</Text>
+                </View>
+                <View style={styles.capBtns}>
+                  <TouchableOpacity
+                    style={styles.capBtn}
+                    onPress={() => setCapacity((c) => Math.max(1, c - 1))}
+                  >
+                    <Text style={styles.capBtnText}>−</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.capBtn}
+                    onPress={() => setCapacity((c) => Math.min(50, c + 1))}
+                  >
+                    <Text style={styles.capBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </GlassCard>
           </>
-        ) : null}
-
-        {activationFlow && step === 1 ? (
-          <GlassCard padding={16}>
-            <View style={styles.capRow}>
-              <Text style={styles.capVal}>{capacity}</Text>
-              <View style={styles.capMid}>
-                <Text style={styles.capTitle}>Aktiva klienter samtidigt</Text>
-                <Text style={styles.capMeta}>STYR PÅMINNELSER OCH DASHBOARD-LAYOUT</Text>
-              </View>
-              <View style={styles.capBtns}>
-                <TouchableOpacity
-                  style={styles.capBtn}
-                  onPress={() => setCapacity((c) => Math.max(1, c - 1))}
-                >
-                  <Text style={styles.capBtnText}>−</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.capBtn}
-                  onPress={() => setCapacity((c) => Math.min(50, c + 1))}
-                >
-                  <Text style={styles.capBtnText}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </GlassCard>
         ) : null}
 
         {step === 1 && !activationFlow ? (
@@ -270,9 +295,15 @@ export default function CoachOnboardingScreen() {
         ) : null}
 
         <TouchableOpacity onPress={handleBack} style={styles.backLink} activeOpacity={0.7}>
-          <Text style={styles.backLinkText}>
-            {step > 0 ? 'Tillbaka' : isPostAuth ? 'Hoppa över' : 'Till inloggning'}
-          </Text>
+          {step === 0 && isPostAuth ? (
+            <Text style={styles.skipLinkText}>
+              HOPPA ÖVER — GÅR ATT ÄNDRA I INSTÄLLNINGAR
+            </Text>
+          ) : (
+            <Text style={styles.backLinkText}>
+              {step > 0 ? 'Tillbaka' : 'Till inloggning'}
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
 
@@ -522,6 +553,38 @@ const styles = StyleSheet.create({
   backLinkText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 13,
+    color: coachColors.muted,
+  },
+  skipLinkText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: coachColors.muted,
+    textAlign: 'center',
+  },
+  stepBarsWrap: {
+    marginBottom: 20,
+  },
+  stepBars: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 10,
+  },
+  stepBar: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: coachColors.border,
+  },
+  stepBarOn: {
+    backgroundColor: coachColors.accent,
+  },
+  stepBarLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
     color: coachColors.muted,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

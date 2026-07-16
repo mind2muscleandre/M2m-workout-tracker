@@ -12,6 +12,7 @@ import { useNotesStore } from '../stores/notesStore';
 import { useClientStore } from '../stores/clientStore';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { Button } from '../components/ui/Button';
+import { SectionLabel } from '../components/ui/SectionLabel';
 import { SplitPane } from '../components/ui/SplitPane';
 import { coachColors, fonts, borderRadius, spacing } from '../lib/theme';
 
@@ -97,7 +98,7 @@ export function NotesScreen() {
   const noteList = (
     <View style={styles.list}>
       <View style={styles.listHeader}>
-        <Text style={styles.listCount}>{`${notes.length} anteckningar`}</Text>
+        <SectionLabel style={styles.listCount}>{`${notes.length} anteckningar`}</SectionLabel>
         <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
           <Text style={styles.filterIcon}>≡</Text>
         </TouchableOpacity>
@@ -219,12 +220,6 @@ const styles = StyleSheet.create({
     borderBottomColor: coachColors.border,
   },
   listCount: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.9,
-    color: coachColors.muted,
     marginBottom: 0,
   },
   filterBtn: {

@@ -15,6 +15,7 @@ import { useAuthStore } from '../stores/authStore';
 import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { Button, IconButton } from '../components/ui/Button';
 import { SearchBar } from '../components/ui/SearchBar';
+import { SectionLabel } from '../components/ui/SectionLabel';
 import { SplitPane } from '../components/ui/SplitPane';
 import { ChatThread } from '../components/ui/ChatThread';
 import { useLayout } from '../lib/useLayout';
@@ -48,6 +49,7 @@ export function MessagesScreen() {
     conversations,
     messages,
     activeConversationId,
+    unreadCount,
     fetchConversations,
     fetchMessages,
     sendMessage,
@@ -126,6 +128,9 @@ export function MessagesScreen() {
         data={filteredConvos}
         keyExtractor={(item) => item.id}
         style={styles.threadScroll}
+        ListHeaderComponent={
+          <SectionLabel style={styles.threadSectionLabel}>Konversationer</SectionLabel>
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>Inga konversationer</Text>
@@ -256,6 +261,7 @@ export function MessagesScreen() {
   return (
     <ScreenContainer
       title="Meddelanden"
+      subtitle={`${unreadCount} olästa · ${conversations.length} konversationer`}
       headerRight={
         <Button
           label="Nytt meddelande"
@@ -285,6 +291,11 @@ const styles = StyleSheet.create({
   },
   searchFull: { maxWidth: '100%' },
   threadScroll: { flex: 1 },
+  threadSectionLabel: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    marginBottom: 2,
+  },
   thread: {
     flexDirection: 'row',
     alignItems: 'center',

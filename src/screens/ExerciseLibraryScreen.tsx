@@ -9,15 +9,11 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  Modal,
   ScrollView,
   Alert,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useExerciseStore } from '../stores/exerciseStore';
 import { useAuthStore } from '../stores/authStore';
@@ -34,6 +30,7 @@ import { ScreenContainer } from '../components/ui/ScreenContainer';
 import { Button } from '../components/ui/Button';
 import { SearchBar } from '../components/ui/SearchBar';
 import { SlideOver } from '../components/ui/SlideOver';
+import { ModalShell } from '../components/ui/ModalShell';
 import {
   fetchLibraryExercises,
   filterLibraryExercises,
@@ -41,7 +38,7 @@ import {
   type LibraryExercise,
 } from '../services/exerciseLibrary';
 import type { LibraryCategory as LibraryCategoryType } from '../utils/helpers';
-import { colors, coachColors, categoryColors, fonts, borderRadius, shadows } from '../lib/theme';
+import { coachColors, categoryColors, fonts, borderRadius } from '../lib/theme';
 
 // ============================================
 // Constants
@@ -535,226 +532,203 @@ export const ExerciseLibraryScreen: React.FC<Props> = () => {
       {/* ============================================ */}
       {/* Create Exercise Modal */}
       {/* ============================================ */}
-      <Modal
+      <ModalShell
         visible={showCreateModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => {
+        onClose={() => {
           setShowCreateModal(false);
           resetCreateModal();
         }}
+        title="Ny övning"
+        scrollable
+        footer={
+          <>
+            <Button
+              label={isCreating ? 'Sparar…' : 'Spara övning'}
+              variant="primary"
+              onPress={handleCreateExercise}
+              disabled={isCreating}
+              loading={isCreating}
+            />
+            <Button
+              label="Avbryt"
+              variant="secondary"
+              onPress={() => {
+                setShowCreateModal(false);
+                resetCreateModal();
+              }}
+              disabled={isCreating}
+            />
+          </>
+        }
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <KeyboardAvoidingView
-            style={styles.modalKeyboardView}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowCreateModal(false);
-                  resetCreateModal();
-                }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text style={styles.modalCancelText}>Avbryt</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Ny ovning</Text>
-              <TouchableOpacity
-                onPress={handleCreateExercise}
-                disabled={isCreating}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                {isCreating ? (
-                  <ActivityIndicator size="small" color={coachColors.coach} />
-                ) : (
-                  <Text style={styles.modalSaveText}>Spara</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+        {/* Name Input */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Namn *</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="T.ex. Bänkpress"
+            placeholderTextColor={coachColors.muted}
+            value={newName}
+            onChangeText={setNewName}
+            autoCapitalize="sentences"
+          />
+        </View>
 
-            <ScrollView
-              style={styles.modalScrollView}
-              contentContainerStyle={styles.modalScrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Name Input */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Namn *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="T.ex. Bankpress"
-                  placeholderTextColor={colors.textSecondary}
-                  value={newName}
-                  onChangeText={setNewName}
-                  autoCapitalize="sentences"
-                  autoFocus
-                />
-              </View>
-
-              {/* Category Picker */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Kategori *</Text>
-                <View style={styles.categoryButtonRow}>
-                  {CATEGORIES.map((cat) => {
-                    const isSelected = newCategory === cat.key;
-                    const catColor = categoryColors[cat.key];
-                    return (
-                      <TouchableOpacity
-                        key={cat.key}
-                        style={[
-                          styles.categoryButton,
-                          isSelected && {
-                            backgroundColor: catColor + '25',
-                            borderColor: catColor,
-                          },
-                        ]}
-                        onPress={() => setNewCategory(cat.key)}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          style={[
-                            styles.categoryButtonText,
-                            isSelected && { color: catColor },
-                          ]}
-                        >
-                          {cat.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Tracking Type Picker */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Spårningstyp *</Text>
-                <View style={styles.trackingTypeRow}>
-                  <TouchableOpacity
+        {/* Category Picker */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Kategori *</Text>
+          <View style={styles.categoryButtonRow}>
+            {CATEGORIES.map((cat) => {
+              const isSelected = newCategory === cat.key;
+              const catColor = categoryColors[cat.key];
+              return (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[
+                    styles.categoryButton,
+                    isSelected && {
+                      backgroundColor: catColor + '25',
+                      borderColor: catColor,
+                    },
+                  ]}
+                  onPress={() => setNewCategory(cat.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text
                     style={[
-                      styles.trackingTypeButton,
-                      newTrackingType === 'weight' && styles.trackingTypeButtonSelected,
+                      styles.categoryButtonText,
+                      isSelected && { color: catColor },
                     ]}
-                    onPress={() => setNewTrackingType('weight')}
-                    activeOpacity={0.7}
                   >
-                    <Text
-                      style={[
-                        styles.trackingTypeButtonText,
-                        newTrackingType === 'weight' && styles.trackingTypeButtonTextSelected,
-                      ]}
-                    >
-                      Vikt (kg)
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.trackingTypeButton,
-                      newTrackingType === 'time' && styles.trackingTypeButtonSelected,
-                    ]}
-                    onPress={() => setNewTrackingType('time')}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.trackingTypeButtonText,
-                        newTrackingType === 'time' && styles.trackingTypeButtonTextSelected,
-                      ]}
-                    >
-                      Tid (sek)
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.trackingTypeButton,
-                      newTrackingType === 'other' && styles.trackingTypeButtonSelected,
-                    ]}
-                    onPress={() => setNewTrackingType('other')}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.trackingTypeButtonText,
-                        newTrackingType === 'other' && styles.trackingTypeButtonTextSelected,
-                      ]}
-                    >
-                      Annat
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Muscle Groups Multi-Select */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>
-                  Muskelgrupper *{' '}
-                  <Text style={styles.formHint}>
-                    ({newMuscleGroups.length} valda)
+                    {cat.label}
                   </Text>
-                </Text>
-                <View style={styles.muscleGroupGrid}>
-                  {MUSCLE_GROUPS.map((mg) => {
-                    const isSelected = newMuscleGroups.includes(mg.key);
-                    return (
-                      <TouchableOpacity
-                        key={mg.key}
-                        style={[
-                          styles.muscleGroupChip,
-                          isSelected && styles.muscleGroupChipSelected,
-                        ]}
-                        onPress={() => toggleMuscleGroup(mg.key)}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          style={[
-                            styles.muscleGroupChipText,
-                            isSelected && styles.muscleGroupChipTextSelected,
-                          ]}
-                        >
-                          {mg.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
 
-              {/* Equipment Input */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Utrustning</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="T.ex. Skivstang, Hantlar"
-                  placeholderTextColor={colors.textSecondary}
-                  value={newEquipment}
-                  onChangeText={setNewEquipment}
-                  autoCapitalize="sentences"
-                />
-              </View>
+        {/* Tracking Type Picker */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Spårningstyp *</Text>
+          <View style={styles.trackingTypeRow}>
+            <TouchableOpacity
+              style={[
+                styles.trackingTypeButton,
+                newTrackingType === 'weight' && styles.trackingTypeButtonSelected,
+              ]}
+              onPress={() => setNewTrackingType('weight')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.trackingTypeButtonText,
+                  newTrackingType === 'weight' && styles.trackingTypeButtonTextSelected,
+                ]}
+              >
+                Vikt (kg)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.trackingTypeButton,
+                newTrackingType === 'time' && styles.trackingTypeButtonSelected,
+              ]}
+              onPress={() => setNewTrackingType('time')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.trackingTypeButtonText,
+                  newTrackingType === 'time' && styles.trackingTypeButtonTextSelected,
+                ]}
+              >
+                Tid (sek)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.trackingTypeButton,
+                newTrackingType === 'other' && styles.trackingTypeButtonSelected,
+              ]}
+              onPress={() => setNewTrackingType('other')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.trackingTypeButtonText,
+                  newTrackingType === 'other' && styles.trackingTypeButtonTextSelected,
+                ]}
+              >
+                Annat
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-              {/* Description Input */}
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Beskrivning</Text>
-                <TextInput
-                  style={[styles.formInput, styles.formTextArea]}
-                  placeholder="Beskriv ovningen..."
-                  placeholderTextColor={colors.textSecondary}
-                  value={newDescription}
-                  onChangeText={setNewDescription}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              </View>
+        {/* Muscle Groups Multi-Select */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>
+            Muskelgrupper *{' '}
+            <Text style={styles.formHint}>
+              ({newMuscleGroups.length} valda)
+            </Text>
+          </Text>
+          <View style={styles.muscleGroupGrid}>
+            {MUSCLE_GROUPS.map((mg) => {
+              const isSelected = newMuscleGroups.includes(mg.key);
+              return (
+                <TouchableOpacity
+                  key={mg.key}
+                  style={[
+                    styles.muscleGroupChip,
+                    isSelected && styles.muscleGroupChipSelected,
+                  ]}
+                  onPress={() => toggleMuscleGroup(mg.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.muscleGroupChipText,
+                      isSelected && styles.muscleGroupChipTextSelected,
+                    ]}
+                  >
+                    {mg.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
 
-              {/* Spacer for keyboard */}
-              <View style={styles.modalSpacer} />
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
+        {/* Equipment Input */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Utrustning</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="T.ex. Skivstång, Hantlar"
+            placeholderTextColor={coachColors.muted}
+            value={newEquipment}
+            onChangeText={setNewEquipment}
+            autoCapitalize="sentences"
+          />
+        </View>
+
+        {/* Description Input */}
+        <View style={[styles.formGroup, styles.formGroupLast]}>
+          <Text style={styles.formLabel}>Beskrivning</Text>
+          <TextInput
+            style={[styles.formInput, styles.formTextArea]}
+            placeholder="Beskriv övningen..."
+            placeholderTextColor={coachColors.muted}
+            value={newDescription}
+            onChangeText={setNewDescription}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+      </ModalShell>
     </ScreenContainer>
   );
 };
@@ -925,7 +899,6 @@ const styles = StyleSheet.create({
     backgroundColor: coachColors.coach,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.glowCoach,
   },
   addToProgramBtnText: {
     fontSize: 14,
@@ -978,16 +951,17 @@ const styles = StyleSheet.create({
   },
   favoritesStarIcon: {
     fontSize: 18,
-    color: colors.warning,
+    color: coachColors.accent,
   },
   favoritesSectionTitle: {
+    fontFamily: fonts.display,
     fontSize: 17,
-    fontWeight: '600',
-    color: colors.text,
+    fontWeight: '700',
+    color: coachColors.fg,
   },
   collapseIcon: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: coachColors.muted,
   },
   favoriteCardWrapper: {
     marginBottom: 0,
@@ -998,9 +972,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   sectionHeaderText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.text,
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: coachColors.muted,
   },
 
   // ---- Empty State ----
@@ -1014,14 +991,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyTitle: {
+    fontFamily: fonts.display,
     fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
+    fontWeight: '700',
+    color: coachColors.fg,
     marginBottom: 8,
   },
   emptySubtitle: {
+    fontFamily: fonts.body,
     fontSize: 15,
-    color: colors.textSecondary,
+    color: coachColors.muted,
     textAlign: 'center',
     paddingHorizontal: 32,
   },
@@ -1030,71 +1009,41 @@ const styles = StyleSheet.create({
   // Create Modal
   // ============================================
 
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  modalKeyboardView: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  modalSaveText: {
-    fontSize: 16,
-    color: coachColors.coach,
-    fontWeight: '600',
-  },
-  modalScrollView: {
-    flex: 1,
-  },
-  modalScrollContent: {
-    padding: 16,
-  },
-
   // ---- Form ----
   formGroup: {
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  formGroupLast: {
+    marginBottom: 4,
   },
   formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    color: coachColors.muted,
     marginBottom: 8,
-    marginLeft: 4,
   },
   formHint: {
+    fontFamily: fonts.mono,
     fontWeight: '400',
     color: coachColors.coach,
+    textTransform: 'none',
   },
   formInput: {
-    backgroundColor: colors.inputBg,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: colors.text,
+    backgroundColor: coachColors.glassBg,
+    borderRadius: borderRadius.md,
+    padding: 14,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    color: coachColors.fg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: coachColors.glassBorder,
   },
   formTextArea: {
     minHeight: 100,
-    paddingTop: 14,
+    paddingTop: 12,
   },
 
   // ---- Category Buttons (modal) ----
@@ -1106,15 +1055,15 @@ const styles = StyleSheet.create({
   categoryButton: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: colors.inputBg,
+    borderRadius: borderRadius.full,
+    backgroundColor: coachColors.glassBg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: coachColors.glassBorder,
   },
   categoryButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: coachColors.mutedHi,
   },
 
   // ---- Muscle Group Chips (modal) ----
@@ -1126,19 +1075,19 @@ const styles = StyleSheet.create({
   muscleGroupChip: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: colors.inputBg,
+    borderRadius: borderRadius.full,
+    backgroundColor: coachColors.glassBg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: coachColors.glassBorder,
   },
   muscleGroupChipSelected: {
     backgroundColor: coachColors.coachDim,
-    borderColor: coachColors.coach,
+    borderColor: coachColors.coachHi,
   },
   muscleGroupChipText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: coachColors.mutedHi,
   },
   muscleGroupChipTextSelected: {
     color: coachColors.coach,
@@ -1152,28 +1101,23 @@ const styles = StyleSheet.create({
   trackingTypeButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: colors.inputBg,
+    borderRadius: borderRadius.md,
+    backgroundColor: coachColors.glassBg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: coachColors.glassBorder,
     alignItems: 'center',
   },
   trackingTypeButtonSelected: {
     backgroundColor: coachColors.coachDim,
-    borderColor: coachColors.coach,
+    borderColor: coachColors.coachHi,
   },
   trackingTypeButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: coachColors.mutedHi,
   },
   trackingTypeButtonTextSelected: {
     color: coachColors.coach,
-    fontWeight: '600',
-  },
-
-  // ---- Modal Spacer ----
-  modalSpacer: {
-    height: 40,
+    fontFamily: fonts.bodySemiBold,
   },
 });

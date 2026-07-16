@@ -32,6 +32,9 @@ export function SaveTemplateSheet({
   const [withProgression, setWithProgression] = useState(true);
   const [withKrav, setWithKrav] = useState(true);
 
+  const levelLabel =
+    level === 'Pass' ? 'passmall' : level === 'Block' ? 'blockmall' : 'programmall';
+
   return (
     <ModalShell
       visible={visible}
@@ -39,6 +42,7 @@ export function SaveTemplateSheet({
       title="Spara som mall"
       subtitle="Mallen blir återanvändbar för alla dina klienter — atletdata följer aldrig med."
       scrollable
+      footer={<Button label={`Spara ${levelLabel}`} variant="primary" onPress={() => onSave(name)} />}
     >
       <Text style={styles.lbl}>Nivå</Text>
       <View style={styles.chips}>
@@ -94,11 +98,17 @@ export function SaveTemplateSheet({
         <Text style={styles.toggleLabel}>Ta med kravtaggar för kravmatchning</Text>
         <TogglePill checked={withKrav} onChange={setWithKrav} label="" />
       </View>
-
-      <Button label="Spara blockmall" variant="primary" onPress={() => onSave(name)} />
     </ModalShell>
   );
 }
+
+const SESSION_TYPES = ['PT-pass', 'Screening', 'Fystest', 'Avstämning'] as const;
+const DAY_LABELS_SHORT = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
+
+export type BookSessionMeta = {
+  sessionType: (typeof SESSION_TYPES)[number];
+  notifyAthlete: boolean;
+};
 
 export function BookSessionSheet({
   visible,
@@ -109,10 +119,12 @@ export function BookSessionSheet({
   visible: boolean;
   onClose: () => void;
   athleteName: string;
-  onBook: (date: string, time: string) => void;
+  onBook: (date: string, time: string, meta: BookSessionMeta) => void;
 }) {
+  const [sessionType, setSessionType] = useState<(typeof SESSION_TYPES)[number]>('PT-pass');
   const [selectedDay, setSelectedDay] = useState(15);
   const [selectedTime, setSelectedTime] = useState('09:00');
+  const [notifyAthlete, setNotifyAthlete] = useState(true);
   const times = ['08:00', '09:00', '10:30', '14:00', '16:00'];
 
   return (
@@ -122,15 +134,37 @@ export function BookSessionSheet({
       title="Boka session"
       subtitle={`För ${athleteName}`}
       scrollable
+      footer={
+        <Button
+          label={`Boka · ${selectedDay} jul ${selectedTime}`}
+          variant="primary"
+          onPress={() =>
+            onBook(`2026-07-${selectedDay}`, selectedTime, { sessionType, notifyAthlete })
+          }
+        />
+      }
     >
+      <Text style={styles.lbl}>Typ</Text>
+      <View style={styles.chips}>
+        {SESSION_TYPES.map((t) => (
+          <TouchableOpacity
+            key={t}
+            style={[styles.chip, sessionType === t && styles.chipOn]}
+            onPress={() => setSessionType(t)}
+          >
+            <Text style={[styles.chipText, sessionType === t && styles.chipTextOn]}>{t}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={styles.cal}>
         <View style={styles.calHead}>
           <Text style={styles.calMonth}>JULI 2026</Text>
           <Text style={styles.calNav}>‹ ›</Text>
         </View>
         <View style={styles.dgrid}>
-          {['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d) => (
-            <Text key={d} style={styles.dh}>{d}</Text>
+          {DAY_LABELS_SHORT.map((d, i) => (
+            <Text key={`${d}-${i}`} style={styles.dh}>{d}</Text>
           ))}
           {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
             <TouchableOpacity
@@ -157,11 +191,12 @@ export function BookSessionSheet({
         ))}
       </View>
 
-      <Button
-        label="Boka session"
-        variant="primary"
-        onPress={() => onBook(`2026-07-${selectedDay}`, selectedTime)}
-      />
+      <View style={styles.toggleRow}>
+        <Text style={styles.toggleLabel}>
+          Skicka bokningsbekräftelse till {athleteName.split(' ')[0]} i chatten
+        </Text>
+        <TogglePill checked={notifyAthlete} onChange={setNotifyAthlete} label="" />
+      </View>
     </ModalShell>
   );
 }
@@ -171,26 +206,46 @@ export type SwapSuggestion = {
   name: string;
   meta: string;
   screeningMatch?: boolean;
+  patternTag?: string;
 };
+
+const SWAP_REASONS = ['Utrustning upptagen', 'Smärta/obehag', 'För tung idag', 'Annat'] as const;
 
 export function ExerciseSwapSheet({
   visible,
   onClose,
   currentName,
+  remainingSets,
   suggestions,
-  onSelect,
+  onConfirm,
+  onSearchAll,
   onKeepSets,
   onToggleKeepSets,
 }: {
   visible: boolean;
   onClose: () => void;
   currentName: string;
+  remainingSets?: number;
   suggestions: SwapSuggestion[];
-  onSelect: (id: string) => void;
+  onConfirm: (exerciseId: string, reason: string | null) => void;
+  onSearchAll?: () => void;
   onKeepSets: boolean;
   onToggleKeepSets: (v: boolean) => void;
 }) {
   const [filter, setFilter] = useState<'alla' | 'screening' | 'gym'>('alla');
+  const [reason, setReason] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const filtered = suggestions.filter((s) => {
+    if (filter === 'screening') return s.screeningMatch;
+    if (filter === 'gym') return !s.screeningMatch;
+    return true;
+  });
+
+  const activeId = selectedId ?? filtered[0]?.id ?? null;
+  const activeSuggestion = filtered.find((s) => s.id === activeId);
+  const setsLabel =
+    remainingSets != null ? ` · ${remainingSets} set kvar` : '';
 
   return (
     <ModalShell
@@ -199,7 +254,44 @@ export function ExerciseSwapSheet({
       title="Byt övning"
       subtitle={`Ersätter ${currentName} — set och logg sparas om du väljer behåll set.`}
       scrollable
+      footer={
+        <>
+          <Button
+            label={activeSuggestion ? `Byt till ${activeSuggestion.name}${setsLabel}` : 'Välj en övning'}
+            variant="primary"
+            disabled={!activeSuggestion}
+            onPress={() => activeSuggestion && onConfirm(activeSuggestion.id, reason)}
+          />
+          {onSearchAll ? (
+            <Text style={styles.ghostLink} onPress={onSearchAll}>
+              SÖK I HELA BIBLIOTEKET →
+            </Text>
+          ) : null}
+        </>
+      }
     >
+      <Text style={styles.lbl}>Varför? · sparas i historiken</Text>
+      <View style={styles.chips}>
+        {SWAP_REASONS.map((r) => (
+          <TouchableOpacity
+            key={r}
+            style={[styles.chip, reason === r && styles.chipOn]}
+            onPress={() => setReason(reason === r ? null : r)}
+          >
+            <Text style={[styles.chipText, reason === r && styles.chipTextOn]}>{r}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.keepinfo}>
+        <Text style={styles.keepIcon}>✓</Text>
+        <Text style={styles.keepText}>
+          <Text style={styles.keepBold}>Behåll set och logg</Text> — byter bara övningsnamn och mål.
+        </Text>
+        <TogglePill checked={onKeepSets} onChange={onToggleKeepSets} label="" />
+      </View>
+
+      <Text style={styles.lbl}>Förslag</Text>
       <View style={styles.chips}>
         {(['alla', 'screening', 'gym'] as const).map((f) => (
           <TouchableOpacity
@@ -214,28 +306,16 @@ export function ExerciseSwapSheet({
         ))}
       </View>
 
-      <View style={styles.keepinfo}>
-        <Text style={styles.keepIcon}>✓</Text>
-        <Text style={styles.keepText}>
-          <Text style={styles.keepBold}>Behåll set och logg</Text> — byter bara övningsnamn och mål.
-        </Text>
-        <TogglePill checked={onKeepSets} onChange={onToggleKeepSets} label="" />
-      </View>
-
-      {suggestions
-        .filter((s) => {
-          if (filter === 'screening') return s.screeningMatch;
-          if (filter === 'gym') return !s.screeningMatch;
-          return true;
-        })
-        .map((s) => (
+      {filtered.map((s) => {
+        const selected = s.id === activeId;
+        return (
           <TouchableOpacity
             key={s.id}
-            style={styles.swaprow}
-            onPress={() => onSelect(s.id)}
+            style={[styles.swaprow, selected && styles.swaprowSel]}
+            onPress={() => setSelectedId(s.id)}
           >
             <View style={styles.swapThumb}>
-              <Text style={styles.swapThumbTxt}>↗</Text>
+              <Text style={styles.swapThumbTxt}>▶</Text>
             </View>
             <View style={styles.swapMid}>
               <Text style={styles.swapTitle}>{s.name}</Text>
@@ -246,11 +326,15 @@ export function ExerciseSwapSheet({
                 {s.meta}
               </Text>
             </View>
-            <Text style={styles.swapAdd}>+</Text>
+            {s.patternTag ? <Text style={styles.kravtag}>{s.patternTag}</Text> : null}
+            <View style={[styles.swapPick, selected && styles.swapPickSel]}>
+              <Text style={[styles.swapPickIcon, selected && styles.swapPickIconSel]}>
+                {selected ? '✓' : '+'}
+              </Text>
+            </View>
           </TouchableOpacity>
-        ))}
-
-      <Button label="Avbryt" variant="secondary" onPress={onClose} />
+        );
+      })}
     </ModalShell>
   );
 }
@@ -452,15 +536,52 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   swapMetaB: { color: coachColors.accent, fontWeight: '500' },
-  swapAdd: {
+  swaprowSel: {
+    borderColor: 'rgba(247,233,40,0.40)',
+  },
+  swapPick: {
     width: 28,
     height: 28,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: 'rgba(247,233,40,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  swapPickSel: {
+    backgroundColor: coachColors.accent,
+    borderColor: coachColors.accent,
+  },
+  swapPickIcon: {
     color: coachColors.accent,
+    fontSize: 14,
+  },
+  swapPickIconSel: {
+    color: '#17191c',
+    fontWeight: '700',
+  },
+  kravtag: {
+    fontFamily: fonts.mono,
+    fontSize: 6.5,
+    letterSpacing: 0.6,
+    color: '#4ADE80',
+    backgroundColor: 'rgba(74,222,128,0.09)',
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    flexShrink: 0,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
+  },
+  ghostLink: {
+    marginTop: 10,
     textAlign: 'center',
-    lineHeight: 24,
-    fontSize: 16,
+    fontFamily: fonts.mono,
+    fontSize: 8.5,
+    letterSpacing: 1.2,
+    color: coachColors.muted,
+    textTransform: 'uppercase',
+    paddingVertical: 6,
   },
 });

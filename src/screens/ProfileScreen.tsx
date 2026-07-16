@@ -25,6 +25,12 @@ import { SectionLabel } from '../components/ui/SectionLabel';
 import { clientToAthleteCard } from '../lib/athleteStatus';
 import { fetchAppBadgesForUser } from '../services/platformUsers';
 import { coachColors, fonts, borderRadius, spacing, shadows } from '../lib/theme';
+import {
+  loadCoachNotificationSettings,
+  saveCoachNotificationSettings,
+  DEFAULT_COACH_NOTIFICATION_SETTINGS,
+  type CoachNotificationSettings,
+} from '../lib/coachSettings';
 
 const APP_VERSION = '2.1.0';
 
@@ -47,12 +53,10 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { clients, fetchClients } = useClientStore();
   const { workouts, fetchAllWorkouts } = useWorkoutStore();
   const { loadForClients, getTimerSessions, getAggregate } = usePlatformStore();
-  const [darkMode, setDarkMode] = useState(true);
-  const [notifications, setNotifications] = useState(true);
-  const [sessionAlerts, setSessionAlerts] = useState(true);
-  const [autoSync, setAutoSync] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState<'sv' | 'en'>('sv');
   const [appBadges, setAppBadges] = useState<Record<string, boolean> | null>(null);
+  const [notifSettings, setNotifSettings] = useState<CoachNotificationSettings>(
+    DEFAULT_COACH_NOTIFICATION_SETTINGS
+  );
 
   useEffect(() => {
     (async () => {
@@ -68,6 +72,24 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       }
     })();
   }, [fetchClients, fetchAllWorkouts, loadForClients, user?.id]);
+
+  useEffect(() => {
+    (async () => {
+      const saved = await loadCoachNotificationSettings();
+      setNotifSettings(saved);
+    })();
+  }, []);
+
+  const updateNotifSetting = useCallback(
+    <K extends keyof CoachNotificationSettings>(key: K, value: CoachNotificationSettings[K]) => {
+      setNotifSettings((prev) => {
+        const next = { ...prev, [key]: value };
+        saveCoachNotificationSettings(next).catch(() => {});
+        return next;
+      });
+    },
+    []
+  );
 
   const activeClients = clients.filter((c) => c.is_active);
   const monthStart = new Date();
@@ -131,33 +153,6 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     );
   }, []);
 
-  const handleThemeToggle = useCallback((value: boolean) => {
-    setDarkMode(value);
-    if (!value) {
-      Alert.alert('Kommer snart', 'Ljust tema är under utveckling. Dark mode är standard.');
-      setDarkMode(true);
-    }
-  }, []);
-
-  const handleNotificationsToggle = useCallback((value: boolean) => {
-    setNotifications(value);
-  }, []);
-
-  const handleSessionAlertsToggle = useCallback((value: boolean) => {
-    setSessionAlerts(value);
-  }, []);
-
-  const handleAutoSyncToggle = useCallback((value: boolean) => {
-    setAutoSync(value);
-  }, []);
-
-  const handleLanguageToggle = useCallback(() => {
-    Alert.alert('Kommer snart', 'Språkval är under utveckling.');
-  }, []);
-
-  const handleUnitsToggle = useCallback(() => {
-    Alert.alert('Kommer snart', 'Enhetsval är under utveckling.');
-  }, []);
 
   const handleEditProfile = useCallback(() => {
     Alert.alert('Kommer snart', 'Redigera profil är under utveckling.');
@@ -210,25 +205,45 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         <SettingRow
           label="Klientvarningar"
           sub="Missade pass · inaktivitet · asymmetrifynd"
-          control={<ToggleSwitch value={sessionAlerts} onValueChange={handleSessionAlertsToggle} />}
+          control={
+            <ToggleSwitch
+              value={notifSettings.clientAlerts}
+              onValueChange={(v) => updateNotifSetting('clientAlerts', v)}
+            />
+          }
           isLast={false}
         />
         <SettingRow
           label="Nya screeningresultat"
           sub="När AI-analys är klar"
-          control={<ToggleSwitch value={notifications} onValueChange={handleNotificationsToggle} />}
+          control={
+            <ToggleSwitch
+              value={notifSettings.screeningResultsNotif}
+              onValueChange={(v) => updateNotifSetting('screeningResultsNotif', v)}
+            />
+          }
           isLast={false}
         />
         <SettingRow
           label="Chattmeddelanden"
           sub="Push vid nya meddelanden"
-          control={<ToggleSwitch value={notifications} onValueChange={handleNotificationsToggle} />}
+          control={
+            <ToggleSwitch
+              value={notifSettings.chatNotif}
+              onValueChange={(v) => updateNotifSetting('chatNotif', v)}
+            />
+          }
           isLast={false}
         />
         <SettingRow
           label="Veckosammanfattning"
           sub="Söndag 18:00 · e-post"
-          control={<ToggleSwitch value={false} onValueChange={() => {}} />}
+          control={
+            <ToggleSwitch
+              value={notifSettings.weeklySummaryNotif}
+              onValueChange={(v) => updateNotifSetting('weeklySummaryNotif', v)}
+            />
+          }
           isLast
         />
       </GlassCard>

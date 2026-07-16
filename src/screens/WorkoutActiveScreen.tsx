@@ -26,6 +26,7 @@ import {
 import { StickyCTA } from '../components/ui/StickyCTA';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useExerciseStore } from '../stores/exerciseStore';
+import { useClientStore } from '../stores/clientStore';
 import { WorkoutExercise, WorkoutSet, Exercise } from '../types/database';
 import { formatTime, formatDate } from '../utils/helpers';
 import RestTimer from '../components/RestTimer';
@@ -58,9 +59,11 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
     deleteSet,
     addExerciseToWorkout,
     removeExerciseFromWorkout,
+    replaceExerciseInWorkout,
     isFetchingWorkoutDetail,
   } = useWorkoutStore();
   const { exercises, fetchExercises } = useExerciseStore();
+  const { clients } = useClientStore();
 
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   const [workoutStartTime, setWorkoutStartTime] = useState<number | null>(null);
@@ -189,19 +192,47 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
     setSwapVisible(true);
   };
 
-  const handleSwapSelect = (exerciseId: string) => {
+  const swapTargetExercise = activeWorkout?.workout_exercises.find((we) => we.id === swapTargetId);
+  const swapRemainingSets = swapTargetExercise
+    ? swapTargetExercise.sets.filter((s) => !s.completed_at).length
+    : undefined;
+
+  const handleSwapConfirm = async (exerciseId: string, _reason: string | null) => {
+    if (!swapTargetId) return;
+    try {
+      await replaceExerciseInWorkout(swapTargetId, exerciseId, keepSetsOnSwap);
+      setSwapVisible(false);
+      setSwapTargetId(null);
+    } catch {
+      Alert.alert('Fel', 'Kunde inte byta övning');
+    }
+  };
+
+  const handleSwapSearchAll = () => {
     setSwapVisible(false);
     setSwapTargetId(null);
     navigation.navigate('ExercisePicker', { workoutId });
   };
 
   const swapSuggestions = useMemo(() => {
-    return exercises.slice(0, 8).map((ex) => ({
-      id: ex.id,
-      name: ex.name,
-      meta: Array.isArray(ex.muscle_group) ? ex.muscle_group.join(', ') : 'Övning',
-    }));
-  }, [exercises]);
+    const currentExerciseId = swapTargetExercise?.exercise?.id;
+    const currentMuscles = new Set(swapTargetExercise?.exercise?.muscle_group ?? []);
+    return exercises
+      .filter((ex) => ex.id !== currentExerciseId)
+      .map((ex) => {
+        const muscles = Array.isArray(ex.muscle_group) ? ex.muscle_group : [];
+        const sharesPattern = muscles.some((m) => currentMuscles.has(m));
+        return {
+          id: ex.id,
+          name: ex.name,
+          meta: muscles.length ? muscles.join(', ') : 'Övning',
+          screeningMatch: ex.category === 'mobility' || ex.category === 'injury_prevention',
+          patternTag: sharesPattern ? muscles[0]?.toUpperCase() : undefined,
+        };
+      })
+      .sort((a, b) => (a.patternTag ? -1 : 0) - (b.patternTag ? -1 : 0))
+      .slice(0, 8);
+  }, [exercises, swapTargetExercise]);
 
   const handleRemoveExercise = (workoutExerciseId: string, exerciseName: string) => {
     Alert.alert('Ta bort övning', `Är du säker att du vill ta bort "${exerciseName}"?`, [
@@ -320,10 +351,16 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
     );
   }
 
+  const clientName = clients.find((c) => c.id === activeWorkout.client_id)?.name;
+  const headerSubtitle =
+    isActive && activeWorkout.workout_exercises.length > 0
+      ? `${clientName ? `${clientName.toUpperCase()} · ` : ''}ÖVNING ${currentExerciseIndex + 1} AV ${activeWorkout.workout_exercises.length}`
+      : formatDate(activeWorkout.date);
+
   return (
     <ScreenContainer
       title={activeWorkout.title || 'Aktivt pass'}
-      subtitle={formatDate(activeWorkout.date)}
+      subtitle={headerSubtitle}
       scroll={false}
       headerLeft={
         (isCompleted || isPlanned || isDraft) ? (
@@ -351,7 +388,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
           />
           {currentWe ? (
             <CurrentExerciseCard
-              tag={`ÖVNING ${currentExerciseIndex + 1}/${activeWorkout.workout_exercises.length}`}
+              tag="PÅGÅR"
               name={currentWe.exercise?.name ?? 'Övning'}
               subtitle={
                 currentWe.target_sets && currentWe.target_reps
@@ -407,6 +444,7 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
             onRestTimeLogged={handleRestTimeLogged}
             onSetLogged={() => startRestTimer(90)}
             onRemoveExercise={isActive ? () => handleRemoveExercise(we.id, we.exercise?.name || 'Övning') : undefined}
+            onSwapExercise={isActive ? () => openSwapForExercise(we.id) : undefined}
           />
         );
         })}
@@ -459,9 +497,11 @@ export function WorkoutActiveScreen({ route, navigation }: Props) {
       <ExerciseSwapSheet
         visible={swapVisible}
         onClose={() => setSwapVisible(false)}
-        currentName={currentWe?.exercise?.name ?? 'Övning'}
+        currentName={swapTargetExercise?.exercise?.name ?? currentWe?.exercise?.name ?? 'Övning'}
+        remainingSets={swapRemainingSets}
         suggestions={swapSuggestions}
-        onSelect={handleSwapSelect}
+        onConfirm={handleSwapConfirm}
+        onSearchAll={handleSwapSearchAll}
         onKeepSets={keepSetsOnSwap}
         onToggleKeepSets={setKeepSetsOnSwap}
       />
@@ -487,6 +527,7 @@ interface ExerciseSectionProps {
   onRestTimeLogged: (setId: string, seconds: number) => void;
   onSetLogged?: () => void;
   onRemoveExercise?: () => void;
+  onSwapExercise?: () => void;
 }
 
 function ExerciseSection({
@@ -503,6 +544,7 @@ function ExerciseSection({
   onRestTimeLogged,
   onSetLogged,
   onRemoveExercise,
+  onSwapExercise,
 }: ExerciseSectionProps) {
   const exercise = workoutExercise.exercise;
 
@@ -520,6 +562,18 @@ function ExerciseSection({
               : 'Inga mål satta'}
           </Text>
         </View>
+        {isActive && onSwapExercise ? (
+          <TouchableOpacity
+            style={styles.exerciseMenuBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              onSwapExercise();
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.exerciseMenuIcon}>⋯</Text>
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.expandIcon}>{isExpanded ? '\u25B2' : '\u25BC'}</Text>
       </TouchableOpacity>
 
@@ -799,6 +853,15 @@ const styles = StyleSheet.create({
   exerciseHeaderInfo: { flex: 1 },
   exerciseName: { fontSize: 16, fontWeight: '600', color: coachColors.fg, fontFamily: fonts.bodySemiBold },
   exerciseTarget: { fontSize: 13, color: coachColors.muted, marginTop: 2, fontFamily: fonts.mono },
+  exerciseMenuBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+  exerciseMenuIcon: { color: coachColors.muted, fontSize: 16, fontWeight: '700' },
   expandIcon: { color: coachColors.muted, fontSize: 12, marginLeft: 8 },
   setsContainer: { paddingHorizontal: 14, paddingBottom: 14 },
   setTableHeader: {
@@ -837,6 +900,11 @@ const styles = StyleSheet.create({
   setCurrent: {
     borderWidth: 1.5,
     borderColor: coachColors.accent,
+    shadowColor: coachColors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 3,
   },
   setTodo: {
     borderWidth: 1.5,

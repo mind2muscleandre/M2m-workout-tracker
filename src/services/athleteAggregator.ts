@@ -8,6 +8,9 @@ import { fetchPerformViewForUser } from './platformPerform';
 import { fetchTrackerViewForUser } from './platformTracker';
 import { fetchMacroViewForUser } from './platformMacro';
 import { fetchAppBadgesForUser } from './platformUsers';
+import { getSharedScopesForAthlete, type SharedScopes } from '../lib/consent';
+
+const NO_SCOPES_SHARED: SharedScopes = { nutrition: false, training: false, goals: false };
 
 function formatLoadError(reason: unknown): string {
   if (reason instanceof Error) return reason.message;
@@ -87,6 +90,7 @@ export async function fetchAthleteAggregate(
         tasks: [],
         activityStreak: null,
       },
+      sharedScopes: { ...NO_SCOPES_SHARED },
       lastActivityAt: latestTimestamp(
         clientWorkouts.map((w) => w.completed_at ?? w.created_at)
       ),
@@ -151,6 +155,10 @@ export async function fetchAthleteAggregate(
       goalsetter: false,
     };
   });
+  const sharedScopes = await getSharedScopesForAthlete(userId).catch((error) => {
+    loadWarnings.push(`Delningsinställningar kunde inte läsas: ${formatLoadError(error)}`);
+    return { ...NO_SCOPES_SHARED };
+  });
 
   const lastActivityAt = latestTimestamp([
     ...clientWorkouts.map((w) => w.completed_at ?? w.created_at),
@@ -171,6 +179,7 @@ export async function fetchAthleteAggregate(
     tracker,
     macro,
     goalsetter,
+    sharedScopes,
     lastActivityAt,
     loadWarnings,
   };

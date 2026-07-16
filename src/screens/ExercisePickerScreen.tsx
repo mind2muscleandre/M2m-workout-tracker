@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
@@ -317,6 +318,9 @@ export function ExercisePickerScreen({ route, navigation }: Props) {
           <TouchableOpacity onPress={() => handleSelectExercise(item)}>
             <GlassCard style={styles.exerciseItem}>
               <View style={styles.exerciseRow}>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.exerciseThumb} />
+                ) : null}
                 {item.isFavorite ? <Text style={styles.favoriteIcon}>★</Text> : null}
                 <View style={styles.exerciseInfo}>
                   <Text style={styles.exerciseName}>{item.name}</Text>
@@ -621,6 +625,13 @@ const styles = StyleSheet.create({
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   exerciseItem: { padding: 14 },
   exerciseRow: { flexDirection: 'row', alignItems: 'center' },
+  exerciseThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: coachColors.surfaceSolid,
+  },
   favoriteIcon: { color: coachColors.accent, fontSize: 16, marginRight: 8 },
   exerciseInfo: { flex: 1 },
   exerciseName: {

@@ -16,7 +16,10 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { SectionLabel } from '../components/ui/SectionLabel';
 import { Button } from '../components/ui/Button';
 import { SplitPane } from '../components/ui/SplitPane';
-import { EnergySystemPill } from '../components/ui/StatusPill';
+import { DetailPanel } from '../components/ui/DetailPanel';
+import { StickyCTA } from '../components/ui/StickyCTA';
+import { EnergySystemPill, EnergySystem } from '../components/ui/StatusPill';
+import { useLayout } from '../lib/useLayout';
 import { supabase } from '../lib/supabase';
 import { PLATFORM_DB } from '../lib/dbTables';
 import {
@@ -46,8 +49,19 @@ type Props = StackScreenProps<RootStackParamList, 'ProgramBuilder'>;
 
 const DAY_LABELS = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
 
+const ENERGY_LEGEND: EnergySystem[] = ['atp', 'glyco', 'aero'];
+
+const KRAV_CHIPS = [
+  { label: 'HÖFT/LJUMSK-PRIO' },
+  { label: 'UNILATERAL UNDERKROPP' },
+  { label: 'MAXSTYRKA + POWER' },
+  { label: 'FOTLED DORSALFLEX. 58', tone: 'scr' as const },
+  { label: '12% ASYMMETRI VÄ FOTLED', tone: 'warn' as const },
+];
+
 export function ProgramBuilderScreen({ route, navigation }: Props) {
   const { programId, clientId, userId: routeUserId } = route.params;
+  const { isMobile, isDesktop } = useLayout();
   const [mode, setMode] = useState<'adapt' | 'tracker'>('tracker');
   const [adaptView, setAdaptView] = useState<AdaptProgramView | null>(null);
   const [trackerView, setTrackerView] = useState<TrackerProgramView | null>(null);
@@ -182,6 +196,34 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
 
   const weekSchedule = adaptView ? weekScheduleForProgram(adaptView) : [];
   const trackerSlots = trackerView?.slots ?? [];
+  const kravStripTitle = adaptView
+    ? `KRAV · ${(adaptView.program.sport_tag ?? 'ATLET').toUpperCase()} + SCREENING`
+    : '';
+
+  const kravPanel =
+    isDesktop && mode === 'adapt' && adaptView ? (
+      <DetailPanel title="Krav & täckning">
+        <KravStrip title={kravStripTitle} chips={KRAV_CHIPS} />
+        {selectedSession ? (
+          <>
+            <CoverageBanner
+              tone="unmatched"
+              message="Elsas svagaste område är **fotled dorsalflexion (58)** — det täcks inte fullt ut av passet."
+              fixLabel="FIXA →"
+              onFix={() =>
+                Alert.alert('Täckningsanalys', 'Öppna övningsbiblioteket för att lägga till fotledsövningar.')
+              }
+            />
+            <CoverageBanner
+              tone="matched"
+              message="**Unilateral underkropp** och **maxstyrka** matchar kravprofilen."
+            />
+          </>
+        ) : (
+          <Text style={styles.muted}>Välj ett pass för att se kravmatchning.</Text>
+        )}
+      </DetailPanel>
+    ) : null;
 
   const programListPane = (
     <View style={styles.listPane}>
@@ -233,7 +275,10 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
       </GlassCard>
     </View>
   ) : mode === 'tracker' && trackerView ? (
-    <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent}>
+    <ScrollView
+      style={styles.detailScroll}
+      contentContainerStyle={[styles.detailContent, isMobile && styles.detailContentMobile]}
+    >
       <View style={styles.detailHeader}>
         <View>
           <Text style={styles.detailTitle}>{trackerView.program.name}</Text>
@@ -254,35 +299,37 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
         </GlassCard>
       ))}
 
-      <SectionLabel>Veckoschema (slots)</SectionLabel>
-      <View style={styles.weekGrid}>
-        {trackerSlots.length === 0 ? (
-          <Text style={styles.muted}>Inget schema</Text>
-        ) : (
-          trackerSlots.slice(0, 21).map((slot, idx) => {
-            const template = trackerView.templates.find((t) => t.id === slot.template_id);
-            const isRest = !template;
-            return (
-              <TouchableOpacity
-                key={slot.id}
-                onPress={() => setSelectedDayIndex(idx)}
-                style={[
-                  styles.dayCard,
-                  selectedDayIndex === idx && styles.dayCardSelected,
-                  isRest && styles.dayCardRest,
-                ]}
-              >
-                <Text style={styles.dayHeader}>
-                  V{slot.week_index + 1} {DAY_LABELS[slot.day_index] ?? `D${slot.day_index}`}
-                </Text>
-                <View style={styles.dayBody}>
-                  <Text style={styles.dayType}>{template?.name ?? 'Vila'}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </View>
+      <GlassCard style={styles.card}>
+        <SectionLabel>Veckoschema (slots)</SectionLabel>
+        <View style={styles.weekGrid}>
+          {trackerSlots.length === 0 ? (
+            <Text style={styles.muted}>Inget schema</Text>
+          ) : (
+            trackerSlots.slice(0, 21).map((slot, idx) => {
+              const template = trackerView.templates.find((t) => t.id === slot.template_id);
+              const isRest = !template;
+              return (
+                <TouchableOpacity
+                  key={slot.id}
+                  onPress={() => setSelectedDayIndex(idx)}
+                  style={[
+                    styles.dayCard,
+                    selectedDayIndex === idx && styles.dayCardSelected,
+                    isRest && styles.dayCardRest,
+                  ]}
+                >
+                  <Text style={styles.dayHeader}>
+                    V{slot.week_index + 1} {DAY_LABELS[slot.day_index] ?? `D${slot.day_index}`}
+                  </Text>
+                  <View style={styles.dayBody}>
+                    <Text style={styles.dayType}>{template?.name ?? 'Vila'}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+      </GlassCard>
 
       <SectionLabel>Schemalägg enstaka pass</SectionLabel>
       <GlassCard style={styles.card}>
@@ -304,7 +351,10 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
       </GlassCard>
     </ScrollView>
   ) : adaptView ? (
-    <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent}>
+    <ScrollView
+      style={styles.detailScroll}
+      contentContainerStyle={[styles.detailContent, isMobile && styles.detailContentMobile]}
+    >
       <View style={styles.detailHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.detailTitle}>{adaptView.program.name}</Text>
@@ -319,16 +369,7 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <KravStrip
-        title={`KRAV · ${(adaptView.program.sport_tag ?? 'ATLET').toUpperCase()} + SCREENING`}
-        chips={[
-          { label: 'HÖFT/LJUMSK-PRIO' },
-          { label: 'UNILATERAL UNDERKROPP' },
-          { label: 'MAXSTYRKA + POWER' },
-          { label: 'FOTLED DORSALFLEX. 58', tone: 'scr' },
-          { label: '12% ASYMMETRI VÄ FOTLED', tone: 'warn' },
-        ]}
-      />
+      {!isDesktop ? <KravStrip title={kravStripTitle} chips={KRAV_CHIPS} /> : null}
 
       <SectionLabel>Block</SectionLabel>
       <BlockPhaseCard
@@ -355,7 +396,7 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
         }}
       />
 
-      {selectedSession ? (
+      {!isDesktop && selectedSession ? (
         <>
           <CoverageBanner
             tone="unmatched"
@@ -467,27 +508,38 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
     </ScrollView>
   ) : null;
 
+  type StickyCta = { label: string; sublabel?: string; locked?: boolean; onPress?: () => void };
+  const stickyCta: StickyCta | null = !isMobile || loading
+    ? null
+    : !adaptView && !trackerView
+      ? { label: 'Skapa program', onPress: handleCreate }
+      : mode === 'adapt' && selectedSession
+        ? {
+            label: 'Starta session',
+            sublabel: dayLabel(selectedSession.day_of_week),
+            onPress: () => navigation.navigate('SessionTimer', { clientId: clientId ?? '' }),
+          }
+        : mode === 'tracker' && trackerView
+          ? { label: 'Schemalägg pass', onPress: handleSchedule }
+          : { label: 'Välj ett pass för att starta', locked: true };
+
   return (
     <ScreenContainer
       title="Adapt — Program"
       scroll={false}
+      detailPanel={kravPanel}
       headerLeft={
         <Button label="Tillbaka" size="sm" onPress={() => navigation.goBack()} />
       }
       headerRight={
         <View style={styles.headerActions}>
           <View style={styles.sysLegend}>
+            {ENERGY_LEGEND.map((system) => (
+              <EnergySystemPill key={system} system={system} />
+            ))}
             <View style={styles.sysLegendItem}>
-              <View style={[styles.sysDot, { backgroundColor: coachColors.accent }]} />
-              <Text style={styles.sysLegendText}>ATP-PC</Text>
-            </View>
-            <View style={styles.sysLegendItem}>
-              <View style={[styles.sysDot, { backgroundColor: coachColors.orange }]} />
-              <Text style={styles.sysLegendText}>Glykolytisk</Text>
-            </View>
-            <View style={styles.sysLegendItem}>
-              <View style={[styles.sysDot, { backgroundColor: coachColors.coach }]} />
-              <Text style={styles.sysLegendText}>Aerob</Text>
+              <View style={styles.sysRestDot} />
+              <Text style={styles.sysLegendText}>Vila</Text>
             </View>
           </View>
           <Button label="Nytt program" variant="primary" size="sm" onPress={handleCreate} />
@@ -502,9 +554,19 @@ export function ProgramBuilderScreen({ route, navigation }: Props) {
         <SplitPane
           list={programListPane}
           detail={detailPane}
+          listWidth={isDesktop ? 320 : 280}
           showDetail
         />
       )}
+      {stickyCta ? (
+        <StickyCTA
+          variant="flush"
+          label={stickyCta.label}
+          sublabel={stickyCta.sublabel}
+          locked={stickyCta.locked}
+          onPress={stickyCta.onPress}
+        />
+      ) : null}
       <SaveTemplateSheet
         visible={templateSheetOpen}
         onClose={() => setTemplateSheetOpen(false)}
@@ -604,6 +666,7 @@ const styles = StyleSheet.create({
   },
   detailScroll: { flex: 1 },
   detailContent: { padding: 16, gap: 4, paddingBottom: 32 },
+  detailContentMobile: { paddingBottom: 120 },
   detailHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -756,9 +819,15 @@ const styles = StyleSheet.create({
   timerNoticeTitle: { fontSize: 13, fontWeight: '600', color: coachColors.fg, marginBottom: 2, fontFamily: fonts.bodySemiBold },
   timerNoticeSub: { fontSize: 11, color: coachColors.muted, fontFamily: fonts.body, flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  sysLegend: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  sysLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  sysDot: { width: 6, height: 6, borderRadius: 3 },
+  sysLegend: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  sysLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 2 },
+  sysRestDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: coachColors.muted,
+  },
   sysLegendText: {
     fontFamily: fonts.mono,
     fontSize: 9,

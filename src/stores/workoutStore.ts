@@ -51,6 +51,11 @@ interface WorkoutActions {
     }>
   ) => Promise<void>;
   removeExerciseFromWorkout: (workoutExerciseId: string) => Promise<void>;
+  replaceExerciseInWorkout: (
+    workoutExerciseId: string,
+    newExerciseId: string,
+    keepCompletedSets: boolean
+  ) => Promise<void>;
   reorderExercises: (
     workoutId: string,
     exerciseIds: string[]
@@ -475,6 +480,67 @@ export const useWorkoutStore = create<WorkoutStore>((set, get) => ({
         'Remove exercise from workout error:',
         (error as Error).message
       );
+      throw error;
+    }
+  },
+
+  replaceExerciseInWorkout: async (
+    workoutExerciseId: string,
+    newExerciseId: string,
+    keepCompletedSets: boolean
+  ) => {
+    try {
+      const { data: updated, error } = await supabase
+        .from('workout_exercises')
+        .update({ exercise_id: newExerciseId })
+        .eq('id', workoutExerciseId)
+        .select(
+          `
+          *,
+          exercise:exercises(*)
+        `
+        )
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Uncompleted sets belonged to the old exercise's plan — drop them so
+      // the replacement starts clean. Completed sets (and their logged
+      // weight/reps history) stay on the row when the coach opts to keep them.
+      let setsQuery = supabase
+        .from('sets')
+        .delete()
+        .eq('workout_exercise_id', workoutExerciseId);
+      if (keepCompletedSets) {
+        setsQuery = setsQuery.is('completed_at', null);
+      }
+      const { error: setsError } = await setsQuery;
+      if (setsError) {
+        throw setsError;
+      }
+
+      const { activeWorkout } = get();
+      if (activeWorkout) {
+        set({
+          activeWorkout: {
+            ...activeWorkout,
+            workout_exercises: activeWorkout.workout_exercises.map((we) =>
+              we.id === workoutExerciseId
+                ? {
+                    ...we,
+                    exercise_id: newExerciseId,
+                    exercise: updated.exercise,
+                    sets: keepCompletedSets ? we.sets.filter((s) => s.completed_at) : [],
+                  }
+                : we
+            ),
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Replace exercise in workout error:', (error as Error).message);
       throw error;
     }
   },

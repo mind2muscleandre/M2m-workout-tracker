@@ -22,7 +22,7 @@ import { listMovementAssessmentsForClient } from '../services/clientAssessments'
 import { listImageScreeningsForClient } from '../services/clientScreenings';
 import { getClientAvatarColor, getClientInitials } from '../lib/athleteStatus';
 import type { MovementAssessmentSummary } from '../types/athlete';
-import { coachColors, fonts, borderRadius, shadows } from '../lib/theme';
+import { coachColors, fonts } from '../lib/theme';
 import { FilterTabs } from '../components/ui/FilterTabs';
 import { TriageStatusChip, type TriageStatus } from '../components/coach/TriageStatusChip';
 
@@ -218,10 +218,10 @@ export function ScreeningHubContent({
           { value: stats.unassessed, label: 'Ej bedömda', color: coachColors.accent },
           { value: stats.actionNeeded, label: 'Åtgärdsbehov', color: coachColors.orange },
         ].map((item) => (
-          <View key={item.label} style={styles.statCard}>
+          <GlassCard key={item.label} padding={12} style={styles.statCard}>
             <Text style={[styles.statValue, { color: item.color }]}>{item.value}</Text>
             <Text style={styles.statLabel}>{item.label}</Text>
-          </View>
+          </GlassCard>
         ))}
       </View>
 
@@ -281,38 +281,40 @@ export function ScreeningHubContent({
           return (
             <TouchableOpacity
               key={item.key}
-              style={styles.recentRow}
+              style={styles.recentRowWrap}
               activeOpacity={0.75}
               onPress={() => onRecentPress?.(item)}
               accessibilityRole="button"
             >
-              <View style={[styles.recentAvatar, { backgroundColor: `${avatarColor}55` }]}>
-                <Text style={styles.recentInitials}>{getClientInitials(item.name)}</Text>
-              </View>
-              <View style={styles.recentBody}>
-                <Text style={styles.recentName}>{item.name}</Text>
-                <View style={styles.recentMeta}>
-                  <Text style={styles.recentMetaText}>
-                    {item.type === 'movement' ? 'Rörelsebedömning' : 'Bildscreening'}
-                  </Text>
-                  <Text style={styles.recentMetaDot}>·</Text>
-                  <Text style={styles.recentMetaText}>{item.date}</Text>
+              <GlassCard padding={13} style={styles.recentRow}>
+                <View style={[styles.recentAvatar, { backgroundColor: `${avatarColor}55` }]}>
+                  <Text style={styles.recentInitials}>{getClientInitials(item.name)}</Text>
                 </View>
-              </View>
-              <TriageStatusChip status={item.triage} />
-              {item.score != null ? (
-                <View style={styles.scoreCol}>
-                  <Text style={[styles.recentScore, { color: scoreColors[tone] }]}>
-                    {Math.round(item.score * 20)}
-                  </Text>
-                  <Text style={styles.scoreK}>SCORE</Text>
+                <View style={styles.recentBody}>
+                  <Text style={styles.recentName}>{item.name}</Text>
+                  <View style={styles.recentMeta}>
+                    <Text style={styles.recentMetaText}>
+                      {item.type === 'movement' ? 'Rörelsebedömning' : 'Bildscreening'}
+                    </Text>
+                    <Text style={styles.recentMetaDot}>·</Text>
+                    <Text style={styles.recentMetaText}>{item.date}</Text>
+                  </View>
                 </View>
-              ) : (
-                <View style={styles.scoreCol}>
-                  <Text style={styles.recentPending}>–</Text>
-                  <Text style={styles.scoreK}>SCORE</Text>
-                </View>
-              )}
+                <TriageStatusChip status={item.triage} />
+                {item.score != null ? (
+                  <View style={styles.scoreCol}>
+                    <Text style={[styles.recentScore, { color: scoreColors[tone] }]}>
+                      {Math.round(item.score * 20)}
+                    </Text>
+                    <Text style={styles.scoreK}>SCORE</Text>
+                  </View>
+                ) : (
+                  <View style={styles.scoreCol}>
+                    <Text style={styles.recentPending}>–</Text>
+                    <Text style={styles.scoreK}>SCORE</Text>
+                  </View>
+                )}
+              </GlassCard>
             </TouchableOpacity>
           );
         })
@@ -378,14 +380,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: coachColors.glassBg,
-    borderWidth: 1,
-    borderColor: coachColors.glassBorder,
-    borderRadius: borderRadius.lg,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
     alignItems: 'center',
-    ...shadows.glass,
   },
   statValue: {
     fontFamily: fonts.display,
@@ -468,16 +463,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontFamily: fonts.body,
   },
+  recentRowWrap: {
+    marginBottom: 8,
+  },
   recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 13,
-    borderRadius: 12,
-    backgroundColor: coachColors.glassBg,
-    borderWidth: 1,
-    borderColor: coachColors.glassBorder,
-    marginBottom: 8,
   },
   recentAvatar: {
     width: 38,

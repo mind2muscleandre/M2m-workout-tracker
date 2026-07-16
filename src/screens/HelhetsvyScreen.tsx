@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -24,9 +24,10 @@ import {
 } from '../lib/dashboardInsights';
 import { clientToAthleteCard, deriveAthleteStatus, deriveGoalPct } from '../lib/athleteStatus';
 import { RootStackParamList } from '../navigation/types';
-import { coachColors, fonts, borderRadius } from '../lib/theme';
+import { coachColors, fonts, borderRadius, AthleteStatus } from '../lib/theme';
 
 type Nav = StackNavigationProp<RootStackParamList>;
+type Segment = 'helhet' | 'triage';
 
 const KPI_DEFS = [
   { key: 'readiness', label: 'Snittberedskap', color: '#4ADE80' },
@@ -36,11 +37,36 @@ const KPI_DEFS = [
   { key: 'screenings', label: 'Screenings v.', color: coachColors.fg },
 ] as const;
 
+type PulseBucket = 'formtopp' | 'redo' | 'bevaka' | 'vila' | 'risk';
+
+const PULSE_BUCKET_DEFS: { key: PulseBucket; label: string; color: string }[] = [
+  { key: 'formtopp', label: 'Formtopp', color: '#4ADE80' },
+  { key: 'redo', label: 'Redo', color: '#60A5FA' },
+  { key: 'bevaka', label: 'Bevaka', color: '#FB923C' },
+  { key: 'vila', label: 'Vila', color: 'rgba(255,255,255,0.35)' },
+  { key: 'risk', label: 'Risk', color: '#F87171' },
+];
+
+function pulseBucketFor(status: AthleteStatus, goalPct: number | null): PulseBucket {
+  if (status === 'alert' || status === 'inactive') return 'risk';
+  if (status === 'recovery') return 'vila';
+  if (status === 'rest') return 'bevaka';
+  return goalPct != null && goalPct >= 75 ? 'formtopp' : 'redo';
+}
+
+function formatHelhetsvyDate(d: Date): string {
+  const weekday = d.toLocaleDateString('sv-SE', { weekday: 'long' }).toUpperCase();
+  const month = d.toLocaleDateString('sv-SE', { month: 'long' }).toUpperCase();
+  const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  return `${weekday} ${d.getDate()} ${month} · ${time}`;
+}
+
 export function HelhetsvyScreen() {
   const navigation = useNavigation<Nav>();
   const { clients, fetchClients } = useClientStore();
   const { workouts, fetchAllWorkouts } = useWorkoutStore();
   const { loadForClients, getTimerSessions, getAggregate } = usePlatformStore();
+  const [segment, setSegment] = useState<Segment>('helhet');
 
   useEffect(() => {
     (async () => {
@@ -74,6 +100,22 @@ export function HelhetsvyScreen() {
   );
   const needsYou = buildNeedsYouQueue(active, workouts, getTimerSessions, getAggregate);
   const feed = buildActivityFeed(active, workouts);
+
+  const pulseDist = useMemo(() => {
+    const counts: Record<PulseBucket, number> = {
+      formtopp: 0,
+      redo: 0,
+      bevaka: 0,
+      vila: 0,
+      risk: 0,
+    };
+    for (const c of active) {
+      const status = deriveAthleteStatus(c, workouts, getTimerSessions(c.client_user_id));
+      const goalPct = deriveGoalPct(getAggregate(c.id));
+      counts[pulseBucketFor(status, goalPct)] += 1;
+    }
+    return counts;
+  }, [active, workouts, getTimerSessions, getAggregate]);
 
   const avgGoal = useMemo(() => {
     const pcts = active
@@ -112,7 +154,7 @@ export function HelhetsvyScreen() {
     (w) => w.status === 'planned' || w.status === 'in_progress'
   ).length;
 
-  const roster = active.slice(0, 12).map((c) => {
+  const rosterAll = active.map((c) => {
     const agg = getAggregate(c.id);
     const card = clientToAthleteCard(c, workouts, {
       timerSessions: getTimerSessions(c.client_user_id),
@@ -121,11 +163,14 @@ export function HelhetsvyScreen() {
     const spark = sparklineFromGoalPct(card.goalPct, agg?.tracker?.trends);
     return {
       ...card,
+      sport: c.sport,
       spark,
       score: card.goalPct ?? 0,
       risk: card.status === 'alert',
     };
   });
+  const roster = segment === 'triage' ? rosterAll.filter((r) => r.risk) : rosterAll.slice(0, 12);
+  const subtitle = `SQUAD COMMAND CENTER · ${active.length} ATLETER · ${formatHelhetsvyDate(new Date())}`;
 
   const kpiValues: Record<string, { value: string; delta?: string; tone?: 'up' | 'down' | 'flat' }> = {
     readiness: {
@@ -166,7 +211,7 @@ export function HelhetsvyScreen() {
   return (
     <ScreenContainer
       title="Helhetsvy"
-      subtitle="Stallöversikt"
+      subtitle={subtitle}
       scroll
       headerRight={
         <View style={styles.live}>
@@ -176,14 +221,20 @@ export function HelhetsvyScreen() {
       }
     >
       <View style={styles.seg}>
-        <TouchableOpacity style={[styles.segBtn, styles.segOn]}>
-          <Text style={[styles.segText, styles.segTextOn]}>Helhet</Text>
+        <TouchableOpacity
+          style={[styles.segBtn, segment === 'helhet' && styles.segOn]}
+          onPress={() => setSegment('helhet')}
+        >
+          <Text style={[styles.segText, segment === 'helhet' && styles.segTextOn]}>Helhet</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.segBtn} onPress={() => navigation.navigate('AthleteRadar')}>
           <Text style={styles.segText}>Radar</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.segBtn} onPress={() => navigation.navigate('ScreeningHub')}>
-          <Text style={styles.segText}>Triage</Text>
+        <TouchableOpacity
+          style={[styles.segBtn, segment === 'triage' && styles.segOn]}
+          onPress={() => setSegment('triage')}
+        >
+          <Text style={[styles.segText, segment === 'triage' && styles.segTextOn]}>Triage</Text>
         </TouchableOpacity>
       </View>
 
@@ -222,6 +273,28 @@ export function HelhetsvyScreen() {
           <Text style={styles.pulseHint}>
             {avgReadiness != null ? 'Snitt återhämtning' : 'Snitt målstatus'} · {active.length} atleter
           </Text>
+
+          <View style={styles.distBar}>
+            {active.length === 0 ? (
+              <View style={[StyleSheet.absoluteFill, styles.distBarEmpty]} />
+            ) : (
+              PULSE_BUCKET_DEFS.filter((b) => pulseDist[b.key] > 0).map((b) => (
+                <View
+                  key={b.key}
+                  style={[styles.distSeg, { flex: pulseDist[b.key], backgroundColor: b.color }]}
+                />
+              ))
+            )}
+          </View>
+          <View style={styles.distLeg}>
+            {PULSE_BUCKET_DEFS.map((b) => (
+              <View key={b.key} style={styles.distLegItem}>
+                <View style={[styles.distDot, { backgroundColor: b.color }]} />
+                <Text style={styles.distLegText}>{b.label}</Text>
+                <Text style={styles.distLegCount}>{pulseDist[b.key]}</Text>
+              </View>
+            ))}
+          </View>
         </GlassCard>
 
         <GlassCard padding={16} style={styles.trend}>
@@ -244,27 +317,44 @@ export function HelhetsvyScreen() {
       <NeedsYouQueue
         items={needsYou}
         onPressItem={(id) => navigation.navigate('AthleteDetail', { clientId: id })}
+        title="▲ Behöver dig nu"
+        emphasized
       />
       <ActivityFeed items={feed} />
 
-      <SectionLabel>Stall · sparklines</SectionLabel>
-      <View style={styles.roster}>
-        {roster.map((r) => (
-          <TouchableOpacity
-            key={r.id}
-            style={[styles.rc, r.risk && styles.rcRisk]}
-            onPress={() => navigation.navigate('AthleteDetail', { clientId: r.id })}
-          >
-            <View style={styles.rcTop}>
-              <Text style={styles.rcName} numberOfLines={1}>{r.name.split(' ')[0]}</Text>
-              <Text style={styles.rcScore}>{r.score > 0 ? r.score : '—'}</Text>
-            </View>
-            {r.spark.length > 0 ? (
-              <Sparkline values={r.spark} height={16} highlightLast={false} />
-            ) : null}
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SectionLabel>{segment === 'triage' ? 'Åtgärd nu' : 'Hela stallet'}</SectionLabel>
+      {segment === 'triage' && roster.length === 0 ? (
+        <Text style={styles.rosterEmpty}>Inga atleter kräver åtgärd just nu</Text>
+      ) : (
+        <View style={styles.roster}>
+          {roster.map((r) => (
+            <TouchableOpacity
+              key={r.id}
+              style={[styles.rc, r.risk && styles.rcRisk]}
+              onPress={() => navigation.navigate('AthleteDetail', { clientId: r.id })}
+            >
+              <View style={styles.rcTop}>
+                <Text style={styles.rcName} numberOfLines={1}>{r.name.split(' ')[0]}</Text>
+                <Text style={styles.rcScore}>{r.score > 0 ? r.score : '—'}</Text>
+              </View>
+              <Text style={styles.rcSport} numberOfLines={1}>{r.sport ? r.sport.toUpperCase() : '—'}</Text>
+              {r.spark.length > 0 ? (
+                <Sparkline values={r.spark} height={16} highlightLast={false} />
+              ) : null}
+              <View style={styles.rcMets}>
+                <View style={styles.rcMet}>
+                  <Text style={styles.rcMetLabel}>ACWR</Text>
+                  <Text style={styles.rcMetValue}>—</Text>
+                </View>
+                <View style={styles.rcMet}>
+                  <Text style={styles.rcMetLabel}>FÖLJ</Text>
+                  <Text style={styles.rcMetValue}>{r.score > 0 ? `${r.score}%` : '—'}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
     </ScreenContainer>
   );
 }
@@ -361,10 +451,48 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textTransform: 'uppercase',
   },
+  distBar: {
+    flexDirection: 'row',
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+    gap: 2,
+    marginTop: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  distSeg: { height: '100%' },
+  distBarEmpty: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  distLeg: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 11,
+  },
+  distLegItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  distDot: { width: 7, height: 7, borderRadius: 4 },
+  distLegText: {
+    fontFamily: fonts.mono,
+    fontSize: 7,
+    letterSpacing: 0.4,
+    color: coachColors.muted,
+    textTransform: 'uppercase',
+  },
+  distLegCount: {
+    fontFamily: fonts.display,
+    fontSize: 11,
+    fontWeight: '700',
+    color: coachColors.fg,
+  },
   trendNow: {
     fontFamily: fonts.mono,
     fontSize: 8,
     color: '#4ADE80',
+  },
+  rosterEmpty: {
+    color: coachColors.muted,
+    fontSize: 13,
+    fontFamily: fonts.body,
+    marginBottom: 24,
   },
   roster: {
     flexDirection: 'row',
@@ -398,5 +526,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: coachColors.fg,
+  },
+  rcSport: {
+    fontFamily: fonts.mono,
+    fontSize: 6.5,
+    letterSpacing: 0.4,
+    color: coachColors.muted,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  rcMets: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 8,
+  },
+  rcMet: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  rcMetLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 6,
+    letterSpacing: 0.3,
+    color: coachColors.muted,
+    textTransform: 'uppercase',
+  },
+  rcMetValue: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    color: coachColors.fg,
+    marginTop: 1,
   },
 });

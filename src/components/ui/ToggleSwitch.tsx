@@ -31,8 +31,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   trackOn: {
-    backgroundColor: coachColors.coachDim,
-    borderColor: 'rgba(0,212,170,0.30)',
+    backgroundColor: coachColors.accent,
+    borderColor: coachColors.accent,
   },
   thumb: {
     width: 18,
@@ -42,6 +42,6 @@ const styles = StyleSheet.create({
   },
   thumbOn: {
     alignSelf: 'flex-end',
-    backgroundColor: coachColors.coach,
+    backgroundColor: '#17191c',
   },
 });

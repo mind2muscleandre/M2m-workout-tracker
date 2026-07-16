@@ -54,7 +54,7 @@ import { SectionLabel } from '../components/ui/SectionLabel';
 import { StepIndicator } from '../components/ui/StepIndicator';
 import { SearchBar } from '../components/ui/SearchBar';
 import { Button } from '../components/ui/Button';
-import { colors, coachColors, fonts, borderRadius } from '../lib/theme';
+import { coachColors, fonts, borderRadius } from '../lib/theme';
 
 type Props = StackScreenProps<RootStackParamList, 'MovementAssessmentProgramBuilder'>;
 type SelectedExercise = ExerciseBankItem & { target_sets: number; target_reps: string };
@@ -788,7 +788,7 @@ export default function MovementAssessmentProgramBuilderScreen({ route, navigati
                 value={title}
                 onChangeText={setTitle}
                 placeholder="Åtgärdsprogram"
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={coachColors.muted}
               />
             </View>
             <View style={styles.topBarSearch}>
@@ -945,7 +945,7 @@ export default function MovementAssessmentProgramBuilderScreen({ route, navigati
             ) : null}
 
             {loadingCatalog ? (
-              <ActivityIndicator color={colors.primary} style={styles.loader} />
+              <ActivityIndicator color={coachColors.accent} style={styles.loader} />
             ) : displayedExercises.length === 0 ? (
               <Text style={styles.muted}>
                 Inga övningar hittades — prova en annan sökning eller ett annat filter.
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
   reorderBtn: { padding: 3, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.07)', minWidth: 22, alignItems: 'center' },
   reorderBtnDisabled: { opacity: 0.25 },
   reorderBtnText: { color: coachColors.fg, fontSize: 10 },
-  selTitle: { flex: 1, color: colors.text, fontSize: 14, fontFamily: fonts.bodySemiBold },
+  selTitle: { flex: 1, color: coachColors.fg, fontSize: 14, fontFamily: fonts.bodySemiBold },
   selAreaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   selAreaLabel: { color: coachColors.mutedHi, fontFamily: fonts.mono, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   selScorePill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
@@ -1260,16 +1260,16 @@ const styles = StyleSheet.create({
   smallInput: {
     width: 48,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: coachColors.border,
     borderRadius: borderRadius.md,
-    color: colors.text,
+    color: coachColors.fg,
     paddingVertical: 6,
     paddingHorizontal: 6,
     textAlign: 'center',
   },
-  remove: { color: colors.danger, fontSize: 12, fontFamily: fonts.bodyMedium },
+  remove: { color: coachColors.danger, fontSize: 12, fontFamily: fonts.bodyMedium },
   loader: { marginVertical: 16 },
-  muted: { color: colors.textSecondary, fontFamily: fonts.body },
+  muted: { color: coachColors.muted, fontFamily: fonts.body },
   footer: { flexDirection: 'row', gap: 8, paddingTop: 8, paddingBottom: 8 },
   footerBtn: { flex: 1, height: 48, justifyContent: 'center' },
   footerBtnPrimary: { flex: 2, height: 48, justifyContent: 'center' },

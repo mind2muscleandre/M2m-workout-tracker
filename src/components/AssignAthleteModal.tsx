@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   FlatList,
@@ -11,7 +10,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import type { AthleteProfile } from '../types/athlete';
-import { colors, coachColors, fonts, borderRadius } from '../lib/theme';
+import { coachColors, fonts } from '../lib/theme';
+import { SearchBar } from './ui/SearchBar';
 
 export interface AssignAthleteModalProps {
   visible: boolean;
@@ -105,23 +105,17 @@ export function AssignAthleteModal({
         </View>
 
         <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Sök namn, e-post eller lag..."
-              placeholderTextColor={colors.textSecondary}
-              value={query}
-              onChangeText={setQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+          <SearchBar
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Sök namn, e-post eller lag…"
+            style={styles.searchBar}
+          />
         </View>
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator color={colors.primary} size="large" />
+            <ActivityIndicator color={coachColors.coach} size="large" />
           </View>
         ) : loadError ? (
           <View style={styles.emptyContainer}>
@@ -149,7 +143,7 @@ export function AssignAthleteModal({
 
         {isAssigning ? (
           <View style={styles.assignOverlay}>
-            <ActivityIndicator color={colors.primary} size="large" />
+            <ActivityIndicator color={coachColors.coach} size="large" />
           </View>
         ) : null}
       </SafeAreaView>
@@ -187,18 +181,10 @@ const styles = StyleSheet.create({
   },
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12 },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.inputBg,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: 14,
+    maxWidth: '100%',
     height: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  searchIcon: { fontSize: 16, marginRight: 10 },
-  searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 0 },
-  chevron: { fontSize: 24, color: colors.textSecondary, fontWeight: '300' },
+  chevron: { fontSize: 24, color: coachColors.muted, fontWeight: '300' },
   listContentEmpty: {
     flexGrow: 1,
   },
@@ -215,13 +201,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.text,
+    color: coachColors.fg,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 15,
-    color: colors.textSecondary,
+    color: coachColors.muted,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -247,16 +233,16 @@ const styles = StyleSheet.create({
   assignName: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.text,
+    color: coachColors.fg,
   },
   assignMeta: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: coachColors.muted,
     marginTop: 2,
   },
   assignTeam: {
     fontSize: 13,
-    color: colors.primaryLight,
+    color: coachColors.accent,
     marginTop: 2,
   },
   assignOverlay: {

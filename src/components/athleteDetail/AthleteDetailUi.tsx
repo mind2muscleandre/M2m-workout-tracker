@@ -866,6 +866,10 @@ export interface WhoopHeroProps {
   strainScore: number | null;
   nutritionScore: number | null;
   sleepScore: number | null;
+  /** False when the athlete has not shared nutrition data (M2M Macro) with this coach. */
+  nutritionShared?: boolean;
+  /** False when the athlete has not shared goals/habit data (M2M Goalsetter) with this coach. */
+  goalsShared?: boolean;
   sessions: WorkoutSessionRow[];
   apps: AppBadges;
   backButton?: React.ReactNode;
@@ -889,6 +893,8 @@ export function WhoopHeroSection({
   strainScore,
   nutritionScore,
   sleepScore,
+  nutritionShared = true,
+  goalsShared = true,
   sessions,
   apps,
   backButton,
@@ -988,8 +994,18 @@ export function WhoopHeroSection({
           <View style={heroSectionStyles.ringsGrid}>
             <WhoopMetricRing label="Återhämtning" value={recoveryScore} color={coachColors.coach} status={recoveryScore != null ? (recoveryScore >= 67 ? 'Optimal' : recoveryScore >= 34 ? 'Måttlig' : 'Låg') : undefined} />
             <WhoopMetricRing label="Belastning" value={strainScore} color={coachColors.orange} status={strainScore != null ? (strainScore >= 70 ? 'Hög' : strainScore >= 40 ? 'Medel' : 'Låg') : undefined} />
-            <WhoopMetricRing label="Kost" value={nutritionScore} color="#5AC8FA" status={nutritionScore != null ? (nutritionScore >= 80 ? 'I mål' : 'Under mål') : undefined} />
-            <WhoopMetricRing label="Sömn" value={sleepScore} color="#BF7FFF" status={sleepScore != null ? (sleepScore >= 80 ? 'God' : sleepScore >= 60 ? 'OK' : 'Bristfällig') : undefined} />
+            <WhoopMetricRing
+              label="Kost"
+              value={nutritionShared ? nutritionScore : null}
+              color="#5AC8FA"
+              status={!nutritionShared ? 'Ej delat' : nutritionScore != null ? (nutritionScore >= 80 ? 'I mål' : 'Under mål') : undefined}
+            />
+            <WhoopMetricRing
+              label="Sömn"
+              value={goalsShared ? sleepScore : null}
+              color="#BF7FFF"
+              status={!goalsShared ? 'Ej delat' : sleepScore != null ? (sleepScore >= 80 ? 'God' : sleepScore >= 60 ? 'OK' : 'Bristfällig') : undefined}
+            />
           </View>
           <EnergyLineChart sessions={sessions} width={compact ? width - 48 : 280} />
         </View>
@@ -1183,6 +1199,95 @@ const vitalStyles = StyleSheet.create({
   barTrack: { flex: 1, height: 6, backgroundColor: coachColors.border, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 3 },
   rowVal: { width: 44, textAlign: 'right', fontSize: 12, fontFamily: 'DMSans_500Medium' },
+});
+
+/* ── Session source filter pills (Sessioner tab) ── */
+export function SourceFilterPills({
+  options,
+  activeId,
+  onChange,
+}: {
+  options: { id: string; label: string }[];
+  activeId: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <View style={filterPillStyles.row}>
+      {options.map((opt) => {
+        const active = opt.id === activeId;
+        return (
+          <TouchableOpacity
+            key={opt.id}
+            onPress={() => onChange(opt.id)}
+            style={[filterPillStyles.pill, active && filterPillStyles.pillActive]}
+            activeOpacity={0.75}
+          >
+            <Text style={[filterPillStyles.pillText, active && filterPillStyles.pillTextActive]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+const filterPillStyles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  pill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    backgroundColor: coachColors.glassBg,
+  },
+  pillActive: {
+    backgroundColor: coachColors.coach,
+    borderColor: coachColors.coach,
+  },
+  pillText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: coachColors.muted,
+  },
+  pillTextActive: {
+    color: '#000',
+    fontWeight: '600',
+  },
+});
+
+/* ── Not-shared empty state (consent gate) ── */
+export function NotSharedEmptyState({ text }: { text: string }) {
+  return (
+    <View style={notSharedStyles.card}>
+      <Text style={notSharedStyles.icon}>🔒</Text>
+      <Text style={notSharedStyles.text}>{text}</Text>
+    </View>
+  );
+}
+
+const notSharedStyles = StyleSheet.create({
+  card: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderRadius: borderRadius.lg,
+    backgroundColor: coachColors.glassBg,
+    borderWidth: 1,
+    borderColor: coachColors.glassBorder,
+    alignItems: 'center',
+    gap: 8,
+  },
+  icon: { fontSize: 18, opacity: 0.7 },
+  text: {
+    fontFamily: fonts.body,
+    fontSize: 12.5,
+    color: coachColors.muted,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
 });
 
 /* ── Connected apps card ── */

@@ -17,6 +17,8 @@ export interface AthleteCardData {
   lastSession?: string;
   color?: string;
   selected?: boolean;
+  /** Use accent (yellow) border/background instead of teal when selected — desktop detail-panel context */
+  selectedAccent?: boolean;
   sparkline?: number[];
   apps?: AppBadgesType | null;
 }
@@ -47,7 +49,7 @@ export function AthleteCard({ athlete, onPress }: AthleteCardProps) {
       activeOpacity={0.75}
       style={[
         styles.card,
-        athlete.selected && styles.selected,
+        athlete.selected && (athlete.selectedAccent ? styles.selectedAccent : styles.selected),
         athlete.status === 'alert' && styles.alert,
       ]}
     >
@@ -122,6 +124,10 @@ const styles = StyleSheet.create({
   selected: {
     backgroundColor: coachColors.glassBgHi,
     borderColor: 'rgba(0,212,170,0.35)',
+  },
+  selectedAccent: {
+    backgroundColor: coachColors.glassBgAccent,
+    borderColor: coachColors.accentHi,
   },
   alert: {
     borderColor: 'rgba(255,95,31,0.26)',

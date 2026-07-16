@@ -27,7 +27,7 @@ import { SearchBar } from '../components/ui/SearchBar';
 import { Button } from '../components/ui/Button';
 import { listMovementAssessmentsForClient } from '../services/clientAssessments';
 import { getClientAvatarColor, getClientInitials } from '../lib/athleteStatus';
-import { colors, coachColors, fonts, borderRadius } from '../lib/theme';
+import { coachColors, fonts, borderRadius } from '../lib/theme';
 
 type Props = StackScreenProps<RootStackParamList, 'MovementAssessmentClientPick'>;
 
@@ -292,7 +292,7 @@ export function MovementAssessmentClientPickScreen({ navigation }: Props) {
               value={newName}
               onChangeText={setNewName}
               placeholder="För- och efternamn"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={coachColors.muted}
               autoCapitalize="words"
               editable={!creating}
             />
@@ -302,7 +302,7 @@ export function MovementAssessmentClientPickScreen({ navigation }: Props) {
               value={newEmail}
               onChangeText={setNewEmail}
               placeholder="namn@exempel.se"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={coachColors.muted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -386,14 +386,14 @@ const styles = StyleSheet.create({
   },
   newClientCard: { marginBottom: 16 },
   newClientHint: {
-    color: colors.textSecondary,
+    color: coachColors.muted,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
     fontFamily: fonts.body,
   },
   inputLabel: {
-    color: colors.textSecondary,
+    color: coachColors.muted,
     fontSize: 13,
     marginBottom: 6,
     marginTop: 8,
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   sep: { height: 8 },
   emptyInline: { paddingVertical: 8 },
   emptyText: {
-    color: colors.textSecondary,
+    color: coachColors.muted,
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,

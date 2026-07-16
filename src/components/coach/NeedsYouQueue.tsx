@@ -8,14 +8,18 @@ import type { NeedsYouItem } from '../../lib/dashboardInsights';
 interface NeedsYouQueueProps {
   items: NeedsYouItem[];
   onPressItem: (clientId: string) => void;
+  title?: string;
+  emphasized?: boolean;
 }
 
-export function NeedsYouQueue({ items, onPressItem }: NeedsYouQueueProps) {
+export function NeedsYouQueue({ items, onPressItem, title, emphasized }: NeedsYouQueueProps) {
   if (items.length === 0) return null;
 
   return (
     <View style={styles.wrap}>
-      <SectionLabel>Behöver dig nu</SectionLabel>
+      <SectionLabel style={emphasized ? styles.emphasizedLabel : undefined}>
+        {title ?? 'Behöver dig nu'}
+      </SectionLabel>
       <GlassCard padding={14} style={styles.card}>
         {items.map((item, idx) => (
           <View key={item.clientId} style={[styles.row, idx < items.length - 1 && styles.rowBorder]}>
@@ -47,6 +51,11 @@ export function NeedsYouQueue({ items, onPressItem }: NeedsYouQueueProps) {
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: 12 },
+  emphasizedLabel: {
+    color: '#F87171',
+    fontWeight: '700',
+    fontSize: 10,
+  },
   card: { gap: 0 },
   row: {
     flexDirection: 'row',

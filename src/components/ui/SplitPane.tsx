@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { coachColors } from '../../lib/theme';
+import { coachColors, shadows } from '../../lib/theme';
 import { useLayout } from '../../lib/useLayout';
 
 interface SplitPaneProps {
@@ -43,6 +43,7 @@ const styles = StyleSheet.create({
     borderColor: coachColors.glassBorder,
     borderRadius: 16,
     overflow: 'hidden',
+    ...shadows.glass,
   },
   list: {
     borderRightWidth: 1,

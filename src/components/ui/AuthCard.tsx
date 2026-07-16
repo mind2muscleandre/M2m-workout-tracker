@@ -4,11 +4,17 @@ import { coachColors, borderRadius, fonts, shadows } from '../../lib/theme';
 
 interface AuthCardProps {
   title?: string;
+  titleAccent?: string;
   subtitle?: string;
   children: React.ReactNode;
 }
 
-export function AuthCard({ title = 'M2M COACH', subtitle, children }: AuthCardProps) {
+export function AuthCard({
+  title = 'M2M',
+  titleAccent = 'Coach',
+  subtitle = 'DITT PT-NAV · HELA BILDEN AV VARJE ATLET',
+  children,
+}: AuthCardProps) {
   return (
     <ScrollView
       contentContainerStyle={styles.page}
@@ -19,7 +25,10 @@ export function AuthCard({ title = 'M2M COACH', subtitle, children }: AuthCardPr
           <View style={styles.logoMark}>
             <Text style={styles.logoMarkText}>M</Text>
           </View>
-          <Text style={styles.logo}>{title}</Text>
+          <Text style={styles.logo}>
+            {title}
+            {titleAccent ? <Text style={styles.logoAccent}> {titleAccent}</Text> : null}
+          </Text>
           {subtitle ? <Text style={styles.sub}>{subtitle}</Text> : null}
         </View>
         <View style={styles.body}>{children}</View>
@@ -73,11 +82,15 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontFamily: fonts.display,
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: '700',
-    letterSpacing: 2,
-    color: coachColors.accent,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    color: coachColors.fg,
     textAlign: 'center',
+  },
+  logoAccent: {
+    color: coachColors.accent,
   },
   sub: {
     fontFamily: fonts.mono,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { coachColors, borderRadius, fonts } from '../../lib/theme';
+import { coachColors, borderRadius, fonts, shadows } from '../../lib/theme';
 
 export interface ChatMessage {
   id: string;
@@ -100,31 +100,32 @@ const styles = StyleSheet.create({
   timeIn: { textAlign: 'left' },
   compose: {
     flexDirection: 'row',
-    gap: 7,
+    gap: 8,
     alignItems: 'flex-end',
     paddingTop: 4,
   },
   input: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 40,
     maxHeight: 90,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     backgroundColor: coachColors.glassBg,
     borderWidth: 1,
     borderColor: coachColors.glassBorder,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.full,
     fontFamily: fonts.body,
     fontSize: 12,
     color: coachColors.fg,
   },
   send: {
-    width: 38,
-    height: 38,
-    borderRadius: borderRadius.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: coachColors.coach,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.glowCoach,
   },
   sendIcon: {
     color: '#000',
