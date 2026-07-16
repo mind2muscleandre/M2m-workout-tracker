@@ -239,7 +239,7 @@ export function DashboardScreen() {
 
   const detailPanel = (
     <DetailPanel
-      title={selectedClient ? selectedClient.name.split(' ')[0] : 'Dagöversikt'}
+      title={selectedClient ? selectedClient.name.split(' ')[0] : 'Dagsöversikt'}
       onClose={() => setSelectedId(null)}
       tabs={
         selectedClient ? (
@@ -269,13 +269,16 @@ export function DashboardScreen() {
     </>
   ) : null;
 
+  const headerDate = formatGreetingDate(new Date());
+
   return (
     <>
       <ScreenContainer
-        title="Översikt"
+        title="Dashboard"
+        subtitle={showDetailPanel ? headerDate : undefined}
         search={
           searchOpen || !showDetailPanel ? (
-            <SearchBar value={search} onChangeText={setSearch} placeholder="Sök atlet…" />
+            <SearchBar value={search} onChangeText={setSearch} placeholder="Sök klient…" />
           ) : undefined
         }
         headerRight={
@@ -286,9 +289,17 @@ export function DashboardScreen() {
             <IconButton>
               <IconBell />
             </IconButton>
+            {showDetailPanel ? (
+              <Button
+                label="+ Broadcast"
+                variant="primary"
+                size="sm"
+                onPress={() => navigation.navigate('Broadcast')}
+              />
+            ) : null}
             <Button
               label="Lägg till atlet"
-              variant="primary"
+              variant={showDetailPanel ? 'secondary' : 'primary'}
               size="sm"
               icon={<IconPlus />}
               onPress={() => setAddMenuVisible(true)}
@@ -299,7 +310,7 @@ export function DashboardScreen() {
         onRefresh={onRefresh}
         detailPanel={detailPanel}
       >
-        {isMobile ? <GreetingHeader user={user} /> : null}
+        <GreetingHeader user={user} />
 
         <GlassCard variant="coach" padding={14} style={styles.statsCard}>
           <SectionLabel>Status idag</SectionLabel>

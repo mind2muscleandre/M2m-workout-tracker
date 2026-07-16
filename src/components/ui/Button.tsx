@@ -110,7 +110,6 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-    ...shadows.glowCoach,
   },
   secondary: {
     backgroundColor: coachColors.glassBg,
